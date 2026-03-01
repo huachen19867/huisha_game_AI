@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>回煞 - 民俗恐怖游戏</title>
+    <!-- Error Handler -->
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            const div = document.createElement('div');
+            div.style.position = 'fixed';
+            div.style.top = '0';
+            div.style.left = '0';
+            div.style.width = '100%';
+            div.style.background = 'rgba(0,0,0,0.8)';
+            div.style.color = '#ff0000';
+            div.style.padding = '20px';
+            div.style.zIndex = '99999';
+            div.style.fontFamily = 'monospace';
+            div.innerHTML = '<h3>Game Error</h3><p>' + msg + '</p><p>' + url + ':' + line + ':' + col + '</p>';
+            if (error && error.stack) {
+                div.innerHTML += '<pre>' + error.stack + '</pre>';
+            }
+            document.body.appendChild(div);
+            return false;
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+            const div = document.createElement('div');
+            div.style.position = 'fixed';
+            div.style.top = '50%';
+            div.style.left = '0';
+            div.style.width = '100%';
+            div.style.background = 'rgba(0,0,0,0.8)';
+            div.style.color = '#ffaa00';
+            div.style.padding = '20px';
+            div.style.zIndex = '99999';
+            div.style.fontFamily = 'monospace';
+            div.innerHTML = '<h3>Unhandled Promise Rejection</h3><p>' + event.reason + '</p>';
+            document.body.appendChild(div);
+        });
+        // Resource loading error handler
+        window.addEventListener('error', function(event) {
+            if (event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK' || event.target.tagName === 'IMG') {
+                const div = document.createElement('div');
+                div.style.position = 'fixed';
+                div.style.bottom = '0';
+                div.style.left = '0';
+                div.style.width = '100%';
+                div.style.background = 'rgba(0,0,0,0.8)';
+                div.style.color = '#ffff00';
+                div.style.padding = '10px';
+                div.style.zIndex = '99999';
+                div.style.fontFamily = 'monospace';
+                div.innerHTML = '<h3>Resource Load Error</h3><p>Failed to load: ' + (event.target.src || event.target.href) + '</p>';
+                document.body.appendChild(div);
+            }
+        }, true);
+    </script>
+    <!-- 引入 Phaser 3 (本地) -->
+    <script src="phaser.min.js"></script>
+    <script>
+        if (typeof Phaser === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"><\/script>');
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: "SimSun", "Songti SC", serif; /* 宋体更有恐怖感 */
+        }
+
+        #game-container {
+            box-shadow: 0 0 20px rgba(139, 0, 0, 0.5); /* 血红色光晕 */
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #dialog-box {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 800px;
+            height: 160px;
+            background-color: #e3dac9; /* Old paper color */
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+                radial-gradient(circle at 10% 20%, rgba(139, 0, 0, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(0, 0, 0, 0.1) 0%, transparent 20%);
+            background-size: 100% 2em, 100% 100%, 100% 100%;
+            border: 4px double #5c4033; /* Dark wood/old frame color */
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0,0,0,0.2);
+            padding: 25px;
+            color: #2b1d0e; /* Dark ink color */
+            font-size: 18px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            pointer-events: auto;
+            border-radius: 2px;
+        }
+
+        #dialog-box::before {
+            content: '';
+            position: absolute;
+            top: 5px; left: 5px; right: 5px; bottom: 5px;
+            border: 1px solid rgba(92, 64, 51, 0.3);
+            pointer-events: none;
+        }
+
+        #dialog-box.hidden {
+            display: none;
+        }
+
+        #speaker-name {
+            margin: 0 0 10px 0;
+            font-weight: bold;
+            color: #8b0000; /* Blood red for name */
+            font-size: 22px;
+            text-shadow: 1px 1px 0 rgba(0,0,0,0.1);
+            font-family: "SimSun", "Songti SC", serif;
+        }
+
+        #dialog-text {
+            margin: 0;
+            line-height: 1.6;
+            flex-grow: 1;
+            font-family: "SimSun", "Songti SC", serif;
+            font-weight: 500;
+        }
+
+        #next-arrow {
+            align-self: flex-end;
+            color: #8b0000;
+            font-size: 20px;
+            animation: blink 1s infinite;
+        }
+
+        /* 虚拟摇杆和按钮样式 */
+        #joystick-zone {
+            position: absolute;
+            bottom: 50px;
+            left: 50px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            touch-action: none; /* 防止触摸时页面滚动 */
+            display: none; /* 默认隐藏，JS检测到触摸设备再显示 */
+            transition: opacity 0.5s ease;
+            opacity: 1;
+            pointer-events: auto; /* 关键：允许点击 */
+        }
+
+        #joystick-knob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50px;
+            height: 50px;
+            background: rgba(139, 0, 0, 0.5);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        #action-btn {
+            position: absolute;
+            bottom: 60px;
+            right: 60px;
+            width: 80px;
+            height: 80px;
+            background: rgba(139, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            font-family: "SimSun", serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: none;
+            user-select: none;
+            display: none;
+            transition: opacity 0.5s ease;
+            opacity: 1;
+            pointer-events: auto; /* 关键：允许点击 */
+        }
+
+        .ui-faded {
+            opacity: 0 !important; /* 改为完全透明，避免遮挡画面 */
+        }
+
+        /* 竖屏提示遮罩 - 移除强制显示 */
+        #orientation-overlay {
+            display: none !important;
+        }
+
+        /* 竖屏时的UI调整 */
+        @media screen and (orientation: portrait) {
+            #joystick-zone {
+                bottom: 120px; /* 抬高摇杆位置，避免被底部手势条遮挡 */
+                left: 30px;
+            }
+            #action-btn {
+                bottom: 130px; /* 抬高按钮位置 */
+                right: 30px;
+            }
+            #dialog-box {
+                bottom: 10px;
+                width: 95%; /* 增加宽度 */
+                height: 180px; /* 增加高度以容纳更多文字 */
+                font-size: 16px; /* 稍微减小字号 */
+            }
+        }
+
+        /* 恐怖结局特效 */
+        #ending-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 10000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .blood-text {
+            font-family: "SimSun", serif;
+            font-size: 60px;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 
+                2px 2px 0 #330000,
+                0 0 20px rgba(255, 0, 0, 0.8),
+                0 0 40px rgba(139, 0, 0, 0.6);
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.5s, transform 0.1s;
+            position: relative;
+            text-align: center;
+            line-height: 1.5;
+            z-index: 2;
+        }
+
+        .blood-text.visible {
+            opacity: 1;
+            transform: scale(1);
+            animation: heartbeat 0.2s infinite alternate;
+        }
+
+        .blood-drip {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            width: 4px;
+            height: 0;
+            background: rgba(200, 0, 0, 0.9);
+            border-radius: 0 0 4px 4px;
+            animation: drip 3s infinite ease-in;
+            box-shadow: 
+                -20px 0 0 rgba(200, 0, 0, 0.9),
+                20px 0 0 rgba(200, 0, 0, 0.9),
+                -40px -10px 0 rgba(180, 0, 0, 0.9),
+                35px -5px 0 rgba(180, 0, 0, 0.9);
+        }
+
+        @keyframes heartbeat {
+            from { transform: scale(1); text-shadow: 0 0 10px red; }
+            to { transform: scale(1.1); text-shadow: 0 0 30px red, 0 0 10px white; }
+        }
+
+        @keyframes drip {
+            0% { height: 0; opacity: 1; }
+            80% { height: 100vh; opacity: 0.8; }
+            100% { height: 100vh; opacity: 0; }
+        }
+
+        @keyframes screen-shake {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(-5px, 5px); }
+            50% { transform: translate(5px, -5px); }
+            75% { transform: translate(-5px, -5px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        .shake-screen {
+            animation: screen-shake 0.1s infinite;
+        }
+
+        .bg-flash {
+            animation: bg-flash 0.1s infinite;
+        }
+
+        .horror-btn {
+            margin-top: 50px;
+            padding: 15px 40px;
+            font-size: 24px;
+            font-family: "SimSun", serif;
+            color: #ff0000;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #8b0000;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 1s, transform 0.2s;
+            pointer-events: auto;
+            z-index: 10001;
+            display: none;
+        }
+        .horror-btn:hover {
+            background: #330000;
+            transform: scale(1.1);
+            text-shadow: 0 0 10px red;
+        }
+
+        @keyframes bg-flash {
+            0% { background-color: #000; }
+            50% { background-color: #300; }
+            100% { background-color: #000; }
+        }
+
+
+        #action-btn:active {
+            background: rgba(255, 0, 0, 0.7);
+        }
+
+        #inventory {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            pointer-events: auto;
+            background: rgba(43, 29, 14, 0.8);
+            padding: 10px;
+            border: 2px solid #5c4033;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        #inv-slots {
+            display: flex;
+            gap: 10px;
+        }
+
+        .inv-item {
+            width: 50px;
+            height: 50px;
+            background: #e3dac9;
+            border: 1px solid #8b4513;
+            color: #2b1d0e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px; /* Larger icons */
+            cursor: pointer;
+            user-select: none;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+
+        .inv-item:hover {
+            transform: scale(1.1);
+            border-color: #8b0000;
+            box-shadow: 0 0 5px #8b0000;
+        }
+
+        /* Document Reader */
+        #doc-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9); /* Darker overlay */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            pointer-events: auto;
+        }
+
+        #doc-paper {
+            width: 80%;
+            max-width: 600px;
+            height: 80%;
+            background: #f4e4bc; /* Old paper color */
+            color: #2b1d0e;
+            padding: 40px;
+            box-sizing: border-box;
+            font-family: "SimSun", "Songti SC", serif;
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+            overflow-y: auto;
+            position: relative;
+            background-image: 
+                linear-gradient(#d3c6a6 1px, transparent 1px),
+                radial-gradient(circle at 50% 50%, transparent 90%, rgba(0,0,0,0.1) 100%);
+            background-size: 100% 2em, 100% 100%;
+            line-height: 2em;
+            border-radius: 2px;
+        }
+
+        #doc-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #8b0000;
+            font-weight: bold;
+        }
+
+        #doc-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #550000;
+            border-bottom: 2px solid #550000;
+            padding-bottom: 10px;
+        }
+
+        #doc-content {
+            font-size: 18px;
+            white-space: pre-wrap;
+        }
+
+        /* Tooltip for inventory */
+        #tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 5px 10px;
+            border: 1px solid #8b0000;
+            pointer-events: none;
+            display: none;
+            z-index: 3000;
+            font-size: 14px;
+        }
+
+        /* 移动端适配：屏幕宽度小于 1024px 时显示虚拟按键 */
+        @media (max-width: 1024px) {
+            #joystick-zone, #action-btn {
+                display: flex;
+            }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Stamina Bar */
+        #stamina-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #555;
+            border-radius: 5px;
+            overflow: hidden;
+            display: none; /* Hidden by default, shown in game */
+        }
+        #stamina-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            transition: width 0.1s linear;
+        }
+
+        /* Sanity Bar */
+        #sanity-container {
+            position: absolute;
+            top: 40px; /* Below stamina bar */
+            left: 20px;
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #555;
+            border-radius: 5px;
+            overflow: hidden;
+            display: none;
+        }
+        #sanity-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #4a90e2, #00bfff);
+            transition: width 0.1s linear;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <div id="grain"></div>
+    <div id="ui-layer">
+        <div id="dialog-box" class="hidden">
+            <p id="speaker-name"></p>
+            <p id="dialog-text"></p>
+            <span id="next-arrow">▼</span>
+        </div>
+        
+        <!-- 物品栏 -->
+        <div id="inventory">
+            <div id="inv-slots"></div>
+        </div>
+        <div id="tooltip"></div>
+
+        <!-- 虚拟摇杆区域 -->
+        <div id="joystick-zone">
+            <div id="joystick-knob"></div>
+        </div>
+        <!-- 交互按钮 -->
+        <div id="action-btn">A</div>
+    </div>
+
+    <!-- 文档阅读器 (移出 ui-layer 以确保点击事件正常) -->
+    <div id="doc-overlay">
+        <div id="doc-paper">
+            <div id="doc-close">X</div>
+            <div id="doc-title"></div>
+            <div id="doc-content"></div>
+        </div>
+    </div>
+
+    <!-- 保险箱密码锁 UI (移出 ui-layer 以确保点击事件正常) -->
+    <div id="safe-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2500; justify-content: center; align-items: center; pointer-events: auto;">
+        <div id="safe-box" style="background: #333; padding: 20px; border: 4px solid #555; border-radius: 10px; width: 240px; text-align: center; box-shadow: 0 0 20px #000;">
+            <div style="color: #fff; margin-bottom: 10px; font-family: monospace;">输入密码</div>
+            <div id="safe-display" style="background: #000; color: #0f0; font-family: monospace; font-size: 32px; height: 40px; line-height: 40px; margin-bottom: 15px; border: 2px solid #555; letter-spacing: 5px;"></div>
+            <div id="safe-keypad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                <!-- Keys generated by JS -->
+            </div>
+            <div style="margin-top: 15px; display: flex; justify-content: space-between;">
+                <button id="safe-close" style="background: #800; color: #fff; border: none; padding: 5px 15px; cursor: pointer;">取消</button>
+                <button id="safe-enter" style="background: #080; color: #fff; border: none; padding: 5px 15px; cursor: pointer;">确定</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 竖屏提示 (已移除强制遮罩，改为仅在竖屏时调整UI布局) -->
+    <!-- <div id="orientation-overlay">
+        <p>⚠️ 请旋转手机 ⚠️</p>
+        <p style="font-size: 16px; color: #fff; margin-top: 10px;">横屏体验更佳</p>
+    </div> -->
+
+    <!-- 结局特效层 -->
+    <div id="ending-layer">
+        <div id="ending-text" class="blood-text">
+            棺材里躺着的...<br>竟然是你自己！
+            <div class="blood-drip"></div>
+        </div>
+        <button id="restart-btn" class="horror-btn">重新开始</button>
+    </div>
+
+    <script type="module">
+        // Import all scenes
+        import { BootScene } from './src/scenes/BootScene.js';
+        import { TitleScene } from './src/scenes/TitleScene.js';
+        import { IntroScene } from './src/scenes/IntroScene.js';
+        import { GameScene } from './src/scenes/GameScene.js';
+
+        // UI Logic
+        window.dialogActive = false;
+        window.lastDialogCloseTime = 0;
+        const dialogBox = document.getElementById('dialog-box');
+        const speakerName = document.getElementById('speaker-name');
+        const dialogText = document.getElementById('dialog-text');
+        const invSlots = document.getElementById('inv-slots');
+        const tooltip = document.getElementById('tooltip');
+        const docOverlay = document.getElementById('doc-overlay');
+        const docTitle = document.getElementById('doc-title');
+        const docContent = document.getElementById('doc-content');
+        const docClose = document.getElementById('doc-close');
+        const staminaContainer = document.getElementById('stamina-container');
+        const staminaBar = document.getElementById('stamina-bar');
+
+        // Safe Logic
+        const safeOverlay = document.getElementById('safe-overlay');
+        const safeDisplay = document.getElementById('safe-display');
+        const safeKeypad = document.getElementById('safe-keypad');
+        let currentSafeCode = "";
+        let onSafeSuccess = null;
+
+        // Init Keypad
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, '←'].forEach(key => {
+            const btn = document.createElement('div');
+            btn.textContent = key;
+            btn.style.cssText = "background: #444; color: #fff; padding: 10px; cursor: pointer; border-radius: 4px; font-weight: bold; user-select: none;";
+            btn.onmouseover = () => btn.style.background = "#666";
+            btn.onmouseout = () => btn.style.background = "#444";
+            btn.onclick = () => {
+                if (key === 'C') {
+                    currentSafeCode = "";
+                } else if (key === '←') {
+                    currentSafeCode = currentSafeCode.slice(0, -1);
+                } else {
+                    if (currentSafeCode.length < 4) currentSafeCode += key;
+                }
+                safeDisplay.textContent = currentSafeCode;
+            };
+            safeKeypad.appendChild(btn);
+        });
+
+        document.getElementById('safe-close').onclick = () => {
+            safeOverlay.style.display = 'none';
+            window.dialogActive = false;
+        };
+
+        document.getElementById('safe-enter').onclick = () => {
+            if (currentSafeCode === '1988') { // Hardcoded password for now
+                safeOverlay.style.display = 'none';
+                window.dialogActive = false;
+                if (onSafeSuccess) onSafeSuccess();
+            } else {
+                safeDisplay.style.color = '#f00';
+                setTimeout(() => safeDisplay.style.color = '#0f0', 500);
+                currentSafeCode = "";
+                safeDisplay.textContent = "";
+            }
+        };
+
+        window.showSafeUI = function(callback) {
+            safeOverlay.style.display = 'flex';
+            currentSafeCode = "";
+            safeDisplay.textContent = "";
+            onSafeSuccess = callback;
+            window.dialogActive = true;
+        };
+
+        window.updateSanityUI = function(current, max) {
+            // UI removed per user request
+            // Maintain function to prevent errors in GameScene
+            const pct = Math.max(0, Math.min(100, (current / max) * 100));
+            if (pct < 30) {
+                 document.body.style.filter = `hue-rotate(${30-pct}deg) blur(1px)`; 
+            } else {
+                 document.body.style.filter = 'none';
+            }
+        };
+
+        window.updateStaminaUI = function(current, max) {
+            // UI removed per user request
+        };
+
+        // Document Logic
+        window.showDocument = function(title, content) {
+            docTitle.textContent = title;
+            docContent.textContent = content;
+            docOverlay.style.display = 'flex';
+            window.dialogActive = true; // Pause game
+        };
+
+        docClose.addEventListener('click', () => {
+            docOverlay.style.display = 'none';
+            window.dialogActive = false; // Resume game
+        });
+        
+        // Ending Logic
+        window.triggerHorrorEnding = function(onComplete) {
+            const layer = document.getElementById('ending-layer');
+            const text = document.getElementById('ending-text');
+            const btn = document.getElementById('restart-btn');
+            
+            // Reset state
+            text.classList.remove('visible');
+            text.style.opacity = '';
+            text.style.transition = '';
+            btn.style.opacity = '0';
+            btn.style.display = 'none';
+            layer.style.pointerEvents = 'auto'; // Enable interaction for button
+            
+            layer.style.display = 'flex';
+            
+            // Phase 1: Build up
+            setTimeout(() => {
+                layer.classList.add('bg-flash');
+            }, 100);
+
+            // Phase 2: Show text with horror effect
+            setTimeout(() => {
+                text.classList.add('visible');
+                document.body.classList.add('shake-screen');
+            }, 500);
+
+            // Phase 3: Stop shaking, fade out text, show button
+            setTimeout(() => {
+                document.body.classList.remove('shake-screen');
+                layer.classList.remove('bg-flash');
+                
+                // Fade out text to make room for pure black/button
+                text.style.opacity = '0';
+                text.style.transition = 'opacity 2s';
+                
+                // Show button after text fades
+                setTimeout(() => {
+                    btn.textContent = '醒来'; // Change text to hint at story continuation
+                    btn.style.display = 'block';
+                    // Force reflow
+                    void btn.offsetWidth;
+                    btn.style.opacity = '1';
+                }, 2000);
+                
+                // Button click handler
+                btn.onclick = () => {
+                    layer.style.display = 'none';
+                    if (onComplete) onComplete();
+                };
+            }, 5000);
+        };
+
+        // Ending Screen (Good/True Ending)
+        window.showEndingScreen = function(title, message, callback) {
+            const layer = document.getElementById('ending-layer');
+            const text = document.getElementById('ending-text');
+            const btn = document.getElementById('restart-btn');
+            
+            // Reset state
+            text.classList.remove('visible');
+            text.style.opacity = '0';
+            text.style.transition = '';
+            btn.style.opacity = '0';
+            btn.style.display = 'none';
+            layer.style.pointerEvents = 'auto';
+            layer.style.display = 'flex';
+            
+            // Set text
+            text.innerHTML = `<span style="color: #fff; font-size: 40px;">${title}</span><br><br><span style="color: #aaa; font-size: 24px;">${message}</span>`;
+            
+            // Remove blood drip for good ending
+            const drip = text.querySelector('.blood-drip');
+            if(drip) drip.style.display = 'none';
+
+            // Fade in
+            setTimeout(() => {
+                text.style.transition = 'opacity 2s';
+                text.style.opacity = '1';
+                text.style.transform = 'scale(1)';
+            }, 500);
+
+            // Show button
+            setTimeout(() => {
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                
+                newBtn.textContent = '重新开始'; // Reset text
+                newBtn.style.display = 'block';
+                // Force reflow
+                void newBtn.offsetWidth;
+                newBtn.style.opacity = '1';
+                newBtn.onclick = () => {
+                    layer.style.display = 'none';
+                    if (callback) callback();
+                    // Reset blood drip style for next time
+                    if(drip) drip.style.display = '';
+                };
+            }, 3000);
+        };
+
+        window.showDialog = function(name, text, callback) {
+            // Clear any existing typing timer to prevent garbled text
+            if (window.currentDialogTimer) {
+                clearInterval(window.currentDialogTimer);
+                window.currentDialogTimer = null;
+            }
+
+            window.dialogActive = true;
+            dialogBox.classList.remove('hidden');
+            speakerName.textContent = name;
+            
+            // Typewriter effect
+            let i = 0;
+            dialogText.textContent = '';
+            window.currentDialogNextHandler = null; // Reset handler
+            window.skipDialog = false; // Reset skip flag
+            
+            window.currentDialogTimer = setInterval(() => {
+                if (window.skipDialog) {
+                    clearInterval(window.currentDialogTimer);
+                    window.currentDialogTimer = null;
+                    dialogText.textContent = text;
+                    i = text.length;
+                    
+                    // Trigger completion logic immediately (wait for click)
+                    const nextHandler = () => {
+                        // Prevent multiple clicks firing multiple times
+                        if (!window.dialogActive) return; 
+
+                        dialogBox.removeEventListener('click', nextHandler);
+                        window.currentDialogNextHandler = null;
+                        
+                        dialogBox.classList.add('hidden');
+                        window.dialogActive = false;
+                        window.lastDialogCloseTime = Date.now();
+                        if (callback) callback();
+                    };
+                    
+                    window.currentDialogNextHandler = nextHandler;
+                    // Re-bind click listener for closing
+                    dialogBox.addEventListener('click', nextHandler, { once: true });
+                    return;
+                }
+
+                dialogText.textContent += text.charAt(i);
+                i++;
+                if (i >= text.length) {
+                    clearInterval(window.currentDialogTimer);
+                    window.currentDialogTimer = null;
+                    
+                    // Wait for click or key to continue
+                    const nextHandler = () => {
+                        if (!window.dialogActive) return; 
+                        dialogBox.removeEventListener('click', nextHandler);
+                        window.currentDialogNextHandler = null;
+                        
+                        dialogBox.classList.add('hidden');
+                        window.dialogActive = false;
+                        window.lastDialogCloseTime = Date.now();
+                        if (callback) callback();
+                    };
+                    
+                    window.currentDialogNextHandler = nextHandler;
+                    // Simple click on dialog box to proceed
+                    dialogBox.addEventListener('click', nextHandler, { once: true });
+                }
+            }, 50);
+        };
+
+        // Global Input Handler for Dialog
+        document.addEventListener('keydown', (e) => {
+            // Document Reader Close on Space/Esc
+            const docOverlay = document.getElementById('doc-overlay');
+            if (docOverlay.style.display === 'flex') {
+                if (e.code === 'Space' || e.code === 'Escape' || e.code === 'Enter') {
+                    docOverlay.style.display = 'none';
+                    window.dialogActive = false;
+                    window.lastDialogCloseTime = Date.now(); // Update time to prevent immediate re-trigger
+                    return;
+                }
+            }
+
+            if (!window.dialogActive) return;
+            
+            if (e.code === 'Space' || e.code === 'Enter') {
+                // If text is still typing, skip to end
+                const dialogText = document.getElementById('dialog-text');
+                if (window.currentDialogNextHandler === null && dialogText.textContent.length > 0) {
+                    window.skipDialog = true;
+                    return;
+                }
+
+                // If we have a pending next handler (dialog finished typing)
+                if (window.currentDialogNextHandler) {
+                    window.currentDialogNextHandler();
+                }
+            }
+        });
+
+        window.updateInventory = function(item) {
+            const slot = document.createElement('div');
+            slot.className = 'inv-item';
+            
+            // Icon mapping
+            let icon = item;
+            if (item.includes('钥匙')) icon = '🗝️';
+            else if (item.includes('饭')) icon = '🍚';
+            else if (item.includes('火柴')) icon = '🔥';
+            else if (item.includes('照片')) icon = '🖼️';
+            else if (item.includes('信')) icon = '✉️';
+            
+            slot.textContent = icon;
+            
+            // Tooltip events
+            slot.addEventListener('mouseenter', (e) => {
+                tooltip.textContent = item;
+                tooltip.style.display = 'block';
+                tooltip.style.left = e.clientX + 10 + 'px';
+                tooltip.style.top = e.clientY + 10 + 'px';
+            });
+            slot.addEventListener('mouseleave', () => {
+                tooltip.style.display = 'none';
+            });
+            slot.addEventListener('mousemove', (e) => {
+                tooltip.style.left = e.clientX + 10 + 'px';
+                tooltip.style.top = e.clientY + 10 + 'px';
+            });
+            
+            // Click to read if it's a letter/photo
+            if (item.includes('信') || item.includes('照片')) {
+                slot.addEventListener('click', () => {
+                    // This would need a callback or global lookup for content
+                    // For now just show item name
+                    // window.showDocument(item, "...");
+                });
+            }
+
+            invSlots.appendChild(slot);
+        };
+
+        // Game Config
+        const config = {
+            type: Phaser.AUTO,
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+                width: 800,
+                height: 600
+            },
+            parent: 'game-container',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false // Enable debug to see hitboxes
+                }
+            },
+            scene: [BootScene, TitleScene, IntroScene, GameScene],
+            pixelArt: true
+        };
+
+        // Start Game
+        try {
+            const game = new Phaser.Game(config);
+            console.log("Game started successfully");
+        } catch (e) {
+            console.error("Phaser Init Error", e);
+            throw e;
+        }
+    </script>
+</body>
+</html>
