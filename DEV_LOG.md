@@ -8,6 +8,10 @@
 
 老板随后提供了旧仓库 `https://github.com/huachen19867/huihun_game_AI`。只读核查显示该仓库存在，默认分支为 `main`，当前远端 HEAD 是 `8b1efde4f799fc19be9c93cbb523c669cf0f7f7e`，提交信息为 `Polish repository for open-source maintenance`，提交时间是 2026-05-31 19:18 +0800。把远端临时浅克隆后与当前本地目录按相对路径和 SHA256 哈希比对，结论是远端保留的是旧版本：本地共有 36 个文件，远端共有 22 个文件；本地独有 17 个文件，包括 `src\systems\StartRoute.js`、`src\systems\StoryState.js`、`tools\build_standalone_entry.mjs` 和多份 `tools\verify_*.mjs`；远端独有 `.gitignore`、`.nojekyll`、`LICENSE`；共有但内容不同的核心文件包括 `index.html`、`README.md`、`ROADMAP.md`、`server.ps1`、`src\data\Maps.js`、`src\scenes\GameScene.js`、`src\systems\InteractionManager.js`、`src\systems\MapManager.js`、`src\systems\TextureGenerator.js` 等。因此准确判断是：以前传过 GitHub，但当前 6 月更新后的最新本地版本尚未同步到该仓库。
 
+执行同步时保留远端历史而不是强推覆盖：先在当前目录 `git init -b main`，添加 `origin`，`git fetch origin main`，再用 `git reset --mixed origin/main` 让本地分支接到远端旧 HEAD，同时保留当前工作区文件；随后补回远端原有 `.gitignore`、`.nojekyll` 和 `LICENSE`。提交前发现 `.superpowers/` 是本地过程文件、`Huisha_Game.zip` 是 2026-02 的旧包，不能代表当前版本，所以加入 `.gitignore` 保留在本地但不入库；README 的 Netlify Drop 说明也改为上传项目静态文件，避免公开仓库指向旧压缩包。
+
+提交前验证命令为：`node tools\build_standalone_entry.mjs`、`node tools\verify_standalone_entry.mjs`、`node tools\verify_story_state.mjs`、`node tools\verify_maps.mjs`、`node tools\verify_start_route.mjs`、18 个源码和工具文件的 `node --check`，以及 `git diff --cached --check`。其中 `git diff --cached --check` 最初抓到大量行尾空白和 `index.html` 的 CRLF/LF 混合换行，已通过机械清理行尾空白、统一本次提交文本文件为 LF、重新生成入口页后解决。主同步提交为 `1d3955cb2ee7f1b69ce8f6443039ca6430e7f9dc`，提交信息 `Sync latest multi-ending game build`，已成功推送到 GitHub `main`，远端从 `8b1efde` 快进到 `1d3955c`。
+
 ## 2026-06-09
 
 修复了一次“点开后黑屏，只显示 `Resource Load Error / Failed to load: undefined`”的启动问题。定位时先用本地 Node 静态服务打开 `http://127.0.0.1:8000/`，标题页和点击进入序章都正常，说明资源本身没有缺；再结合截图和入口代码判断，根因是直接双击 `index.html` 时，浏览器会阻止本地 `file://` 页面里的 ES module 继续 `import ./src/...`，原来的通用资源错误兜底又没有拿到具体 `src`，所以只显示 `undefined`。
