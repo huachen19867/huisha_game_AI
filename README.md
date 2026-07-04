@@ -44,6 +44,8 @@
 ## 🧪 3D 原型
 标题页新增了“进入 3D 原型”入口，也可以直接访问 `prototype3d.html`。当前 3D 版本是第一阶段原型：保留 2D 主线不变，只提供正厅与走廊小段的 Three.js 低模探索、基础移动、物件调查和返回标题。
 
+3D 美术不建议直接在代码里硬搓。后续生成老宅场景、贴图和道具参考时，优先使用 `docs/3D_ART_PROMPTS.md` 里的完整提示词包。
+
 ## 🛠️ 本地运行 (手动)
 如果你想手动运行：
 1. 右键点击 `server.ps1`，选择“使用 PowerShell 运行”。
@@ -98,6 +100,7 @@
 - [路线图](ROADMAP.md)
 - [开发日志](DEV_LOG.md)
 - [游戏流程梳理](docs/GAME_FLOW.md)
+- [3D 美术生成提示词包](docs/3D_ART_PROMPTS.md)
 - [扩展设计文档](docs/superpowers/specs/2026-04-29-huisha-multi-ending-expansion-design.md)
 
 ## 📄 许可证
