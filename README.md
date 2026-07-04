@@ -91,6 +91,7 @@
 - [剧情草案](STORY.md)
 - [路线图](ROADMAP.md)
 - [开发日志](DEV_LOG.md)
+- [游戏流程梳理](docs/GAME_FLOW.md)
 - [扩展设计文档](docs/superpowers/specs/2026-04-29-huisha-multi-ending-expansion-design.md)
 
 ## 📄 许可证

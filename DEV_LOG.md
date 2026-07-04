@@ -1,5 +1,15 @@
 # 开发日志
 
+## 2026-07-04
+
+梳理了一次《回煞》当前版本的完整游戏流程，并沉淀到 `docs/GAME_FLOW.md`。这次没有改玩法代码，重点是把源码里的实际路由、地图拓扑、供品链、记忆链和多结局判定统一成一份可维护说明，避免后续只凭 `STORY.md` 的剧情稿或旧设计文档判断实现状态。
+
+本次读取的关键文件包括 `src/scenes/TitleScene.js`、`src/scenes/IntroScene.js`、`src/scenes/GameScene.js`、`src/systems/InteractionManager.js`、`src/systems/MapManager.js`、`src/systems/StoryState.js`、`src/data/Maps.js` 和 `docs/superpowers/specs/2026-04-29-huisha-multi-ending-expansion-design.md`。以后再查游戏流程，可以优先看 `docs/GAME_FLOW.md`：入口链路是 `BootScene -> TitleScene -> IntroScene -> GameScene`，调试直达由 `StartRoute.js` 支持；真相层级由 `StoryState.getTruthLevel()` 判定，`surface / family / complete` 分别对应低线索、中线索和完整真相。
+
+这次复盘出的关键判断是：当前结局不是单一路径。`room_entrance` 的 `exit_door` 会按真相层级直接触发“破茧 / 回煞 / 进入车祸记忆”，但黑布遗像触发 `doorSlammed` 后，正厅回大门的普通门会锁住，因此它更像一个早退或特殊路由入口；另一套主线高潮是供品仪式加血红钥匙开棺，线索完整时进 `memory_crash`，否则进 `room_memory`。后续如果要精修流程，需先确认“出口分支”是保留为早退结局，还是要让玩家在锁门后也能明确回到该离开选择。
+
+为了维护索引，已在 `README.md` 的文档列表里增加 `docs/GAME_FLOW.md` 链接。验证方式采用现有轻量脚本即可：`node tools\verify_story_state.mjs`、`node tools\verify_maps.mjs`、`node tools\verify_start_route.mjs`；如果后续同步单文件入口，还需要先跑 `node tools\build_standalone_entry.mjs`，再跑 `node tools\verify_standalone_entry.mjs`。
+
 ## 2026-06-21
 
 核查了一次“最新版本是否已经自动推到 GitHub”。当前工作区 `C:\AI\游戏开发\回煞` 不是 Git 仓库，`git status --short --branch`、`git remote -v`、`git log --oneline --decorate --graph -n 10` 和 `git branch -vv` 都返回 `fatal: not a git repository`；递归查找 `.git` 目录也为空，因此本地没有可用于判断或执行推送的 Git 历史和远端配置。
