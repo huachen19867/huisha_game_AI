@@ -13,7 +13,8 @@
         candle: '美术/烛.png',
         redCord: '美术/红绳.png',
         chair: '美术/椅子.png',
-        coffinDetail: '美术/棺材区域.png'
+        coffinDetail: '美术/棺材区域.png',
+        corridorVista: '美术/走廊全景.png'
     };
 
     class ThreePrototypeScene {
@@ -102,7 +103,8 @@
                 candle: load(ART_TEXTURES.candle),
                 redCord: load(ART_TEXTURES.redCord),
                 chair: load(ART_TEXTURES.chair),
-                coffinDetail: load(ART_TEXTURES.coffinDetail)
+                coffinDetail: load(ART_TEXTURES.coffinDetail),
+                corridorVista: load(ART_TEXTURES.corridorVista)
             };
         }
 
@@ -162,7 +164,8 @@
                     blending: THREE.AdditiveBlending
                 }),
                 chair: artMaterial(this.textures.chair, 0.56, { depthWrite: false }),
-                coffinDetail: artMaterial(this.textures.coffinDetail, 0.4, { depthWrite: false })
+                coffinDetail: artMaterial(this.textures.coffinDetail, 0.4, { depthWrite: false }),
+                corridorVista: artMaterial(this.textures.corridorVista, 0.74)
             };
         }
 
@@ -182,6 +185,14 @@
             const sideFill = new THREE.PointLight(0x9b7350, 1.4, 7.5, 1.8);
             sideFill.position.set(-2.8, 1.85, 0.2);
             this.scene.add(sideFill);
+
+            this.corridorGuideLight = new THREE.PointLight(0x6f8ca8, 1.85, 7.2, 1.55);
+            this.corridorGuideLight.position.set(0, 1.7, -7.6);
+            this.scene.add(this.corridorGuideLight);
+
+            const doorCrackLight = new THREE.PointLight(0xb6422b, 1.65, 4.8, 1.9);
+            doorCrackLight.position.set(0, 1.35, -11.35);
+            this.scene.add(doorCrackLight);
 
             this.flashlight = new THREE.SpotLight(0xfff0c8, 7.0, 13.5, Math.PI / 5.7, 0.62, 1.05);
             this.flashlight.castShadow = true;
@@ -229,6 +240,9 @@
             this.addPlane('portrait-art-plane', 1.18, 1.58, [0, 1.92, -3.88], [0, 0, 0], this.materials.portrait);
             this.addPlane('corridor-detail-left', 6.2, 2.42, [-1.305, 1.54, -7.48], [0, Math.PI / 2, 0], this.materials.corridorDetail);
             this.addPlane('corridor-detail-right', 6.2, 2.42, [1.305, 1.54, -7.48], [0, -Math.PI / 2, 0], this.materials.corridorDetail);
+            this.addPlane('corridor-end-art-plane', 2.44, 1.38, [0, 1.46, -11.575], [0, 0, 0], this.materials.corridorVista);
+            this.addBox('corridor-door-threshold', [2.1, 0.08, 0.12], [0, 0.03, -10.65], woodMat, false);
+            this.addBox('corridor-door-seal', [1.45, 0.08, 0.08], [0, 1.4, -11.54], woodMat, false);
             this.addPlane('floor-debris', 3.6, 2.7, [0, 0.035, -0.35], [-Math.PI / 2, 0, 0], this.materials.floorDebris);
             this.addPlane('coffin-art-panel', 2.58, 1.72, [0, 0.865, 0.78], [-Math.PI / 2, 0, 0.02], this.materials.coffinDetail);
             this.addPlane('red-cord-art-coffin', 2.15, 2.15, [0, 0.94, 0.78], [-Math.PI / 2, 0, 0], this.materials.redCord);

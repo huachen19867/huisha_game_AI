@@ -53,6 +53,22 @@
                 radius: 1.7,
                 title: '走廊',
                 text: '走廊尽头贴着倒过来的福字。再往前，墙里的脚步声就会跟上你。'
+            },
+            {
+                id: 'corridor_midpoint',
+                label: '按 E 听墙里的脚步',
+                position: { x: 0, y: 1.4, z: -6.55 },
+                radius: 1.25,
+                title: '墙里的脚步',
+                text: '脚步声贴着木墙走，与你保持同样的速度。你停下，它也停下。'
+            },
+            {
+                id: 'corridor_end_door',
+                label: '按 E 调查尽头封门',
+                position: { x: 0, y: 1.4, z: -11.1 },
+                radius: 1.45,
+                title: '尽头封门',
+                text: '门缝后没有风，却有烛火在晃。门闩从这一侧落下，像是有人刚刚替你关好。'
             }
         ]
     };
