@@ -17,7 +17,13 @@ const requiredArtFiles = [
     '美术/木梁.png',
     '美术/供桌区域.png',
     '美术/走廊墙面.png',
-    '美术/纸钱与香灰.png'
+    '美术/纸钱与香灰.png',
+    '美术/相框.png',
+    '美术/香炉.png',
+    '美术/烛.png',
+    '美术/红绳.png',
+    '美术/椅子.png',
+    '美术/棺材区域.png'
 ];
 
 await Promise.all(requiredArtFiles.map((path) => access(new URL(`../${path}`, import.meta.url))));
@@ -39,6 +45,16 @@ assert.match(sceneModule, /requestAnimationFrame/, '3D scene must animate via re
 assert.match(sceneModule, /TextureLoader/, '3D scene must load generated art as textures');
 assert.match(sceneModule, /美术\/木墙\.png/, '3D scene must use the generated wall texture');
 assert.match(sceneModule, /美术\/木地板\.png/, '3D scene must use the generated floor texture');
+assert.match(sceneModule, /美术\/相框\.png/, '3D scene must use the generated portrait frame art');
+assert.match(sceneModule, /美术\/香炉\.png/, '3D scene must use the generated incense burner art');
+assert.match(sceneModule, /美术\/烛\.png/, '3D scene must use the generated candle art');
+assert.match(sceneModule, /美术\/红绳\.png/, '3D scene must use the generated red cord art');
+assert.match(sceneModule, /美术\/椅子\.png/, '3D scene must use the generated chair art');
+assert.match(sceneModule, /美术\/棺材区域\.png/, '3D scene must use the generated coffin area art');
+assert.match(sceneModule, /portrait-art-plane/, '3D scene must place a portrait art plane');
+assert.match(sceneModule, /incense-art-plane/, '3D scene must place an incense art plane');
+assert.match(sceneModule, /candle-art-left/, '3D scene must place candle art planes');
+assert.match(sceneModule, /coffin-art-panel/, '3D scene must place a coffin detail art panel');
 assert.match(sceneModule, /toneMappingExposure/, '3D scene must raise exposure for readable lighting');
 assert.match(controlsModule, /canOccupy/, '3D controls must test occupied space before moving');
 assert.match(controlsModule, /collidesWithObstacle/, '3D controls must collide against obstacle rectangles');

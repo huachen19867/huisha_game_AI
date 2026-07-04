@@ -7,7 +7,13 @@
         beam: '美术/木梁.png',
         altarBackdrop: '美术/供桌区域.png',
         corridorDetail: '美术/走廊墙面.png',
-        floorDebris: '美术/纸钱与香灰.png'
+        floorDebris: '美术/纸钱与香灰.png',
+        portrait: '美术/相框.png',
+        incense: '美术/香炉.png',
+        candle: '美术/烛.png',
+        redCord: '美术/红绳.png',
+        chair: '美术/椅子.png',
+        coffinDetail: '美术/棺材区域.png'
     };
 
     class ThreePrototypeScene {
@@ -90,11 +96,26 @@
                 beam: load(ART_TEXTURES.beam, { repeat: [1.2, 1.2] }),
                 altarBackdrop: load(ART_TEXTURES.altarBackdrop),
                 corridorDetail: load(ART_TEXTURES.corridorDetail),
-                floorDebris: load(ART_TEXTURES.floorDebris)
+                floorDebris: load(ART_TEXTURES.floorDebris),
+                portrait: load(ART_TEXTURES.portrait),
+                incense: load(ART_TEXTURES.incense),
+                candle: load(ART_TEXTURES.candle),
+                redCord: load(ART_TEXTURES.redCord),
+                chair: load(ART_TEXTURES.chair),
+                coffinDetail: load(ART_TEXTURES.coffinDetail)
             };
         }
 
         createMaterials() {
+            const artMaterial = (texture, opacity = 1, options = {}) => new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                map: texture,
+                transparent: opacity < 1 || !!options.transparent,
+                opacity,
+                depthWrite: options.depthWrite !== false,
+                blending: options.blending || THREE.NormalBlending
+            });
+
             return {
                 floor: new THREE.MeshStandardMaterial({
                     color: 0xc8aa82,
@@ -132,7 +153,16 @@
                     transparent: true,
                     opacity: 0.22,
                     depthWrite: false
-                })
+                }),
+                portrait: artMaterial(this.textures.portrait, 0.95),
+                incense: artMaterial(this.textures.incense, 0.86),
+                candle: artMaterial(this.textures.candle, 0.78, { depthWrite: false }),
+                redCord: artMaterial(this.textures.redCord, 0.58, {
+                    depthWrite: false,
+                    blending: THREE.AdditiveBlending
+                }),
+                chair: artMaterial(this.textures.chair, 0.56, { depthWrite: false }),
+                coffinDetail: artMaterial(this.textures.coffinDetail, 0.4, { depthWrite: false })
             };
         }
 
@@ -196,9 +226,12 @@
             this.addBox('right-crossbeam', [0.22, 0.22, 5.2], [3.98, 2.78, -0.1], woodMat, true);
 
             this.addPlane('altar-art-backdrop', 3.95, 2.96, [0, 1.7, -4.01], [0, 0, 0], this.materials.altarBackdrop);
+            this.addPlane('portrait-art-plane', 1.18, 1.58, [0, 1.92, -3.88], [0, 0, 0], this.materials.portrait);
             this.addPlane('corridor-detail-left', 6.2, 2.42, [-1.305, 1.54, -7.48], [0, Math.PI / 2, 0], this.materials.corridorDetail);
             this.addPlane('corridor-detail-right', 6.2, 2.42, [1.305, 1.54, -7.48], [0, -Math.PI / 2, 0], this.materials.corridorDetail);
             this.addPlane('floor-debris', 3.6, 2.7, [0, 0.035, -0.35], [-Math.PI / 2, 0, 0], this.materials.floorDebris);
+            this.addPlane('coffin-art-panel', 2.58, 1.72, [0, 0.865, 0.78], [-Math.PI / 2, 0, 0.02], this.materials.coffinDetail);
+            this.addPlane('red-cord-art-coffin', 2.15, 2.15, [0, 0.94, 0.78], [-Math.PI / 2, 0, 0], this.materials.redCord);
         }
 
         createProps() {
@@ -220,6 +253,9 @@
             this.addBox('altar-top', [2.7, 0.12, 0.94], [0, 0.98, -3.12], altarMat, true);
             this.addBox('black-frame', [1.25, 0.84, 0.08], [0, 1.93, -4.0], clothMat, false);
             this.addBox('incense-burner', [0.42, 0.16, 0.28], [0, 1.12, -2.78], redMat, false);
+            this.addPlane('incense-art-plane', 0.62, 0.62, [0, 1.25, -2.53], [0, 0, 0], this.materials.incense);
+            this.addPlane('candle-art-left', 0.56, 0.56, [-1.28, 1.29, -2.52], [0, 0, 0], this.materials.candle);
+            this.addPlane('candle-art-right', 0.56, 0.56, [1.28, 1.29, -2.52], [0, 0, 0], this.materials.candle);
 
             const coffin = this.addBox('coffin', [2.4, 0.62, 1.18], [0, 0.36, 0.78], coffinMat, true);
             coffin.rotation.y = 0.02;
@@ -244,6 +280,10 @@
             this.addChair(3.2, 1.0, chairMat);
             this.addChair(-3.2, -1.1, chairMat);
             this.addChair(3.2, -1.1, chairMat);
+            this.addChairArt('chair-art-left-front', -3.2, 1.0, 0.2);
+            this.addChairArt('chair-art-right-front', 3.2, 1.0, -0.2);
+            this.addChairArt('chair-art-left-back', -3.2, -1.1, 0.2);
+            this.addChairArt('chair-art-right-back', 3.2, -1.1, -0.2);
         }
 
         addChair(x, z, mat) {
@@ -255,6 +295,10 @@
 
         addPillar(x, z, mat) {
             this.addBox(`pillar-${x}-${z}`, [0.52, 3.1, 0.52], [x, 1.48, z], mat, true);
+        }
+
+        addChairArt(name, x, z, yaw) {
+            this.addPlane(name, 0.78, 0.58, [x, 0.72, z + 0.05], [0, yaw, 0], this.materials.chair);
         }
 
         addPlane(name, width, height, position, rotation, material) {
