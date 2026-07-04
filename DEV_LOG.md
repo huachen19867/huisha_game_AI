@@ -2,6 +2,12 @@
 
 ## 2026-07-04
 
+确认下一步 3D 化方向采用第一阶段 A 方案：在现有项目里新增可玩的 3D 原型入口，先覆盖正厅与走廊小段，并保留当前 Phaser 2D 主流程不受影响。已新增设计文档 `docs/superpowers/specs/2026-07-04-huisha-3d-prototype-design.md`，明确本阶段不做完整 3D 资产、不迁移全地图、不重写剧情状态机，而是先用 Three.js 或等价 WebGL 方案验证 3D 手感、灯光、基础交互和返回标题链路。
+
+本次特别把老板的“自动 git / 推 GitHub”列入完成标准：实现完成后必须跑现有验证脚本、必要时重建单文件入口，再提交并推送到 `origin/main`。此前 GitHub 已提示旧远端 `huihun_game_AI` 迁移到 `huisha_game_AI`，本地 `origin` 已更新为 `https://github.com/huachen19867/huisha_game_AI.git`，后续推送应直接走新地址。
+
+## 2026-07-04
+
 梳理了一次《回煞》当前版本的完整游戏流程，并沉淀到 `docs/GAME_FLOW.md`。这次没有改玩法代码，重点是把源码里的实际路由、地图拓扑、供品链、记忆链和多结局判定统一成一份可维护说明，避免后续只凭 `STORY.md` 的剧情稿或旧设计文档判断实现状态。
 
 本次读取的关键文件包括 `src/scenes/TitleScene.js`、`src/scenes/IntroScene.js`、`src/scenes/GameScene.js`、`src/systems/InteractionManager.js`、`src/systems/MapManager.js`、`src/systems/StoryState.js`、`src/data/Maps.js` 和 `docs/superpowers/specs/2026-04-29-huisha-multi-ending-expansion-design.md`。以后再查游戏流程，可以优先看 `docs/GAME_FLOW.md`：入口链路是 `BootScene -> TitleScene -> IntroScene -> GameScene`，调试直达由 `StartRoute.js` 支持；真相层级由 `StoryState.getTruthLevel()` 判定，`surface / family / complete` 分别对应低线索、中线索和完整真相。
