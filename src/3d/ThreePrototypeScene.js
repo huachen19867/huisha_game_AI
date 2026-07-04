@@ -18,9 +18,10 @@
     };
 
     class ThreePrototypeScene {
-        constructor({ root, prompt, onDialog }) {
+        constructor({ root, prompt, objective, onDialog }) {
             this.root = root;
             this.prompt = prompt;
+            this.objective = objective;
             this.onDialog = onDialog;
             this.map = Huisha3D.MAIN_HALL_MAP;
             this.clock = new THREE.Clock();
@@ -66,6 +67,7 @@
                 camera: this.camera,
                 map: this.map,
                 prompt: this.prompt,
+                objective: this.objective,
                 onDialog: this.onDialog
             });
 

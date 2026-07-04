@@ -2,18 +2,21 @@
     const Huisha3D = global.Huisha3D || (global.Huisha3D = {});
 
     class ThreeInteraction {
-        constructor({ camera, map, prompt, onDialog }) {
+        constructor({ camera, map, prompt, objective, onDialog }) {
             this.camera = camera;
             this.map = map;
             this.prompt = prompt;
+            this.objective = objective;
             this.onDialog = onDialog;
             this.current = null;
+            this.visited = new Set();
             this.onKeyDown = (event) => {
                 if (event.code === 'KeyE' && this.current) {
-                    this.onDialog(this.current.title, this.current.text);
+                    this.investigate(this.current);
                 }
             };
             window.addEventListener('keydown', this.onKeyDown);
+            this.updateObjective();
         }
 
         update() {
@@ -32,11 +35,43 @@
 
             this.current = nearest;
             if (nearest) {
-                this.prompt.textContent = nearest.label;
+                const suffix = this.visited.has(nearest.id) ? '（已调查）' : '';
+                this.prompt.textContent = `${nearest.label}${suffix}`;
                 this.prompt.classList.add('is-visible');
             } else {
                 this.prompt.classList.remove('is-visible');
             }
+        }
+
+        investigate(item) {
+            this.visited.add(item.id);
+            this.onDialog(item.title, item.text);
+            this.updateObjective();
+        }
+
+        updateObjective() {
+            if (!this.objective || !this.map.objective) return;
+
+            const flow = this.map.objective;
+            const hallComplete = this.hasVisitedAll(flow.hallRequired || []);
+            const allComplete = this.hasVisitedAll(flow.completeRequired || []);
+
+            if (allComplete) {
+                this.objective.textContent = flow.complete;
+                this.objective.classList.add('is-complete');
+                return;
+            }
+
+            if (hallComplete) {
+                this.objective.textContent = flow.hallComplete;
+            } else {
+                this.objective.textContent = flow.initial;
+            }
+            this.objective.classList.remove('is-complete');
+        }
+
+        hasVisitedAll(ids) {
+            return ids.length > 0 && ids.every((id) => this.visited.has(id));
         }
 
         dispose() {

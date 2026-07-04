@@ -21,6 +21,13 @@
             { id: 'pillar_left_back', xMin: -4.28, xMax: -3.68, zMin: -2.78, zMax: -2.18 },
             { id: 'pillar_right_back', xMin: 3.68, xMax: 4.28, zMin: -2.78, zMax: -2.18 }
         ],
+        objective: {
+            initial: '目标：调查供桌、棺材和黑布相框',
+            hallRequired: ['altar', 'coffin', 'black_frame'],
+            hallComplete: '目标：沿走廊前进，调查尽头封门',
+            completeRequired: ['altar', 'coffin', 'black_frame', 'corridor_end_door'],
+            complete: '目标：返回正厅，等待下一段 3D 内容'
+        },
         interactables: [
             {
                 id: 'altar',

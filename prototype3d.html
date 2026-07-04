@@ -103,6 +103,26 @@
             text-shadow: 0 1px 3px #000;
         }
 
+        .objective {
+            position: absolute;
+            top: 96px;
+            left: 20px;
+            max-width: min(390px, calc(100vw - 40px));
+            border-left: 3px solid #b92929;
+            background: linear-gradient(90deg, rgba(5, 4, 3, 0.82), rgba(5, 4, 3, 0.42));
+            color: #f2dfae;
+            padding: 10px 14px;
+            font-size: 15px;
+            line-height: 1.55;
+            text-shadow: 0 1px 4px #000;
+            box-shadow: 0 0 24px rgba(0, 0, 0, 0.22);
+        }
+
+        .objective.is-complete {
+            border-left-color: #d9c17e;
+            color: #fff1c7;
+        }
+
         .prompt {
             position: absolute;
             left: 50%;
@@ -194,6 +214,13 @@
             .return-link {
                 min-width: 88px;
             }
+
+            .objective {
+                top: 86px;
+                left: 12px;
+                max-width: calc(100vw - 24px);
+                font-size: 13px;
+            }
         }
     </style>
 </head>
@@ -207,6 +234,7 @@
             </div>
             <button class="return-link" id="return-title" type="button">返回标题</button>
         </div>
+        <div class="objective" id="objective-panel" aria-live="polite">目标：调查正厅里的供桌、棺材和黑布相框</div>
         <div class="prompt" id="interaction-prompt">靠近物件后按 E 调查</div>
         <div class="controls">WASD 移动，拖动鼠标或触控滑动视角，靠近物件按 E 调查。点击画面可锁定鼠标。</div>
     </div>
@@ -242,9 +270,11 @@
 
             const root = document.getElementById('three-root');
             const prompt = document.getElementById('interaction-prompt');
+            const objective = document.getElementById('objective-panel');
             const scene = new window.Huisha3D.ThreePrototypeScene({
                 root,
                 prompt,
+                objective,
                 onDialog: window.show3dDialog
             });
             scene.start();
