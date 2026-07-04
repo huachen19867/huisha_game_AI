@@ -6,6 +6,12 @@
 
 本次特别把老板的“自动 git / 推 GitHub”列入完成标准：实现完成后必须跑现有验证脚本、必要时重建单文件入口，再提交并推送到 `origin/main`。此前 GitHub 已提示旧远端 `huihun_game_AI` 迁移到 `huisha_game_AI`，本地 `origin` 已更新为 `https://github.com/huachen19867/huisha_game_AI.git`，后续推送应直接走新地址。
 
+完成了第一版 3D 原型入口实现。新增 `prototype3d.html`、`vendor/three.min.js`、`src/3d/ThreeHouseMap.js`、`src/3d/ThreeControls.js`、`src/3d/ThreeInteraction.js` 和 `src/3d/ThreePrototypeScene.js`，标题页 `TitleScene` 增加“进入 3D 原型”选项，默认 2D 主线仍由空格或“开始 2D 主线”进入。3D 原型采用本地 Three.js 普通脚本而不是模块导入，原因是当前项目需要保留 `index.html` 的单文件直开能力；3D 页面独立加载本地脚本，不干扰 Phaser 主包。
+
+新增 `tools/verify_3d_prototype.mjs`，先验证过缺少 `prototype3d.html` 时会失败，再补齐实现使其通过；同时增强 `tools/verify_standalone_entry.mjs`，要求生成后的 `index.html` 包含 `prototype3d.html` 入口。实现后已运行 `node tools\build_standalone_entry.mjs` 同步单文件入口，后续任何改动 `TitleScene` 的操作都要记得同步构建，否则双击入口看不到最新按钮。
+
+3D 渲染器开启了 `preserveDrawingBuffer`，主要服务于后续自动化 smoke test：可以直接从 canvas 读取像素，判断 WebGL 画面不是空白。当前原型场景很小，这个配置的性能代价可接受；等 3D 版本进入正式内容量级时再重新评估。
+
 ## 2026-07-04
 
 梳理了一次《回煞》当前版本的完整游戏流程，并沉淀到 `docs/GAME_FLOW.md`。这次没有改玩法代码，重点是把源码里的实际路由、地图拓扑、供品链、记忆链和多结局判定统一成一份可维护说明，避免后续只凭 `STORY.md` 的剧情稿或旧设计文档判断实现状态。

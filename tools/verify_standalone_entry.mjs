@@ -21,4 +21,6 @@ for (const expectedSymbol of ['class BootScene', 'class TitleScene', 'class Intr
     assert.match(moduleScripts[0][1], new RegExp(expectedSymbol), `standalone entry should include ${expectedSymbol}`);
 }
 
+assert.match(indexHtml, /prototype3d\.html/, 'standalone entry should link to the 3D prototype');
+
 console.log('Standalone entry verification passed');

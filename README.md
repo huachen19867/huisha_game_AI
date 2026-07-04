@@ -41,6 +41,9 @@
 ## 🚀 快速开始 (推荐)
 直接双击运行目录下的 `StartGame.bat` 即可自动启动服务器并打开游戏。
 
+## 🧪 3D 原型
+标题页新增了“进入 3D 原型”入口，也可以直接访问 `prototype3d.html`。当前 3D 版本是第一阶段原型：保留 2D 主线不变，只提供正厅与走廊小段的 Three.js 低模探索、基础移动、物件调查和返回标题。
+
 ## 🛠️ 本地运行 (手动)
 如果你想手动运行：
 1. 右键点击 `server.ps1`，选择“使用 PowerShell 运行”。
@@ -72,10 +75,13 @@
 .
 ├── index.html
 ├── phaser.min.js
+├── prototype3d.html
+├── vendor
 ├── StartGame.bat
 ├── server.ps1
 ├── src
 │   ├── data
+│   ├── 3d
 │   ├── entities
 │   ├── scenes
 │   └── systems
