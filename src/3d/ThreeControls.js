@@ -13,6 +13,7 @@
             this.pitch = 0;
             this.speed = 2.8;
             this.lookSpeed = 0.0024;
+            this.playerRadius = map.playerRadius || 0.28;
             this.boundHandlers = [];
             this.camera.position.set(map.playerStart.x, map.playerStart.y, map.playerStart.z);
             this.applyLook();
@@ -93,19 +94,53 @@
 
             if (move.lengthSq() > 0) {
                 move.normalize().multiplyScalar(this.speed * deltaSeconds);
-                const next = this.camera.position.clone().add(move);
-                if (this.isWalkable(next.x, next.z)) {
-                    this.camera.position.copy(next);
-                }
+                this.tryMove(move);
             }
             this.camera.position.y = this.map.playerStart.y;
             this.applyLook();
         }
 
+        tryMove(move) {
+            const current = this.camera.position;
+            const nextX = current.x + move.x;
+            const nextZ = current.z + move.z;
+
+            if (this.canOccupy(nextX, nextZ)) {
+                current.x = nextX;
+                current.z = nextZ;
+                return;
+            }
+            if (this.canOccupy(nextX, current.z)) {
+                current.x = nextX;
+            }
+            if (this.canOccupy(current.x, nextZ)) {
+                current.z = nextZ;
+            }
+        }
+
+        canOccupy(x, z) {
+            return this.isWalkable(x, z) && !this.collidesWithObstacle(x, z);
+        }
+
         isWalkable(x, z) {
+            const radius = this.playerRadius;
             return this.map.walkable.some((rect) => (
-                x >= rect.xMin && x <= rect.xMax && z >= rect.zMin && z <= rect.zMax
+                x >= rect.xMin + radius
+                && x <= rect.xMax - radius
+                && z >= rect.zMin + radius
+                && z <= rect.zMax - radius
             ));
+        }
+
+        collidesWithObstacle(x, z) {
+            const radius = this.playerRadius;
+            return (this.map.obstacles || []).some((rect) => {
+                const nearestX = Math.max(rect.xMin, Math.min(x, rect.xMax));
+                const nearestZ = Math.max(rect.zMin, Math.min(z, rect.zMax));
+                const dx = x - nearestX;
+                const dz = z - nearestZ;
+                return dx * dx + dz * dz < radius * radius;
+            });
         }
 
         dispose() {

@@ -4,9 +4,22 @@
     Huisha3D.MAIN_HALL_MAP = {
         id: 'room_main_3d',
         playerStart: { x: 0, y: 1.55, z: 3.2, yaw: Math.PI },
+        playerRadius: 0.32,
         walkable: [
             { xMin: -4.7, xMax: 4.7, zMin: -3.9, zMax: 4.1 },
             { xMin: -1.15, xMax: 1.15, zMin: -11.5, zMax: -3.2 }
+        ],
+        obstacles: [
+            { id: 'altar', xMin: -1.5, xMax: 1.5, zMin: -3.68, zMax: -2.48 },
+            { id: 'coffin', xMin: -1.48, xMax: 1.48, zMin: -0.02, zMax: 1.58 },
+            { id: 'chair_left_front', xMin: -3.64, xMax: -2.76, zMin: 0.5, zMax: 1.42 },
+            { id: 'chair_right_front', xMin: 2.76, xMax: 3.64, zMin: 0.5, zMax: 1.42 },
+            { id: 'chair_left_back', xMin: -3.64, xMax: -2.76, zMin: -1.6, zMax: -0.68 },
+            { id: 'chair_right_back', xMin: 2.76, xMax: 3.64, zMin: -1.6, zMax: -0.68 },
+            { id: 'pillar_left_front', xMin: -4.28, xMax: -3.68, zMin: 1.9, zMax: 2.5 },
+            { id: 'pillar_right_front', xMin: 3.68, xMax: 4.28, zMin: 1.9, zMax: 2.5 },
+            { id: 'pillar_left_back', xMin: -4.28, xMax: -3.68, zMin: -2.78, zMax: -2.18 },
+            { id: 'pillar_right_back', xMin: 3.68, xMax: 4.28, zMin: -2.78, zMax: -2.18 }
         ],
         interactables: [
             {

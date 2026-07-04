@@ -31,6 +31,7 @@
             position: fixed;
             inset: 0;
             background: radial-gradient(circle at 50% 45%, #1d1710 0%, #050403 58%, #000 100%);
+            z-index: 0;
         }
 
         #three-root canvas {
@@ -43,6 +44,7 @@
             position: fixed;
             inset: 0;
             pointer-events: none;
+            z-index: 2;
         }
 
         .topbar {
@@ -134,6 +136,7 @@
             padding: 18px 20px;
             display: none;
             pointer-events: auto;
+            z-index: 3;
         }
 
         .dialog.is-visible {
@@ -169,9 +172,11 @@
             inset: 0;
             pointer-events: none;
             background:
-                linear-gradient(90deg, rgba(0, 0, 0, 0.74), transparent 22%, transparent 78%, rgba(0, 0, 0, 0.74)),
-                radial-gradient(circle, transparent 38%, rgba(0, 0, 0, 0.72) 100%);
+                linear-gradient(90deg, rgba(0, 0, 0, 0.44), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.44)),
+                radial-gradient(circle, transparent 48%, rgba(0, 0, 0, 0.46) 100%);
             mix-blend-mode: multiply;
+            opacity: 0.55;
+            z-index: 1;
         }
 
         @media (max-width: 680px) {

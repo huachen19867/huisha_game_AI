@@ -1,6 +1,14 @@
 (function defineThreePrototypeScene(global) {
     const Huisha3D = global.Huisha3D || (global.Huisha3D = {});
     const THREE = global.THREE;
+    const ART_TEXTURES = {
+        wall: '美术/木墙.png',
+        floor: '美术/木地板.png',
+        beam: '美术/木梁.png',
+        altarBackdrop: '美术/供桌区域.png',
+        corridorDetail: '美术/走廊墙面.png',
+        floorDebris: '美术/纸钱与香灰.png'
+    };
 
     class ThreePrototypeScene {
         constructor({ root, prompt, onDialog }) {
@@ -14,8 +22,8 @@
 
         start() {
             this.scene = new THREE.Scene();
-            this.scene.background = new THREE.Color(0x050403);
-            this.scene.fog = new THREE.FogExp2(0x050403, 0.075);
+            this.scene.background = new THREE.Color(0x0f0a07);
+            this.scene.fog = new THREE.FogExp2(0x0f0a07, 0.045);
 
             this.camera = new THREE.PerspectiveCamera(68, this.root.clientWidth / this.root.clientHeight, 0.1, 80);
             this.renderer = new THREE.WebGLRenderer({
@@ -27,7 +35,16 @@
             this.renderer.setSize(this.root.clientWidth, this.root.clientHeight);
             this.renderer.shadowMap.enabled = true;
             this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            if (THREE.SRGBColorSpace) {
+                this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+            }
+            if (THREE.ACESFilmicToneMapping) {
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            }
+            this.renderer.toneMappingExposure = 1.68;
             this.root.appendChild(this.renderer.domElement);
+            this.textures = this.loadArtTextures();
+            this.materials = this.createMaterials();
 
             this.createLights();
             this.createArchitecture();
@@ -50,16 +67,93 @@
             this.animate();
         }
 
+        loadArtTextures() {
+            const loader = new THREE.TextureLoader();
+            const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
+            const load = (path, options = {}) => {
+                const texture = loader.load(path);
+                if (THREE.SRGBColorSpace) {
+                    texture.colorSpace = THREE.SRGBColorSpace;
+                }
+                if (options.repeat) {
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.repeat.set(options.repeat[0], options.repeat[1]);
+                }
+                texture.anisotropy = Math.min(maxAnisotropy, 8);
+                return texture;
+            };
+
+            return {
+                wall: load(ART_TEXTURES.wall, { repeat: [2.2, 1.05] }),
+                floor: load(ART_TEXTURES.floor, { repeat: [2.8, 2.25] }),
+                beam: load(ART_TEXTURES.beam, { repeat: [1.2, 1.2] }),
+                altarBackdrop: load(ART_TEXTURES.altarBackdrop),
+                corridorDetail: load(ART_TEXTURES.corridorDetail),
+                floorDebris: load(ART_TEXTURES.floorDebris)
+            };
+        }
+
+        createMaterials() {
+            return {
+                floor: new THREE.MeshStandardMaterial({
+                    color: 0xc8aa82,
+                    map: this.textures.floor,
+                    roughness: 0.82,
+                    metalness: 0.02
+                }),
+                wall: new THREE.MeshStandardMaterial({
+                    color: 0x9a8061,
+                    map: this.textures.wall,
+                    roughness: 0.96,
+                    metalness: 0.01
+                }),
+                ceiling: new THREE.MeshStandardMaterial({
+                    color: 0x4a3326,
+                    map: this.textures.wall,
+                    roughness: 0.98
+                }),
+                beam: new THREE.MeshStandardMaterial({
+                    color: 0x7a4c30,
+                    map: this.textures.beam,
+                    roughness: 0.9
+                }),
+                altarBackdrop: new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    map: this.textures.altarBackdrop
+                }),
+                corridorDetail: new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    map: this.textures.corridorDetail
+                }),
+                floorDebris: new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    map: this.textures.floorDebris,
+                    transparent: true,
+                    opacity: 0.22,
+                    depthWrite: false
+                })
+            };
+        }
+
         createLights() {
-            const ambient = new THREE.HemisphereLight(0x5d5544, 0x100806, 0.9);
+            const ambient = new THREE.HemisphereLight(0xc6aa82, 0x25160e, 1.82);
             this.scene.add(ambient);
 
-            const candleLight = new THREE.PointLight(0xff8a3d, 2.2, 8, 1.7);
+            const candleLight = new THREE.PointLight(0xffa657, 4.1, 10.5, 1.45);
             candleLight.position.set(0, 1.45, -2.65);
             candleLight.castShadow = true;
             this.scene.add(candleLight);
 
-            this.flashlight = new THREE.SpotLight(0xf2dfb2, 4.4, 10, Math.PI / 7.5, 0.52, 1.3);
+            const pathLight = new THREE.PointLight(0xffc47a, 2.8, 9, 1.6);
+            pathLight.position.set(0, 1.75, 1.65);
+            this.scene.add(pathLight);
+
+            const sideFill = new THREE.PointLight(0x9b7350, 1.4, 7.5, 1.8);
+            sideFill.position.set(-2.8, 1.85, 0.2);
+            this.scene.add(sideFill);
+
+            this.flashlight = new THREE.SpotLight(0xfff0c8, 7.0, 13.5, Math.PI / 5.7, 0.62, 1.05);
             this.flashlight.castShadow = true;
             this.flashlightTarget = new THREE.Object3D();
             this.scene.add(this.flashlight);
@@ -68,14 +162,15 @@
         }
 
         createArchitecture() {
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a2118, roughness: 0.92, metalness: 0.02 });
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x17110d, roughness: 0.98 });
-            const woodMat = new THREE.MeshStandardMaterial({ color: 0x3a1f14, roughness: 0.9 });
+            const floorMat = this.materials.floor;
+            const wallMat = this.materials.wall;
+            const ceilingMat = this.materials.ceiling;
+            const woodMat = this.materials.beam;
 
             this.addBox('main-floor', [10.4, 0.14, 8.6], [0, -0.08, 0], floorMat, true);
             this.addBox('corridor-floor', [2.65, 0.12, 8.4], [0, -0.07, -7.45], floorMat, true);
-            this.addBox('main-ceiling', [10.4, 0.16, 8.6], [0, 3.2, 0], wallMat, false);
-            this.addBox('corridor-ceiling', [2.65, 0.14, 8.4], [0, 3.05, -7.45], wallMat, false);
+            this.addBox('main-ceiling', [10.4, 0.16, 8.6], [0, 3.2, 0], ceilingMat, false);
+            this.addBox('corridor-ceiling', [2.65, 0.14, 8.4], [0, 3.05, -7.45], ceilingMat, false);
 
             this.addBox('back-wall-left', [4.05, 3.2, 0.3], [-3.17, 1.55, -4.18], wallMat, true);
             this.addBox('back-wall-right', [4.05, 3.2, 0.3], [3.17, 1.55, -4.18], wallMat, true);
@@ -90,14 +185,36 @@
                 const z = 3.4 - i * 0.86;
                 this.addBox(`floor-plank-${i}`, [10.2, 0.025, 0.035], [0, 0.01, z], woodMat, false);
             }
+
+            this.addPillar(-3.98, 2.2, woodMat);
+            this.addPillar(3.98, 2.2, woodMat);
+            this.addPillar(-3.98, -2.48, woodMat);
+            this.addPillar(3.98, -2.48, woodMat);
+            this.addBox('front-crossbeam', [8.8, 0.22, 0.22], [0, 2.75, 2.2], woodMat, true);
+            this.addBox('back-crossbeam', [8.8, 0.22, 0.22], [0, 2.75, -2.48], woodMat, true);
+            this.addBox('left-crossbeam', [0.22, 0.22, 5.2], [-3.98, 2.78, -0.1], woodMat, true);
+            this.addBox('right-crossbeam', [0.22, 0.22, 5.2], [3.98, 2.78, -0.1], woodMat, true);
+
+            this.addPlane('altar-art-backdrop', 3.95, 2.96, [0, 1.7, -4.01], [0, 0, 0], this.materials.altarBackdrop);
+            this.addPlane('corridor-detail-left', 6.2, 2.42, [-1.305, 1.54, -7.48], [0, Math.PI / 2, 0], this.materials.corridorDetail);
+            this.addPlane('corridor-detail-right', 6.2, 2.42, [1.305, 1.54, -7.48], [0, -Math.PI / 2, 0], this.materials.corridorDetail);
+            this.addPlane('floor-debris', 3.6, 2.7, [0, 0.035, -0.35], [-Math.PI / 2, 0, 0], this.materials.floorDebris);
         }
 
         createProps() {
-            const altarMat = new THREE.MeshStandardMaterial({ color: 0x4b2517, roughness: 0.86 });
-            const coffinMat = new THREE.MeshStandardMaterial({ color: 0x090706, roughness: 0.78 });
-            const redMat = new THREE.MeshStandardMaterial({ color: 0x8b1717, roughness: 0.7 });
+            const altarMat = new THREE.MeshStandardMaterial({
+                color: 0x8a4f31,
+                map: this.textures.beam,
+                roughness: 0.82
+            });
+            const coffinMat = new THREE.MeshStandardMaterial({
+                color: 0x2b1b13,
+                map: this.textures.beam,
+                roughness: 0.76
+            });
+            const redMat = new THREE.MeshStandardMaterial({ color: 0xa5241d, roughness: 0.72 });
             const paperMat = new THREE.MeshStandardMaterial({ color: 0xd8c17e, roughness: 0.95 });
-            const clothMat = new THREE.MeshStandardMaterial({ color: 0x010101, roughness: 1 });
+            const clothMat = new THREE.MeshStandardMaterial({ color: 0x080706, roughness: 1 });
 
             this.addBox('altar', [2.4, 0.9, 0.74], [0, 0.46, -3.12], altarMat, true);
             this.addBox('altar-top', [2.7, 0.12, 0.94], [0, 0.98, -3.12], altarMat, true);
@@ -118,7 +235,11 @@
                 talisman.rotation.z = (i % 3 - 1) * 0.12;
             }
 
-            const chairMat = new THREE.MeshStandardMaterial({ color: 0x2b1710, roughness: 0.92 });
+            const chairMat = new THREE.MeshStandardMaterial({
+                color: 0x6d4029,
+                map: this.textures.beam,
+                roughness: 0.88
+            });
             this.addChair(-3.2, 1.0, chairMat);
             this.addChair(3.2, 1.0, chairMat);
             this.addChair(-3.2, -1.1, chairMat);
@@ -130,6 +251,20 @@
             this.addBox(`chair-back-${x}-${z}`, [0.65, 0.82, 0.1], [x, 0.86, z - 0.31], mat, true);
             this.addBox(`chair-leg-a-${x}-${z}`, [0.08, 0.45, 0.08], [x - 0.24, 0.22, z - 0.2], mat, true);
             this.addBox(`chair-leg-b-${x}-${z}`, [0.08, 0.45, 0.08], [x + 0.24, 0.22, z + 0.2], mat, true);
+        }
+
+        addPillar(x, z, mat) {
+            this.addBox(`pillar-${x}-${z}`, [0.52, 3.1, 0.52], [x, 1.48, z], mat, true);
+        }
+
+        addPlane(name, width, height, position, rotation, material) {
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), material);
+            mesh.name = name;
+            mesh.position.set(position[0], position[1], position[2]);
+            mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
+            mesh.receiveShadow = true;
+            this.scene.add(mesh);
+            return mesh;
         }
 
         addBox(name, size, position, material, castShadow) {
