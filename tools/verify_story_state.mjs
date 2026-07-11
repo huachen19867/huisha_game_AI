@@ -21,10 +21,17 @@ assert.equal(emptyState.storyFlags.clues.control, 1);
 collectClue(emptyState, 'father_note', 'control');
 collectClue(emptyState, 'medical_record', 'illness');
 collectClue(emptyState, 'prescription', 'illness');
+assert.equal(getTruthLevel(emptyState), 'surface');
+flags.puzzles.school = true;
+flags.puzzles.hospital = true;
 assert.equal(getTruthLevel(emptyState), 'family');
 
 collectClue(emptyState, 'toy_plane', 'death');
 collectClue(emptyState, 'crash_guardrail', 'death');
+flags.photoSetCollected = true;
+flags.familyPhotoCornerFound = true;
+flags.familyPhotoAssembled = true;
+flags.coffinOpened = true;
 assert.equal(getTruthLevel(emptyState), 'complete');
 
 const freshFlags = createDefaultStoryFlags();

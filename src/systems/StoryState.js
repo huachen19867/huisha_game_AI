@@ -3,6 +3,13 @@ export function createDefaultStoryFlags() {
         clues: { control: 0, illness: 0, death: 0 },
         collectedClues: [],
         memories: { school: false, hospital: false, crash: false },
+        puzzles: { school: false, hospital: false },
+        photoSetCollected: false,
+        familyPhotoCornerFound: false,
+        familyPhotoAssembled: false,
+        chasePhase: 'idle',
+        crashEvidence: { car: false, guardrail: false },
+        coffinOpened: false,
         endingChoice: null,
         postMemoryDialogShown: {
             school: false,
@@ -52,6 +59,18 @@ export function ensureStoryFlags(gameState) {
     flags.memories.hospital = !!flags.memories.hospital;
     flags.memories.crash = !!flags.memories.crash;
 
+    if (!flags.puzzles) flags.puzzles = { school: false, hospital: false };
+    flags.puzzles.school = !!flags.puzzles.school;
+    flags.puzzles.hospital = !!flags.puzzles.hospital;
+    flags.photoSetCollected = !!flags.photoSetCollected;
+    flags.familyPhotoCornerFound = !!flags.familyPhotoCornerFound;
+    flags.familyPhotoAssembled = !!flags.familyPhotoAssembled;
+    flags.coffinOpened = !!flags.coffinOpened;
+    if (!['idle', 'active', 'escaped'].includes(flags.chasePhase)) flags.chasePhase = 'idle';
+    if (!flags.crashEvidence) flags.crashEvidence = { car: false, guardrail: false };
+    flags.crashEvidence.car = !!flags.crashEvidence.car;
+    flags.crashEvidence.guardrail = !!flags.crashEvidence.guardrail;
+
     if (flags.endingChoice === undefined) flags.endingChoice = null;
     if (!flags.postMemoryDialogShown) {
         flags.postMemoryDialogShown = { school: false, hospital: false };
@@ -84,8 +103,31 @@ export function collectClue(gameState, clueId, clueType) {
 }
 
 export function getTruthLevel(gameState) {
-    const { clues } = ensureStoryFlags(gameState);
-    if (clues.control >= 2 && clues.illness >= 2 && clues.death >= 2) return 'complete';
-    if (clues.control >= 1 && clues.illness >= 1) return 'family';
+    const flags = ensureStoryFlags(gameState);
+    const complete = flags.puzzles.school &&
+        flags.puzzles.hospital &&
+        flags.familyPhotoAssembled &&
+        flags.clues.death >= 2 &&
+        flags.coffinOpened;
+    if (complete) return 'complete';
+    if (flags.puzzles.school && flags.puzzles.hospital) return 'family';
     return 'surface';
+}
+
+export function reconcileFamilyPhoto(gameState) {
+    const flags = ensureStoryFlags(gameState);
+    flags.familyPhotoAssembled = flags.photoSetCollected && flags.familyPhotoCornerFound;
+    return flags.familyPhotoAssembled;
+}
+
+export function getExitRoute(gameState) {
+    const truthLevel = getTruthLevel(gameState);
+    if (truthLevel === 'complete') return 'memory_crash';
+    if (truthLevel === 'family') return 'ending_huisha';
+    return 'ending_pojian';
+}
+
+export function canChooseCrashEnding(gameState) {
+    const flags = ensureStoryFlags(gameState);
+    return getTruthLevel(gameState) === 'complete' && flags.crashEvidence.car && flags.crashEvidence.guardrail;
 }
