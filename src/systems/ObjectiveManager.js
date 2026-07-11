@@ -31,16 +31,22 @@ export function getCurrentObjective(gameState, mapId) {
     const flags = ensureStoryFlags(gameState);
     if (mapId === 'room_prologue') return '沿公路寻找避雨处';
     if (!gameState.doorSlammed) return '进入老宅，调查正厅里的黑布遗像';
+    if (mapId === 'room_kitchen' && !gameState.hasRice) return '找出饭桌上空着的是谁的位置';
+    if (mapId === 'room_secret' && !gameState.hasMatches) return '用笔记和木偶影子拆开四张封条';
+    if (mapId === 'room_backyard' && !gameState.hasIncense) return '辨认井绳上代表孩子的结';
+    if (mapId === 'room_attic' && !gameState.hasSpiritMoney) return '找出没有牌位的纸钱债主';
+    if (mapId === 'memory_school' && !flags.puzzles.school) return '用时间证据找出父亲哪句话不可能成立';
+    if (mapId === 'memory_hospital' && !flags.puzzles.hospital) return '用处方和药盒余量计算实际停药日';
     const missing = [
         ['hasRice', '倒头饭（厨房）'], ['hasMatches', '火柴（密室）'],
         ['hasIncense', '香（后院）'], ['hasSpiritMoney', '纸钱（阁楼）']
     ].filter(([key]) => !gameState[key]).map(([, label]) => label);
     if (missing.length) return `完成供桌仪式：寻找${missing.join('、')}`;
+    if (!flags.ritualSolved) return '回到正厅，根据已经证明的结论完成供桌仪式';
     if (!flags.puzzles.school || !flags.puzzles.hospital) return '还原两段记忆：从旧书房进入学校，从药柜小间进入医院';
     if (!flags.photoSetCollected) return '调查走廊里的四张旧照片';
     if (!flags.familyPhotoCornerFound) return '用地下室钥匙进入地下禁闭室寻找照片缺角';
     if (flags.chasePhase === 'active') return '躲藏 6 秒，或把完整全家福带回正厅';
-    if (!gameState.candlesLit) return '回到正厅完成供品仪式';
     if (!flags.coffinOpened) return '用血红钥匙打开棺材';
     if (flags.crashEvidence && (!flags.crashEvidence.car || !flags.crashEvidence.guardrail)) return '调查变形车门和护栏缺口';
     return '根据已经查明的真相作出选择';

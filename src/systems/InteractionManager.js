@@ -61,6 +61,7 @@ export class InteractionManager {
                 const collected = obj.clueId && obj.clueType ? this.collectClue(obj.clueId, obj.clueType) : false;
                 if (collected && this.scene.playSound) this.scene.playSound(400, 'triangle', 0.4);
                 const outcome = applyPuzzleOutcome(this.gameState, puzzle);
+                this.scene.queueNarrativeBeat?.();
                 if (outcome.newlyCompleted && outcome.rewardItem) window.updateInventory(outcome.rewardItem);
                 if (puzzle.id === 'kitchen_table') this.scene.eventManager?.triggerPaperDollEvent();
                 if (puzzle.id === 'well_knots' && this.scene.incense) {

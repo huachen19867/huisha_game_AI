@@ -15,6 +15,8 @@ view = getObjectiveView(state, 'room_kitchen');
 assert.equal(view.completed, true, 'the kitchen is complete once its own rice puzzle is solved');
 state.hasRice = false;
 state.hasRice = state.hasMatches = state.hasIncense = state.hasSpiritMoney = true;
+assert.equal(getCurrentObjective(state, 'room_main'), '回到正厅，根据已经证明的结论完成供桌仪式');
+state.storyFlags.ritualSolved = true;
 assert.equal(getCurrentObjective(state, 'room_main'), '还原两段记忆：从旧书房进入学校，从药柜小间进入医院');
 view = getObjectiveView(state, 'room_kitchen');
 assert.equal(view.completed, true);

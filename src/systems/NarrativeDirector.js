@@ -5,6 +5,23 @@ const ESCAPE_CLUES = ['locked_window', 'basement_lock_chain'];
 
 export const NARRATIVE_BEATS = [
     {
+        id: 'last_night_echo',
+        isReady: flags => flags.caseConclusions.includes('empty_seat') && flags.caseConclusions.includes('rewritten_night'),
+        lines: [
+            { speaker: '主角', text: '18:10 我还在学校，父亲却说 18:00 已和我争吵。他改写了最后一夜。' },
+            { speaker: '少年李明', text: '我不是吃完饭才走的。那张桌子从一开始就空着我的位置。' },
+            { speaker: '主角', text: '没有回家吃饭的人，一直是我。' }
+        ]
+    },
+    {
+        id: 'sealed_family_echo',
+        isReady: flags => flags.caseConclusions.includes('treatment_blocked') && flags.caseConclusions.includes('sealed_house'),
+        lines: [
+            { speaker: '主角', text: '父亲拿走母亲的药，又用封条把所有出口封住。他把控制叫作保护。' },
+            { speaker: '母亲的声音', text: '明儿，别学他替别人决定该怎么活。' }
+        ]
+    },
+    {
         id: 'memorial_echo',
         isReady: flags => flags.collectedClues.includes('diary_mother') && flags.photoSetCollected,
         lines: [
@@ -35,6 +52,8 @@ export const NARRATIVE_BEATS = [
 export function getNarrativePhase(gameState) {
     const flags = ensureStoryFlags(gameState);
     if (flags.coffinOpened) return 'acceptance';
+    if (flags.caseConclusions.includes('empty_seat') || flags.caseConclusions.includes('rewritten_night')) return 'recognition';
+    if (flags.caseConclusions.includes('treatment_blocked') || flags.caseConclusions.includes('sealed_house')) return 'anger';
     if (flags.narrativeBeatsSeen.includes('escape_echo') || flags.narrativeBeatsSeen.includes('memorial_echo') || flags.photoSetCollected) return 'recognition';
     if (flags.narrativeBeatsSeen.includes('mother_echo') || flags.clues.illness >= 2) return 'anger';
     return 'denial';
@@ -53,6 +72,10 @@ export function markNarrativeBeatSeen(gameState, beatId) {
 }
 
 export function getNarrativeSummary(gameState) {
+    const flags = ensureStoryFlags(gameState);
+    if (flags.caseConclusions.includes('empty_seat') && flags.caseConclusions.includes('rewritten_night')) {
+        return '父亲改写了最后一夜；饭桌空位等的是我。';
+    }
     const phase = getNarrativePhase(gameState);
     if (phase === 'acceptance') return '棺材里等的人是我。';
     if (phase === 'recognition') return '所有日期都停在十年前的七月十四。';

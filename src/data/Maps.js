@@ -659,7 +659,7 @@ export const Maps = {
     memory_school: {
         id: 'memory_school',
         name: '记忆：夜校',
-        purpose: '完成试卷顺序谜题',
+        purpose: '用时间证据找出父亲改写的最后一夜',
         rewards: ['school_puzzle'],
         visual: {
             rain: false,
@@ -690,34 +690,39 @@ export const Maps = {
             playerStart: { x: 240, y: 320 },
             interactables: [
                 {
-                    id: 'school_blackboard',
-                    x: 288,
-                    y: 60,
+                    id: 'school_detention_clock', x: 100, y: 90,
                     texture: 'photo_frame',
-                    tint: 0x0d1f18,
-                    clueId: 'school_blackboard',
+                    tint: 0x332711,
+                    clueId: 'school_detention_clock',
                     clueType: 'control',
-                    documentTitle: '黑板评语',
-                    documentText: '黑板上写着：李明，第二名。全班都在笑，只有父亲站在门口，脸比黑板还沉。'
+                    documentTitle: '停住的留堂钟',
+                    documentText: '教室后钟停在 18:10。值日表写着：李明留堂结束后负责锁窗，签名墨迹与当天一致。'
                 },
                 {
-                    id: 'school_report',
-                    x: 160,
-                    y: 210,
-                    texture: 'trash_paper',
-                    tint: 0xffeeee,
-                    clueId: 'school_report',
-                    clueType: 'control',
+                    id: 'school_bus_ticket', x: 455, y: 95,
+                    texture: 'trash_paper', tint: 0xd6ba78,
+                    clueId: 'school_bus_ticket', clueType: 'control',
+                    documentTitle: '末班车票',
+                    documentText: '票面时间 18:20。校门到村口只有这一班车，旧时刻表注明全程至少二十分钟。'
+                },
+                {
+                    id: 'school_report', x: 155, y: 245,
+                    texture: 'trash_paper', tint: 0xffeeee,
+                    clueId: 'school_report', clueType: 'control',
                     documentTitle: '成绩单',
-                    documentText: '总分只差三分。红笔在“三分”下面划了很多遍，最后纸被划破了。'
+                    documentText: '成绩单背面原写“到家后争吵”，后来被红笔改成“放学前顶撞”。日期也被刮过。'
                 },
                 {
-                    id: 'school_final_stack',
-                    x: 400,
-                    y: 310,
-                    texture: 'desk',
-                    tint: 0x666666,
-                    dialog: '几张试卷按年份排好，最后一张背面写着：我不想回家。',
+                    id: 'father_school_statement', x: 430, y: 245,
+                    texture: 'trash_paper', tint: 0xffcccc,
+                    clueId: 'father_school_statement', clueType: 'control',
+                    documentTitle: '父亲给老师的说明',
+                    documentText: '父亲写道：李明 18:00 已回家并因成绩争吵，随后自行离开。落款日期是事故第二天。'
+                },
+                {
+                    id: 'school_final_stack', x: 300, y: 360,
+                    texture: 'desk', tint: 0x666666,
+                    dialog: '把离校、车程和父亲的说法放到一起，只有一条时间线能成立。',
                     clueId: 'school_last_argument',
                     clueType: 'control',
                     puzzleId: 'school',
@@ -730,7 +735,7 @@ export const Maps = {
     memory_hospital: {
         id: 'memory_hospital',
         name: '记忆：旧医院',
-        purpose: '完成治疗证据链谜题',
+        purpose: '用处方与余量找出治疗被中断的日期',
         rewards: ['hospital_puzzle'],
         visual: {
             rain: false,
@@ -761,34 +766,37 @@ export const Maps = {
             playerStart: { x: 80, y: 240 },
             interactables: [
                 {
-                    id: 'hospital_window',
-                    x: 260,
-                    y: 90,
-                    texture: 'photo_frame',
-                    tint: 0x99ccff,
-                    clueId: 'hospital_window',
-                    clueType: 'illness',
-                    documentTitle: '诊室窗口',
-                    documentText: '窗口里没有医生，只有母亲的声音反复说：我吃了药就不会看见他了，对吗？'
+                    id: 'hospital_prescription', x: 120, y: 95,
+                    texture: 'trash_paper', tint: 0xe5f6ff,
+                    clueId: 'hospital_prescription', clueType: 'illness',
+                    documentTitle: '七日处方',
+                    documentText: '白片早晚各一片，连续七日，共十四片。任何一天不得自行停药。'
                 },
                 {
-                    id: 'hospital_ward',
-                    x: 480,
-                    y: 180,
-                    texture: 'bed',
-                    tint: 0xaaccff,
-                    clueId: 'hospital_ward',
-                    clueType: 'illness',
-                    documentTitle: '病房门牌',
-                    documentText: '门牌上写着王秀兰，旁边被父亲划掉了“住院观察”四个字。'
+                    id: 'hospital_pill_count', x: 350, y: 95,
+                    texture: 'trash_paper', tint: 0xffffff,
+                    clueId: 'hospital_pill_count', clueType: 'illness',
+                    documentTitle: '药盒余量',
+                    documentText: '第五天清晨清点：十四片药还剩八片。护士在数字旁画了一个问号。'
                 },
                 {
-                    id: 'hospital_return',
-                    x: 420,
-                    y: 360,
-                    texture: 'trash_paper',
-                    tint: 0xffffff,
-                    dialog: '缴费单在灯下慢慢变湿，像有人刚刚哭过。你听见母亲说：明儿，不要怪我。',
+                    id: 'hospital_ward_log', x: 520, y: 205,
+                    texture: 'bed', tint: 0xaaccff,
+                    clueId: 'hospital_ward_log', clueType: 'illness',
+                    documentTitle: '病房记录',
+                    documentText: '第四日晚，丈夫强行取走药盒；第五日早晚均未服药。病人反复要求把药还来。'
+                },
+                {
+                    id: 'hospital_bill', x: 190, y: 330,
+                    texture: 'trash_paper', tint: 0xffdddd,
+                    clueId: 'hospital_bill', clueType: 'illness',
+                    documentTitle: '拒付缴费单',
+                    documentText: '第四日晚签字拒绝继续住院。签名旁写着：家丑不可外扬，带回家管。'
+                },
+                {
+                    id: 'hospital_return', x: 450, y: 355,
+                    texture: 'desk', tint: 0xffffff,
+                    dialog: '药量、病房记录和拒付单能共同指出治疗在哪一天、被谁中断。',
                     clueId: 'hospital_mother_voice',
                     clueType: 'illness',
                     puzzleId: 'hospital',
