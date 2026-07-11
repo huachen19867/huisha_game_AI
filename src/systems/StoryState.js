@@ -11,6 +11,7 @@ export function createDefaultStoryFlags() {
         crashEvidence: { car: false, guardrail: false },
         coffinOpened: false,
         endingChoice: null,
+        narrativeBeatsSeen: [],
         postMemoryDialogShown: {
             school: false,
             hospital: false
@@ -72,6 +73,7 @@ export function ensureStoryFlags(gameState) {
     flags.crashEvidence.guardrail = !!flags.crashEvidence.guardrail;
 
     if (flags.endingChoice === undefined) flags.endingChoice = null;
+    if (!Array.isArray(flags.narrativeBeatsSeen)) flags.narrativeBeatsSeen = [];
     if (!flags.postMemoryDialogShown) {
         flags.postMemoryDialogShown = { school: false, hospital: false };
     }
