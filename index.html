@@ -580,6 +580,7 @@ const Maps = {
     room_prologue: {
         id: 'room_prologue',
         name: '荒野公路',
+        visual: { rain: true },
         width: 30,
         height: 12,
         data: [
@@ -612,6 +613,7 @@ const Maps = {
     room_entrance: {
         id: 'room_entrance',
         name: '老宅大门',
+        visual: { rain: true },
         width: 24,
         height: 14,
         data: [
@@ -642,6 +644,7 @@ const Maps = {
     room_main: {
         id: 'room_main',
         name: '正厅',
+        visual: { rain: false },
         width: 24,
         height: 16,
         data: [
@@ -685,6 +688,7 @@ const Maps = {
     room_kitchen: {
         id: 'room_kitchen',
         name: '厨房',
+        visual: { rain: false },
         width: 16,
         height: 14,
         data: [
@@ -715,6 +719,7 @@ const Maps = {
     room_corridor: {
         id: 'room_corridor',
         name: '走廊',
+        visual: { rain: false },
         width: 10,
         height: 20,
         data: [
@@ -763,6 +768,7 @@ const Maps = {
     room_bathroom: {
         id: 'room_bathroom',
         name: '卫生间',
+        visual: { rain: false },
         width: 16,
         height: 12,
         data: [
@@ -792,6 +798,7 @@ const Maps = {
     room_bedroom_parents: {
         id: 'room_bedroom_parents',
         name: '父母卧室',
+        visual: { rain: false },
         width: 18,
         height: 14,
         data: [
@@ -826,6 +833,7 @@ const Maps = {
     room_secret: {
         id: 'room_secret',
         name: '密室',
+        visual: { rain: false },
         width: 12,
         height: 12,
         data: [
@@ -857,6 +865,7 @@ const Maps = {
     room_study: {
         id: 'room_study',
         name: '旧书房',
+        visual: { rain: false },
         width: 16,
         height: 12,
         data: [
@@ -917,6 +926,7 @@ const Maps = {
     room_medicine: {
         id: 'room_medicine',
         name: '药柜小间',
+        visual: { rain: false },
         width: 16,
         height: 12,
         data: [
@@ -977,6 +987,7 @@ const Maps = {
     room_bedroom_me: {
         id: 'room_bedroom_me',
         name: '我的卧室',
+        visual: { rain: false },
         width: 16,
         height: 14,
         data: [
@@ -1010,6 +1021,7 @@ const Maps = {
     room_backyard: {
         id: 'room_backyard',
         name: '后院',
+        visual: { rain: true },
         width: 20,
         height: 20,
         data: [
@@ -1052,6 +1064,7 @@ const Maps = {
     room_basement: {
         id: 'room_basement',
         name: '地下室',
+        visual: { rain: false },
         width: 30,
         height: 30,
         data: [
@@ -1108,6 +1121,7 @@ const Maps = {
     room_attic: {
         id: 'room_attic',
         name: '阁楼',
+        visual: { rain: false },
         width: 20,
         height: 14,
         data: [
@@ -1138,6 +1152,7 @@ const Maps = {
         id: 'memory_school',
         name: '记忆：夜校',
         visual: {
+            rain: false,
             ambient: 0x4a3a2a,
             floorTint: 0x6b5a35,
             wallTint: 0x242015,
@@ -1206,6 +1221,7 @@ const Maps = {
         id: 'memory_hospital',
         name: '记忆：旧医院',
         visual: {
+            rain: false,
             ambient: 0x9fb8c8,
             floorTint: 0x9fb3b8,
             wallTint: 0x52636b,
@@ -1274,6 +1290,7 @@ const Maps = {
         id: 'memory_crash',
         name: '记忆：雨夜车祸',
         visual: {
+            rain: true,
             ambient: 0x26384a,
             floorTint: 0x2b3038,
             wallTint: 0x111a22,
@@ -1346,6 +1363,7 @@ const Maps = {
     room_memory: {
         id: 'room_memory',
         name: '记忆空间',
+        visual: { rain: false },
         width: 24,
         height: 18,
         data: [
@@ -1988,6 +2006,61 @@ function getTruthLevel(gameState) {
 }
         // END bundled src/systems/StoryState.js
 
+        // BEGIN bundled src/systems/RuntimeState.js
+function resolveSpawnCoordinate(value, fallback) {
+    return value === undefined || value === null ? fallback : value;
+}
+
+function updateBoundedResource(current, ratePerSecond, deltaMs, min = 0, max = 100) {
+    const next = current + ratePerSecond * (deltaMs / 1000);
+    return Math.max(min, Math.min(max, next));
+}
+
+function updateStaminaState({ stamina, maxStamina, exhausted, wantsRun, isMoving, deltaMs }) {
+    const drainPerSecond = 10;
+    const rechargePerSecond = 5;
+    let nextStamina = stamina;
+    let nextExhausted = exhausted;
+    let isRunning = wantsRun && isMoving && !nextExhausted;
+
+    if (isRunning) {
+        nextStamina = updateBoundedResource(nextStamina, -drainPerSecond, deltaMs, 0, maxStamina);
+        if (nextStamina <= 0) {
+            nextExhausted = true;
+            isRunning = false;
+        }
+    } else {
+        nextStamina = updateBoundedResource(nextStamina, rechargePerSecond, deltaMs, 0, maxStamina);
+        if (nextExhausted && nextStamina > 30) nextExhausted = false;
+    }
+
+    return { stamina: nextStamina, exhausted: nextExhausted, isRunning };
+}
+        // END bundled src/systems/RuntimeState.js
+
+        // BEGIN bundled src/systems/DomListenerRegistry.js
+class DomListenerRegistry {
+    constructor() {
+        this.entries = [];
+    }
+
+    add(target, type, handler, options) {
+        target.addEventListener(type, handler, options);
+        this.entries.push({ target, type, handler, options });
+    }
+
+    clear() {
+        for (const { target, type, handler, options } of this.entries.splice(0)) {
+            target.removeEventListener(type, handler, options);
+        }
+    }
+
+    get size() {
+        return this.entries.length;
+    }
+}
+        // END bundled src/systems/DomListenerRegistry.js
+
         // BEGIN bundled src/systems/StartRoute.js
 
 function resolveStartRoute(search = '') {
@@ -2017,6 +2090,11 @@ class SoundManager {
         this.micAnalyser = null;
         this.micDataArray = null;
         this.init();
+    }
+
+    setScene(scene) {
+        this.scene = scene;
+        return this;
     }
 
     init() {
@@ -2249,6 +2327,7 @@ class SoundManager {
         // END bundled src/systems/SoundManager.js
 
         // BEGIN bundled src/entities/Player.js
+
 class Player {
     constructor(scene, x, y) {
         this.scene = scene;
@@ -2273,8 +2352,6 @@ class Player {
         this.maxStamina = 100;
         this.stamina = 100;
         this.isRunning = false;
-        this.staminaRechargeRate = 0.5;
-        this.staminaDrainRate = 1;
         this.exhausted = false; // If true, cannot run until stamina > 20
 
         // Input
@@ -2342,28 +2419,36 @@ class Player {
         this.flickerTimer = 0;
     }
 
-    update(cursors, wasd, joystick, soundManager) {
+    update(cursors, wasd, joystick, soundManager, delta) {
         this.sprite.setVelocity(0);
 
-        // Stamina Logic
-        if (this.keyShift.isDown && !this.exhausted && (this.sprite.body.velocity.x !== 0 || this.sprite.body.velocity.y !== 0)) {
-            this.isRunning = true;
-            this.stamina -= this.staminaDrainRate;
-            if (this.stamina <= 0) {
-                this.stamina = 0;
-                this.exhausted = true;
-                this.isRunning = false;
-            }
-        } else {
-            this.isRunning = false;
-            if (this.stamina < this.maxStamina) {
-                this.stamina += this.staminaRechargeRate;
-                if (this.stamina > this.maxStamina) this.stamina = this.maxStamina;
-            }
-            if (this.exhausted && this.stamina > 30) {
-                this.exhausted = false;
-            }
+        let moveX = 0;
+        let moveY = 0;
+
+        // Keyboard Input
+        if (cursors.left.isDown || wasd.left.isDown) moveX = -1;
+        else if (cursors.right.isDown || wasd.right.isDown) moveX = 1;
+
+        if (cursors.up.isDown || wasd.up.isDown) moveY = -1;
+        else if (cursors.down.isDown || wasd.down.isDown) moveY = 1;
+
+        // Joystick Input
+        if (joystick.active) {
+            if (Math.abs(joystick.x) > 0.1) moveX = joystick.x;
+            if (Math.abs(joystick.y) > 0.1) moveY = joystick.y;
         }
+
+        const staminaState = updateStaminaState({
+            stamina: this.stamina,
+            maxStamina: this.maxStamina,
+            exhausted: this.exhausted,
+            wantsRun: this.keyShift.isDown,
+            isMoving: moveX !== 0 || moveY !== 0,
+            deltaMs: delta
+        });
+        this.stamina = staminaState.stamina;
+        this.exhausted = staminaState.exhausted;
+        this.isRunning = staminaState.isRunning;
 
         // Update UI
         if (window.updateStaminaUI) {
@@ -2399,22 +2484,6 @@ class Player {
             });
         }
         */
-
-        let moveX = 0;
-        let moveY = 0;
-
-        // Keyboard Input
-        if (cursors.left.isDown || wasd.left.isDown) moveX = -1;
-        else if (cursors.right.isDown || wasd.right.isDown) moveX = 1;
-
-        if (cursors.up.isDown || wasd.up.isDown) moveY = -1;
-        else if (cursors.down.isDown || wasd.down.isDown) moveY = 1;
-
-        // Joystick Input
-        if (joystick.active) {
-            if (Math.abs(joystick.x) > 0.1) moveX = joystick.x;
-            if (Math.abs(joystick.y) > 0.1) moveY = joystick.y;
-        }
 
         if (moveX !== 0 || moveY !== 0) {
             // Normalize
@@ -2509,6 +2578,21 @@ class Player {
 }
         // END bundled src/entities/Player.js
 
+        // BEGIN bundled src/systems/PhysicsSync.js
+function syncStaticBody(gameObject) {
+    if (!gameObject) return false;
+    if (typeof gameObject.refreshBody === 'function') {
+        gameObject.refreshBody();
+        return true;
+    }
+    if (gameObject.body && typeof gameObject.body.updateFromGameObject === 'function') {
+        gameObject.body.updateFromGameObject();
+        return true;
+    }
+    return false;
+}
+        // END bundled src/systems/PhysicsSync.js
+
         // BEGIN bundled src/systems/EventManager.js
 class EventManager {
     constructor(scene) {
@@ -2595,6 +2679,7 @@ class EventManager {
         // END bundled src/systems/EventManager.js
 
         // BEGIN bundled src/systems/MapManager.js
+
 
 class MapManager {
     constructor(scene) {
@@ -2719,6 +2804,7 @@ class MapManager {
                 const h = obj.height;
                 obj.body.setSize(w * 0.8, h * 0.3);
                 obj.body.setOffset(w * 0.1, h * 0.7);
+                syncStaticBody(obj);
             }
         };
 
@@ -2740,7 +2826,7 @@ class MapManager {
             // Explicitly set immovable and refresh
             if (scene.coffin.body) {
                 scene.coffin.body.immovable = true;
-                scene.coffin.refreshBody();
+                syncStaticBody(scene.coffin);
             }
             addToInteractables(scene.coffin, objs.coffin);
         }
@@ -2796,7 +2882,7 @@ class MapManager {
 
             // Interaction setup
             scene.npc.objId = 'kitchen_ghost';
-            scene.npc.refreshBody(); // Ensure body is active
+            syncStaticBody(scene.npc); // Ensure body is active
 
 
             if (scene.gameState.hasRice && scene.gameState.hasMatches) {
@@ -2835,6 +2921,7 @@ class MapManager {
              if (isHorror && !scene.isMobile) scene.car.setPipeline('Light2D');
              scene.car.body.setSize(60, 100);
              scene.car.body.setOffset(2, 14);
+             syncStaticBody(scene.car);
              // No setupFurniture here as it has custom bounds already
              addToInteractables(scene.car, objs.car);
         }
@@ -2927,7 +3014,7 @@ class MapManager {
                 // Make it a thin strip at the top wall
                 scene.family_rules.body.setSize(32, 10);
                 scene.family_rules.body.setOffset(0, 20);
-                scene.family_rules.refreshBody();
+                syncStaticBody(scene.family_rules);
             }
 
             // Force add to interactables since it has no dialog/id in map data
@@ -2949,7 +3036,7 @@ class MapManager {
                 const h = scene.safe.height;
                 scene.safe.body.setSize(w * 0.9, h * 0.5);
                 scene.safe.body.setOffset(w * 0.05, h * 0.5);
-                scene.safe.refreshBody(); // Important for Static Bodies!
+                syncStaticBody(scene.safe); // Important for Static Bodies!
             }
 
             // Force add to interactables (even if no dialog/id in map data)
@@ -3067,11 +3154,7 @@ class MapManager {
                 if (isHorror && !scene.isMobile) item.setPipeline('Light2D');
 
                 scene.physics.add.existing(item, true);
-                if (typeof item.refreshBody === 'function') {
-                    item.refreshBody();
-                } else if (item.body && typeof item.body.updateFromGameObject === 'function') {
-                    item.body.updateFromGameObject();
-                }
+                syncStaticBody(item);
 
                 item.objId = data.id;
                 item.dialog = data.dialog;
@@ -3155,7 +3238,7 @@ class MapManager {
             // Dad (Left)
             scene.dad = this.furniture.create(objs.parents_npc.x - 40, objs.parents_npc.y, 'npc_paper');
             scene.dad.setTint(0xaaaaaa);
-            scene.dad.refreshBody();
+            syncStaticBody(scene.dad);
             // Add interaction
             scene.dad.objId = 'dad_ghost';
             this.scene.interactables.add(scene.dad);
@@ -3163,7 +3246,7 @@ class MapManager {
             // Mom (Right)
             scene.mom = this.furniture.create(objs.parents_npc.x + 40, objs.parents_npc.y, 'npc_paper');
             scene.mom.setTint(0xaaaaaa);
-            scene.mom.refreshBody();
+            syncStaticBody(scene.mom);
             // Add interaction
             scene.mom.objId = 'mom_ghost';
             this.scene.interactables.add(scene.mom);
@@ -3179,6 +3262,7 @@ class MapManager {
         // END bundled src/systems/MapManager.js
 
         // BEGIN bundled src/systems/InteractionManager.js
+
 
 class InteractionManager {
     constructor(scene) {
@@ -3518,6 +3602,7 @@ class InteractionManager {
                                 duration: 1000,
                                 ease: 'Power2',
                                 onComplete: () => {
+                                    syncStaticBody(obj);
                                     this.gameState.cabinetMoved = true;
                                     if (scene.soundManager) scene.soundManager.playNoise(1.0);
 
@@ -4344,6 +4429,8 @@ class IntroScene extends Phaser.Scene {
 
 
 
+
+
 class GameScene extends Phaser.Scene {
     constructor() {
         super('GameScene');
@@ -4351,8 +4438,8 @@ class GameScene extends Phaser.Scene {
 
     init(data) {
         this.currentMapId = data.mapId || 'room_prologue';
-        this.playerStartX = data.x || null;
-        this.playerStartY = data.y || null;
+        this.playerStartX = data.x ?? null;
+        this.playerStartY = data.y ?? null;
         this.previousMapId = data.previousMapId || null;
 
         // If restarting from Title (no data provided), ensure we start fresh
@@ -4416,6 +4503,7 @@ class GameScene extends Phaser.Scene {
             this.game.soundManager = new SoundManager(this);
             this.soundManager = this.game.soundManager;
         }
+        this.soundManager.setScene(this);
 
         const ua = navigator.userAgent || '';
         this.isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
@@ -4445,6 +4533,7 @@ class GameScene extends Phaser.Scene {
         // Joystick Logic
         this.joystick = { x: 0, y: 0, active: false };
         this.initJoystick();
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyJoystick());
 
         // Initialize Map Manager
         this.mapManager = new MapManager(this);
@@ -4452,8 +4541,8 @@ class GameScene extends Phaser.Scene {
 
         // Create Player
         const mapData = Maps[this.currentMapId];
-        const startX = this.playerStartX || mapData.objects.playerStart.x;
-        const startY = this.playerStartY || mapData.objects.playerStart.y;
+        const startX = resolveSpawnCoordinate(this.playerStartX, mapData.objects.playerStart.x);
+        const startY = resolveSpawnCoordinate(this.playerStartY, mapData.objects.playerStart.y);
         this.player = new Player(this, startX, startY);
 
         // Colliders
@@ -4477,15 +4566,11 @@ class GameScene extends Phaser.Scene {
         this.cameras.main.fadeIn(500, 0, 0, 0);
 
         // Lights & Atmosphere
-        if (!this.isMobile) {
-            this.lights.enable();
-            this.lights.setAmbientColor(0x888888);
-        }
-
+        const shouldRain = mapData.visual?.rain === true && !this.isMobile;
         this.rainParticles = this.add.particles(0, 0, 'rain', {
             x: { min: 0, max: 800 },
             y: -10,
-            quantity: this.isMobile ? 0 : 2,
+            quantity: shouldRain ? 2 : 0,
             lifespan: 1000,
             speedY: { min: 400, max: 600 },
             speedX: { min: -20, max: 20 },
@@ -4495,6 +4580,7 @@ class GameScene extends Phaser.Scene {
         });
         this.rainParticles.setDepth(200);
         this.rainParticles.setScrollFactor(0);
+        if (!shouldRain) this.rainParticles.stop();
 
         this.vignette = this.add.image(400, 300, 'vignette');
         this.vignette.setScrollFactor(0);
@@ -4616,7 +4702,7 @@ class GameScene extends Phaser.Scene {
         this.showPostMemoryDialog();
     }
 
-    update() {
+    update(time, delta) {
         if (window.dialogActive) {
             this.player.sprite.setVelocity(0);
             return;
@@ -4665,7 +4751,7 @@ class GameScene extends Phaser.Scene {
 
         // Wait for sound manager to be ready
         if (this.soundManager) {
-            this.player.update(this.cursors, this.wasd, this.joystick, this.soundManager);
+            this.player.update(this.cursors, this.wasd, this.joystick, this.soundManager, delta);
         }
 
         if (this.interactionManager) this.interactionManager.update();
@@ -4710,40 +4796,19 @@ class GameScene extends Phaser.Scene {
         }
 
         // Sanity System Logic
-        this.updateSanity();
+        this.updateSanity(delta);
     }
 
-    updateSanity() {
-        if (!window.updateSanityUI) return;
-
-        let drainRate = 0;
-
-        // 1. Darkness Drain (if flashlight is off or flickering)
-        // Check ambient light + flashlight
-        // Simplified: If not in memory room and not near light source?
-        // Let's just say: If chaser is active OR in specific scary rooms
-
-        if (this.currentMapId === 'room_basement' || this.currentMapId === 'room_attic' || this.currentMapId === 'room_secret') {
-            drainRate += 0.05;
-        }
-
-        // 2. Chaser Proximity
-        if (this.chaser && this.chaser.active && this.gameState.isChasing) {
+    updateSanity(delta) {
+        let ratePerSecond = 0;
+        if (['room_basement', 'room_attic', 'room_secret'].includes(this.currentMapId)) ratePerSecond -= 3;
+        if (this.chaser?.active && this.gameState.isChasing) {
             const dist = Phaser.Math.Distance.Between(this.player.sprite.x, this.player.sprite.y, this.chaser.x, this.chaser.y);
-            if (dist < 300) {
-                drainRate += 0.2;
-            }
+            if (dist < 300) ratePerSecond -= 12;
         }
-
-        // 3. Recharge in safe areas
-        if (this.currentMapId === 'room_bedroom_me' || this.currentMapId === 'room_memory') {
-            drainRate = -0.1;
-        }
-
-        this.gameState.sanity -= drainRate;
-        this.gameState.sanity = Phaser.Math.Clamp(this.gameState.sanity, 0, 100);
-
-        window.updateSanityUI(this.gameState.sanity, 100);
+        if (['room_bedroom_me', 'room_memory'].includes(this.currentMapId)) ratePerSecond = 6;
+        this.gameState.sanity = updateBoundedResource(this.gameState.sanity, ratePerSecond, delta, 0, 100);
+        window.updateSanityUI?.(this.gameState.sanity, 100);
 
         // Sanity Effects
         if (this.gameState.sanity < 30) {
@@ -4837,8 +4902,16 @@ class GameScene extends Phaser.Scene {
                 // Game Over Logic
                 this.physics.pause();
                 this.chaser.body.setVelocity(0);
-                window.showDialog('暴怒的黑影', '抓到你了...乖儿子，哪也不许去。我们要永远在一起...永远不分开。', () => {
-                     this.scene.restart();
+                window.showDialog('暴怒的黑影', '抓到你了……但这次记忆没有把你送回最初。', () => {
+                    this.physics.resume();
+                    this.gameState.isHidden = false;
+                    const retryMap = Maps[this.currentMapId];
+                    this.scene.restart({
+                        mapId: this.currentMapId,
+                        x: retryMap.objects.playerStart.x,
+                        y: retryMap.objects.playerStart.y,
+                        previousMapId: this.previousMapId
+                    });
                 });
             }
         });
@@ -5173,23 +5246,26 @@ class GameScene extends Phaser.Scene {
     }
 
     initJoystick() {
+        this.destroyJoystick();
+        this.domListeners = new DomListenerRegistry();
+
         const zone = document.getElementById('joystick-zone');
         const knob = document.getElementById('joystick-knob');
         const actionBtn = document.getElementById('action-btn');
 
         let startX, startY;
         const maxDist = 35;
-        let uiTimer = null;
 
         const showUI = () => {
             zone.classList.remove('ui-faded');
             actionBtn.classList.remove('ui-faded');
-            if (uiTimer) clearTimeout(uiTimer);
+            if (this.mobileUiTimer) clearTimeout(this.mobileUiTimer);
+            this.mobileUiTimer = null;
         };
 
         const scheduleHideUI = () => {
-            if (uiTimer) clearTimeout(uiTimer);
-            uiTimer = setTimeout(() => {
+            if (this.mobileUiTimer) clearTimeout(this.mobileUiTimer);
+            this.mobileUiTimer = setTimeout(() => {
                 zone.classList.add('ui-faded');
                 actionBtn.classList.add('ui-faded');
             }, 2000);
@@ -5197,7 +5273,7 @@ class GameScene extends Phaser.Scene {
 
         scheduleHideUI();
 
-        zone.addEventListener('touchstart', (e) => {
+        function onTouchStart(e) {
             showUI();
             e.preventDefault();
             const touch = e.touches[0];
@@ -5206,56 +5282,63 @@ class GameScene extends Phaser.Scene {
             startY = rect.top + rect.height / 2;
             this.joystick.active = true;
             this.updateJoystick(touch.clientX, touch.clientY, startX, startY, knob, maxDist);
-        }, { passive: false });
+        }
 
-        zone.addEventListener('touchmove', (e) => {
+        function onTouchMove(e) {
             showUI();
             e.preventDefault();
             if (!this.joystick.active) return;
             const touch = e.touches[0];
             this.updateJoystick(touch.clientX, touch.clientY, startX, startY, knob, maxDist);
-        }, { passive: false });
+        }
 
-        const endHandler = (e) => {
+        function onTouchEnd() {
             scheduleHideUI();
             this.joystick.active = false;
             this.joystick.x = 0;
             this.joystick.y = 0;
             knob.style.transform = `translate(-50%, -50%)`;
+        }
+
+        const handleAction = (e) => {
+            showUI();
+            scheduleHideUI();
+            e.preventDefault();
+            if (window.dialogActive) {
+                if (window.currentDialogNextHandler) window.currentDialogNextHandler();
+                return;
+            }
+            if (this.gameState.isHidden) {
+                this.toggleHide();
+                return;
+            }
+            if (this.interactText.visible && this.interactionManager) this.interactionManager.handleInteraction();
         };
 
-        zone.addEventListener('touchend', endHandler);
-        zone.addEventListener('touchcancel', endHandler);
+        function onActionTouchStart(e) {
+            handleAction(e);
+        }
 
-        actionBtn.addEventListener('touchstart', (e) => {
-            showUI();
-            scheduleHideUI();
-            e.preventDefault();
-            if (window.dialogActive) {
-                if (window.currentDialogNextHandler) window.currentDialogNextHandler();
-                return;
-            }
-            if (this.gameState.isHidden) {
-                this.toggleHide();
-                return;
-            }
-            if (this.interactText.visible && this.interactionManager) this.interactionManager.handleInteraction();
-        }, { passive: false });
+        function onActionMouseDown(e) {
+            handleAction(e);
+        }
 
-        actionBtn.addEventListener('mousedown', (e) => {
-            showUI();
-            scheduleHideUI();
-            e.preventDefault();
-            if (window.dialogActive) {
-                if (window.currentDialogNextHandler) window.currentDialogNextHandler();
-                return;
-            }
-            if (this.gameState.isHidden) {
-                this.toggleHide();
-                return;
-            }
-            if (this.interactText.visible && this.interactionManager) this.interactionManager.handleInteraction();
-        });
+        const passiveFalse = { passive: false };
+        this.domListeners.add(zone, 'touchstart', onTouchStart.bind(this), passiveFalse);
+        this.domListeners.add(zone, 'touchmove', onTouchMove.bind(this), passiveFalse);
+        this.domListeners.add(zone, 'touchend', onTouchEnd.bind(this));
+        this.domListeners.add(zone, 'touchcancel', onTouchEnd.bind(this));
+        this.domListeners.add(actionBtn, 'touchstart', onActionTouchStart, passiveFalse);
+        this.domListeners.add(actionBtn, 'mousedown', onActionMouseDown);
+    }
+
+    destroyJoystick() {
+        this.domListeners?.clear();
+        this.domListeners = null;
+        if (this.mobileUiTimer) clearTimeout(this.mobileUiTimer);
+        this.mobileUiTimer = null;
+        if (this.exitHideListener) document.removeEventListener('touchstart', this.exitHideListener);
+        this.exitHideListener = null;
     }
 
     updateJoystick(clientX, clientY, centerX, centerY, knob, maxDist) {

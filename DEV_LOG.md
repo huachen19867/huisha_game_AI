@@ -18,6 +18,14 @@
 
 新增 `tools/verify_2d_only.mjs` 作为产品边界契约。测试先在现有 `prototype3d.html` 上按预期失败，清退后会同时检查运行路径不存在、标题和单文件入口没有 3D 跳转、README 不再宣传 3D，以及归档素材和提示词仍然存在。可复用的操作顺序是：先核对移动或递归删除目标解析后的绝对路径仍位于工作区，再使用 PowerShell 的 `Move-Item` / `Remove-Item -LiteralPath` 处理精确路径，最后重建 `index.html` 并运行 2D-only、单文件、剧情、地图和启动路由验证。
 
+完成 2D 稳定性底座修复。冲刺失效的根因是 `Player.update()` 先把速度归零、再用旧速度判断是否在移动；现在先读取方向，再由 `RuntimeState.updateStaminaState()` 结合 `delta` 计算冲刺和体力。理智增减也改用每秒速率，60 帧与 144 帧的结果由 `tools/verify_runtime_state.mjs` 对照验证；出生坐标统一使用空值判断，显式的 `x=0`、`y=0` 不再被默认出生点覆盖。以后所有持续资源变化都必须使用 `delta`，不能再把“每帧数值”当作“每秒数值”。
+
+静态碰撞统一收口到 `PhysicsSync.syncStaticBody()`，兼容静态组对象的 `refreshBody()` 与普通对象静态物理体的 `body.updateFromGameObject()`。父母衣柜在读取已移动状态和 tween 完成后都会同步碰撞体，保险箱、家规、棺材、NPC、车辆及通用剧情物件也复用同一入口；`tools/verify_physics_sync.mjs` 覆盖两套 API。可复用边界是：静态体只要改过位置、尺寸或偏移，紧接着必须 sync，不能只挪贴图。
+
+移动端原生 DOM 监听改由 `DomListenerRegistry` 登记，GameScene 每次初始化摇杆前先清理旧登记，并在 Phaser `SHUTDOWN` 时解绑六个摇杆/交互监听、UI 淡出计时器和躲藏退出监听。`tools/verify_dom_listener_registry.mjs` 验证重复 clear 安全且不会留下处理器。可复用边界是：挂在场景外持久 DOM 上的监听不随 Phaser 场景销毁，必须有明确的 shutdown 清理路径。
+
+地图氛围现在显式声明 `visual.rain`，只允许荒野公路、老宅大门、后院和雨夜车祸四张户外地图下雨；GameScene 不再覆盖 MapManager 设定的环境光。SoundManager 每次创建 GameScene 都刷新场景引用，追逐失败会恢复物理并用当前地图出生点重试，不再无数据重启到序章。对应契约在 `tools/verify_scene_runtime_contracts.mjs`。阶段验收重建了 `index.html`，9 项验证脚本和 26 个 JS/MJS 语法检查全部通过；真实浏览器在 1280×720 直达 `memory_school` 确认室内无雨，在 390×844 直达 `room_bedroom_parents` 确认摇杆、交互键和背包不越界，两种视口控制台错误均为空。
+
 ## 2026-07-05
 
 继续推进 3D 原型从“能看能走”走向“有短流程可验收”。本轮新增 `prototype3d.html` 里的目标 HUD，并把目标配置沉到 `src/3d/ThreeHouseMap.js`：初始目标要求调查供桌、棺材和黑布相框；三件正厅物品都调查后，目标会切到沿走廊调查尽头封门；封门调查完成后，目标标记为完成并提示返回正厅。这样后续扩 3D 章节时，可以继续把阶段目标放在地图数据里，而不是散落在页面文案和交互代码中。
