@@ -12,6 +12,10 @@ export function createDefaultStoryFlags() {
         coffinOpened: false,
         endingChoice: null,
         narrativeBeatsSeen: [],
+        puzzleProgress: {},
+        caseConclusions: [],
+        ritualSolved: false,
+        hauntingSeen: [],
         postMemoryDialogShown: {
             school: false,
             hospital: false
@@ -74,6 +78,10 @@ export function ensureStoryFlags(gameState) {
 
     if (flags.endingChoice === undefined) flags.endingChoice = null;
     if (!Array.isArray(flags.narrativeBeatsSeen)) flags.narrativeBeatsSeen = [];
+    if (!flags.puzzleProgress || typeof flags.puzzleProgress !== 'object' || Array.isArray(flags.puzzleProgress)) flags.puzzleProgress = {};
+    if (!Array.isArray(flags.caseConclusions)) flags.caseConclusions = [];
+    flags.ritualSolved = !!flags.ritualSolved;
+    if (!Array.isArray(flags.hauntingSeen)) flags.hauntingSeen = [];
     if (!flags.postMemoryDialogShown) {
         flags.postMemoryDialogShown = { school: false, hospital: false };
     }
