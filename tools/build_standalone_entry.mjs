@@ -66,7 +66,9 @@ const nextModuleScript = [
     bootstrapScript.trimStart()
 ].join(eol);
 
-const nextHtml = indexHtml.replace(currentModuleScript, nextModuleScript);
+const nextHtml = indexHtml
+    .replace(currentModuleScript, nextModuleScript)
+    .replace(/[ \t]+$/gm, '');
 await writeFile(indexUrl, nextHtml, 'utf8');
 
 console.log('Standalone index.html generated');

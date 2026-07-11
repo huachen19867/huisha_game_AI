@@ -53,23 +53,16 @@ export class TitleScene extends Phaser.Scene {
             repeat: -1
         });
 
-        const startText = this.add.text(400, 390, '开始 2D 主线  [空格]', {
+        const startText = this.add.text(400, 410, '开始游戏  [空格]', {
             fontFamily: '"SimSun", serif',
             fontSize: '24px',
             color: '#aaaaaa'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         startText.setAlpha(0);
 
-        const prototypeText = this.add.text(400, 440, '进入 3D 原型', {
-            fontFamily: '"SimSun", serif',
-            fontSize: '22px',
-            color: '#8f8f8f'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        prototypeText.setAlpha(0);
-
         // Fade in start text after delay to prevent accidental clicks
         this.tweens.add({
-            targets: [startText, prototypeText],
+            targets: startText,
             alpha: 1,
             duration: 1000,
             delay: 200 // Reduced delay for better UX
@@ -80,7 +73,8 @@ export class TitleScene extends Phaser.Scene {
 
             // Remove listeners to prevent multiple calls
             this.input.keyboard.off('keydown-SPACE', startGame);
-            this.input.off('pointerdown', startGame);
+            this.input.keyboard.off('keydown-ENTER', startGame);
+            startText.off('pointerdown', startGame);
 
             if (!this.game.soundManager) {
                 this.game.soundManager = new SoundManager(this);
@@ -93,21 +87,8 @@ export class TitleScene extends Phaser.Scene {
             });
         };
 
-        const startPrototype = () => {
-            if (prototypeText.alpha < 0.1) return;
-            if (!this.game.soundManager) {
-                this.game.soundManager = new SoundManager(this);
-            }
-            this.game.soundManager.playTone(80, 'sawtooth', 1);
-            this.cameras.main.fadeOut(600, 0, 0, 0);
-            this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-                window.location.href = 'prototype3d.html';
-            });
-        };
-
         this.input.keyboard.on('keydown-SPACE', startGame);
         this.input.keyboard.on('keydown-ENTER', startGame);
         startText.on('pointerdown', startGame);
-        prototypeText.on('pointerdown', startPrototype);
     }
 }
