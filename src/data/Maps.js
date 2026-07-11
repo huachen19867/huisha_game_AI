@@ -2,6 +2,7 @@ export const Maps = {
     room_prologue: {
         id: 'room_prologue',
         name: '荒野公路',
+        visual: { rain: true },
         width: 30,
         height: 12,
         data: [
@@ -34,6 +35,7 @@ export const Maps = {
     room_entrance: {
         id: 'room_entrance',
         name: '老宅大门',
+        visual: { rain: true },
         width: 24,
         height: 14,
         data: [
@@ -64,6 +66,7 @@ export const Maps = {
     room_main: {
         id: 'room_main',
         name: '正厅',
+        visual: { rain: false },
         width: 24,
         height: 16,
         data: [
@@ -107,6 +110,7 @@ export const Maps = {
     room_kitchen: {
         id: 'room_kitchen',
         name: '厨房',
+        visual: { rain: false },
         width: 16,
         height: 14,
         data: [
@@ -137,6 +141,7 @@ export const Maps = {
     room_corridor: {
         id: 'room_corridor',
         name: '走廊',
+        visual: { rain: false },
         width: 10,
         height: 20,
         data: [
@@ -185,6 +190,7 @@ export const Maps = {
     room_bathroom: {
         id: 'room_bathroom',
         name: '卫生间',
+        visual: { rain: false },
         width: 16,
         height: 12,
         data: [
@@ -214,6 +220,7 @@ export const Maps = {
     room_bedroom_parents: {
         id: 'room_bedroom_parents',
         name: '父母卧室',
+        visual: { rain: false },
         width: 18,
         height: 14,
         data: [
@@ -248,6 +255,7 @@ export const Maps = {
     room_secret: {
         id: 'room_secret',
         name: '密室',
+        visual: { rain: false },
         width: 12,
         height: 12,
         data: [
@@ -279,6 +287,7 @@ export const Maps = {
     room_study: {
         id: 'room_study',
         name: '旧书房',
+        visual: { rain: false },
         width: 16,
         height: 12,
         data: [
@@ -339,6 +348,7 @@ export const Maps = {
     room_medicine: {
         id: 'room_medicine',
         name: '药柜小间',
+        visual: { rain: false },
         width: 16,
         height: 12,
         data: [
@@ -399,6 +409,7 @@ export const Maps = {
     room_bedroom_me: {
         id: 'room_bedroom_me',
         name: '我的卧室',
+        visual: { rain: false },
         width: 16,
         height: 14,
         data: [
@@ -432,6 +443,7 @@ export const Maps = {
     room_backyard: {
         id: 'room_backyard',
         name: '后院',
+        visual: { rain: true },
         width: 20,
         height: 20,
         data: [
@@ -474,6 +486,7 @@ export const Maps = {
     room_basement: {
         id: 'room_basement',
         name: '地下室',
+        visual: { rain: false },
         width: 30,
         height: 30,
         data: [
@@ -530,6 +543,7 @@ export const Maps = {
     room_attic: {
         id: 'room_attic',
         name: '阁楼',
+        visual: { rain: false },
         width: 20,
         height: 14,
         data: [
@@ -560,6 +574,7 @@ export const Maps = {
         id: 'memory_school',
         name: '记忆：夜校',
         visual: {
+            rain: false,
             ambient: 0x4a3a2a,
             floorTint: 0x6b5a35,
             wallTint: 0x242015,
@@ -628,6 +643,7 @@ export const Maps = {
         id: 'memory_hospital',
         name: '记忆：旧医院',
         visual: {
+            rain: false,
             ambient: 0x9fb8c8,
             floorTint: 0x9fb3b8,
             wallTint: 0x52636b,
@@ -696,6 +712,7 @@ export const Maps = {
         id: 'memory_crash',
         name: '记忆：雨夜车祸',
         visual: {
+            rain: true,
             ambient: 0x26384a,
             floorTint: 0x2b3038,
             wallTint: 0x111a22,
@@ -768,6 +785,7 @@ export const Maps = {
     room_memory: {
         id: 'room_memory',
         name: '记忆空间',
+        visual: { rain: false },
         width: 24,
         height: 18,
         data: [

@@ -8,6 +8,11 @@ export class SoundManager {
         this.init();
     }
 
+    setScene(scene) {
+        this.scene = scene;
+        return this;
+    }
+
     init() {
         if (!this.audioCtx) {
             this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();

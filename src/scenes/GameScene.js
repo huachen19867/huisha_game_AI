@@ -80,6 +80,7 @@ export class GameScene extends Phaser.Scene {
             this.game.soundManager = new SoundManager(this);
             this.soundManager = this.game.soundManager;
         }
+        this.soundManager.setScene(this);
 
         const ua = navigator.userAgent || '';
         this.isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
@@ -142,15 +143,11 @@ export class GameScene extends Phaser.Scene {
         this.cameras.main.fadeIn(500, 0, 0, 0);
 
         // Lights & Atmosphere
-        if (!this.isMobile) {
-            this.lights.enable();
-            this.lights.setAmbientColor(0x888888);
-        }
-
+        const shouldRain = mapData.visual?.rain === true && !this.isMobile;
         this.rainParticles = this.add.particles(0, 0, 'rain', {
             x: { min: 0, max: 800 },
             y: -10,
-            quantity: this.isMobile ? 0 : 2,
+            quantity: shouldRain ? 2 : 0,
             lifespan: 1000,
             speedY: { min: 400, max: 600 },
             speedX: { min: -20, max: 20 },
@@ -160,6 +157,7 @@ export class GameScene extends Phaser.Scene {
         });
         this.rainParticles.setDepth(200);
         this.rainParticles.setScrollFactor(0);
+        if (!shouldRain) this.rainParticles.stop();
 
         this.vignette = this.add.image(400, 300, 'vignette');
         this.vignette.setScrollFactor(0);
@@ -481,8 +479,16 @@ export class GameScene extends Phaser.Scene {
                 // Game Over Logic
                 this.physics.pause();
                 this.chaser.body.setVelocity(0);
-                window.showDialog('暴怒的黑影', '抓到你了...乖儿子，哪也不许去。我们要永远在一起...永远不分开。', () => {
-                     this.scene.restart();
+                window.showDialog('暴怒的黑影', '抓到你了……但这次记忆没有把你送回最初。', () => {
+                    this.physics.resume();
+                    this.gameState.isHidden = false;
+                    const retryMap = Maps[this.currentMapId];
+                    this.scene.restart({
+                        mapId: this.currentMapId,
+                        x: retryMap.objects.playerStart.x,
+                        y: retryMap.objects.playerStart.y,
+                        previousMapId: this.previousMapId
+                    });
                 });
             }
         });
