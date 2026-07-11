@@ -7,9 +7,13 @@ assert.equal(getCurrentObjective(state, 'room_prologue'), '沿公路寻找避雨
 state.doorSlammed = true;
 assert.equal(getCurrentObjective(state, 'room_main'), '完成供桌仪式：寻找倒头饭（厨房）、火柴（密室）、香（后院）、纸钱（阁楼）');
 let view = getObjectiveView(state, 'room_kitchen');
-assert.equal(view.local, '取得倒头饭并触发纸人变化');
+assert.equal(view.local, '根据水槽、灶台与纸人手势还原饭桌座次');
 assert.equal(view.completed, false);
 assert.equal(view.memory, '父亲死了，我只是回来避雨。');
+state.hasRice = true;
+view = getObjectiveView(state, 'room_kitchen');
+assert.equal(view.completed, true, 'the kitchen is complete once its own rice puzzle is solved');
+state.hasRice = false;
 state.hasRice = state.hasMatches = state.hasIncense = state.hasSpiritMoney = true;
 assert.equal(getCurrentObjective(state, 'room_main'), '还原两段记忆：从旧书房进入学校，从药柜小间进入医院');
 view = getObjectiveView(state, 'room_kitchen');

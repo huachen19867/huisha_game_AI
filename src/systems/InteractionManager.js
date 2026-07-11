@@ -1,4 +1,4 @@
-import { canChooseCrashEnding, collectClue, ensureStoryFlags, getExitRoute, getTruthLevel, reconcileFamilyPhoto } from './StoryState.js';
+import { applyPuzzleOutcome, canChooseCrashEnding, collectClue, ensureStoryFlags, getExitRoute, getTruthLevel, reconcileFamilyPhoto } from './StoryState.js';
 import { syncStaticBody } from './PhysicsSync.js';
 import { Puzzles, canStartPuzzle } from '../data/Puzzles.js';
 import { formatInteractionPrompt, normalizeInteractionMeta, selectInteractionCandidate } from './InteractionRules.js';
@@ -46,6 +46,10 @@ export class InteractionManager {
         }
 
         const progress = flags.puzzleProgress[puzzle.id] || createPuzzleProgress(puzzle);
+        if (progress.solved) {
+            window.showDialog('主角', puzzle.successText);
+            return;
+        }
         window.showPuzzle({ ...puzzle, availableEvidence: evidenceIds }, progress, {
             onChange: nextProgress => {
                 flags.puzzleProgress[puzzle.id] = nextProgress;
@@ -56,10 +60,24 @@ export class InteractionManager {
             onSuccess: () => {
                 const collected = obj.clueId && obj.clueType ? this.collectClue(obj.clueId, obj.clueType) : false;
                 if (collected && this.scene.playSound) this.scene.playSound(400, 'triangle', 0.4);
-                if (puzzle.conclusion && !flags.caseConclusions.includes(puzzle.conclusion)) flags.caseConclusions.push(puzzle.conclusion);
-                if (puzzle.id === 'school' || puzzle.id === 'hospital') {
-                    flags.puzzles[puzzle.id] = true;
-                    flags.memories[puzzle.id] = true;
+                const outcome = applyPuzzleOutcome(this.gameState, puzzle);
+                if (outcome.newlyCompleted && outcome.rewardItem) window.updateInventory(outcome.rewardItem);
+                if (puzzle.id === 'kitchen_table') this.scene.eventManager?.triggerPaperDollEvent();
+                if (puzzle.id === 'well_knots' && this.scene.incense) {
+                    this.scene.incense.destroy();
+                    this.scene.incense = null;
+                }
+                if (puzzle.id === 'attic_debt' && this.scene.spirit_money) {
+                    this.scene.spirit_money.destroy();
+                    this.scene.spirit_money = null;
+                }
+                if (puzzle.ritual) {
+                    this.scene.leftCandle?.setAlpha(1);
+                    this.scene.rightCandle?.setAlpha(1);
+                    this.scene.playSound(600, 'sine', 1);
+                    this.scene.doors?.getChildren().forEach(door => {
+                        if (door.targetMap === 'room_entrance') door.locked = false;
+                    });
                 }
                 this.scene.refreshObjective();
                 window.showDialog('主角', puzzle.successText, () => {
@@ -386,12 +404,7 @@ export class InteractionManager {
 
                 if (obj.objId === 'kitchen_cabinet') {
                     if (!this.gameState.hasRice) {
-                        this.gameState.hasRice = true;
-                        window.updateInventory('倒头饭');
-                        scene.playSound(400, 'triangle', 0.5);
-                        window.showDialog('主角', `你获得了【倒头饭】。${getObjectReflection(this.gameState, 'rice')}`, () => {
-                            if (scene.eventManager) scene.eventManager.triggerPaperDollEvent();
-                        });
+                        this.openConfiguredPuzzle({ ...obj, puzzleId: 'kitchen_table' });
                     } else {
                         window.showDialog('主角', getObjectReflection(this.gameState, 'rice'));
                     }
@@ -485,7 +498,8 @@ export class InteractionManager {
             }
 
             if (type === 'sink') {
-                window.showDialog('主角', '满是水垢的水槽...仿佛很久没人用过了。');
+                this.collectClue('kitchen_sink_bowls', 'control');
+                window.showDocument('水槽里的三只旧碗', '缺口大碗还带酒味，白瓷碗底结着药渍，蓝边小碗刻着一架纸飞机。它们属于不同的人。');
                 return;
             }
 
@@ -583,19 +597,13 @@ export class InteractionManager {
 
             if (type === 'incense') {
                  if (this.gameState.hasIncense) return;
-                 this.gameState.hasIncense = true;
-                 window.updateInventory('香');
-                 if (scene.incense) { scene.incense.destroy(); scene.incense = null; }
-                 scene.playSound(400, 'triangle', 0.5);
+                 this.openConfiguredPuzzle({ ...obj, puzzleId: 'well_knots' });
                  return;
             }
 
             if (type === 'spirit_money') {
                  if (this.gameState.hasSpiritMoney) return;
-                 this.gameState.hasSpiritMoney = true;
-                 window.updateInventory('纸钱');
-                 if (scene.spirit_money) { scene.spirit_money.destroy(); scene.spirit_money = null; }
-                 scene.playSound(400, 'triangle', 0.5);
+                 this.openConfiguredPuzzle({ ...obj, puzzleId: 'attic_debt' });
                  return;
             }
 
@@ -606,24 +614,7 @@ export class InteractionManager {
                     return;
                 }
                 if (this.gameState.hasRice && this.gameState.hasMatches && this.gameState.hasIncense && this.gameState.hasSpiritMoney) {
-                    scene.leftCandle.setAlpha(1);
-                    scene.rightCandle.setAlpha(1);
-                    scene.lights.addLight(scene.leftCandle.x, scene.leftCandle.y, 100).setColor(0xffaa00).setIntensity(1.5);
-                    scene.lights.addLight(scene.rightCandle.x, scene.rightCandle.y, 100).setColor(0xffaa00).setIntensity(1.5);
-                    scene.playSound(600, 'sine', 1);
-                    this.gameState.candlesLit = true;
-                    scene.doors?.getChildren().forEach(door => {
-                        if (door.targetMap === 'room_entrance') door.locked = false;
-                    });
-                    scene.refreshObjective();
-
-                    window.showDialog('主角', '（你摆上了倒头饭，点燃了香和蜡烛，烧了纸钱。火苗诡异地跳动了一下。）', () => {
-                        scene.time.delayedCall(500, () => {
-                            scene.cameras.main.shake(500, 0.02);
-                            scene.playSound(100, 'sawtooth', 3);
-                            window.showDialog('主角', '火光照过遗像，父亲的脸变成了少年时的我。供桌中间那副碗筷，原来一直在等我。');
-                        });
-                    });
+                    this.openConfiguredPuzzle({ ...obj, puzzleId: 'altar_ritual' });
                 } else {
                     let missing = [];
                     if (!this.gameState.hasRice) missing.push('倒头饭');
@@ -742,7 +733,8 @@ export class InteractionManager {
             */
 
             if (type === 'kitchen_ghost') {
-                window.showDialog('奇怪的纸人', '（空洞的声音）...饿...好饿...给我饭...', () => {
+                this.collectClue('kitchen_ghost_gesture', 'death');
+                window.showDialog('奇怪的纸人', '它先指向灶边，又指向侧门，最后把手停在饭桌南侧的空位。', () => {
                     if (this.scene.gameState.hasRice) {
                         window.showDialog('主角', '这就是你要的饭吗？（似乎需要把饭放在某个地方）');
                     } else {

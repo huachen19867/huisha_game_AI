@@ -33,6 +33,7 @@ export const Puzzles = {
             offering_is_not_daily_bowl: '供位不是任何人的日常碗，它等的是没回来的人。'
         },
         hints: ['先用碗上的痕迹认出三个人。', '北位靠灶，西位背门，东位挨侧门；剩下的才是供位。'],
+        reward: { flag: 'hasRice', item: '倒头饭' },
         conclusion: 'empty_seat', successText: '饭桌终于摆回原样。南边那碗冷饭，从一开始就在等没有回来的我。'
     }),
     secret_seals: board({
@@ -57,6 +58,7 @@ export const Puzzles = {
             seal_south: '南边圆口垂着井绳。', seal_north: '北边长方影子钉着七点。'
         },
         hints: ['先辨认四道影子的轮廓。', '按东门、西窗、南井、北棺放置。'],
+        reward: { flag: 'hasMatches', item: '火柴' },
         conclusion: 'sealed_house', successText: '封条下面压着划火片和火柴。父亲封的不是鬼，是这栋不肯结束的家。'
     }),
     well_knots: board({
@@ -74,6 +76,7 @@ export const Puzzles = {
         conflicts: { child_mark: 'child_knot', leave_tied: 'water_knot' },
         messages: { child_knot: '纸飞机旁缝着的是短结。', water_knot: '湿符写明圆结镇水，不能解开。' },
         hints: ['纸人的袖口能认出孩子的结。', '解短结，保留圆结。'],
+        reward: { flag: 'hasIncense', item: '香' },
         successText: '短结一松，井绳带出一把受潮的香。圆结还在，井下的水没有继续上涨。'
     }),
     attic_debt: board({
@@ -92,6 +95,7 @@ export const Puzzles = {
         conflicts: { debtor: 'debt_has_no_name', proof: 'parents_have_graves' },
         messages: { debt_has_no_name: '账页说债主没有牌位，也就不会写名字。', parents_have_graves: '坟位记录能证明父母不是那个无尸无牌位的人。' },
         hints: ['先排除已有坟位的人。', '选择无名短纸束，并用父母坟位记录作证。'],
+        reward: { flag: 'hasSpiritMoney', item: '纸钱' },
         conclusion: 'unpaid_debt', successText: '无名纸束落下来。父亲烧了十年纸钱，却从没敢在上面写我的名字。'
     }),
     school: board({
@@ -147,7 +151,7 @@ export const Puzzles = {
     }),
     altar_ritual: board({
         id: 'altar_ritual', title: '把最后一顿饭送到正确的位置',
-        prerequisites: [],
+        prerequisites: ['empty_seat', 'sealed_house', 'unpaid_debt'],
         clues: [
             { id: 'empty_seat', label: '空位：饭等的是没有回来的孩子' },
             { id: 'sealed_house', label: '封宅：火只能在最后照出亡名' },
@@ -168,6 +172,7 @@ export const Puzzles = {
             money_pays: '纸钱偿还旧债，不负责照明。', fire_reveals: '火最后点亮遗像，让亡者看见自己的名字。'
         },
         hints: ['四个位置的动词已经说明供品用途。', '饭留位、香引魂、纸钱偿债、火柴照真。'],
+        ritual: true,
         successText: '火光照过遗像，父亲的脸褪成了少年时的我。供桌一直在等我入席。'
     })
 };

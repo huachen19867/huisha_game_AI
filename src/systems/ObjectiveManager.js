@@ -8,7 +8,7 @@ function isMapPurposeComplete(gameState, mapId) {
         room_prologue: gameState.viewedEntrance,
         room_entrance: flags.endingChoice !== null,
         room_main: Boolean(gameState.candlesLit && flags.coffinOpened),
-        room_kitchen: gameState.hasRice && gameState.hasMatches,
+        room_kitchen: gameState.hasRice,
         room_corridor: flags.photoSetCollected,
         room_bathroom: flags.collectedClues.includes('bathroom_medicine_hint'),
         room_bedroom_parents: gameState.inventory.includes('地下室钥匙') && gameState.cabinetMoved,

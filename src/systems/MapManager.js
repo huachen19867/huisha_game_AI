@@ -121,6 +121,9 @@ export class MapManager {
                 this.scene.interactables.add(obj);
                 if (data.dialog) obj.dialog = data.dialog;
                 if (data.id) obj.objId = data.id;
+                for (const key of ['clueId', 'clueType', 'documentTitle', 'documentText', 'puzzleId', 'itemGrant', 'memoryTrigger', 'memoryReturn', 'memoryComplete', 'endingChoice']) {
+                    if (data[key] !== undefined) obj[key] = data[key];
+                }
                 obj.interaction = normalizeInteractionMeta(data, { textureKey: obj.texture?.key });
                 if (obj.interaction.marker && !obj.interactionMarker) {
                     obj.interactionMarker = scene.add.circle(obj.x, obj.y - Math.max(18, obj.displayHeight * 0.55), 4, 0xffd27a, 0.85)
@@ -236,7 +239,7 @@ export class MapManager {
                  scene.npc.setVisible(false);
                  scene.npc.body.enable = false;
             } else {
-                addToInteractables(scene.npc, { id: 'kitchen_ghost', interaction: { label: '灶台边的女人', verb: '询问', priority: 30, radius: 120, marker: true, blocksMovement: true } });
+                addToInteractables(scene.npc, { ...objs.npc, id: 'kitchen_ghost', interaction: { label: '灶台边的女人', verb: '观察', priority: 30, radius: 120, marker: true, blocksMovement: true } });
             }
         }
 

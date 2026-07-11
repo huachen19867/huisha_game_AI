@@ -758,7 +758,7 @@ const Maps = {
         objects: {
             playerStart: { x: 384, y: 450 },
             coffin: { x: 384, y: 150, dialog: '黑棺钉着七颗锁魂钉。里面每响一下，我的胸口也跟着疼一下。' },
-            altar: { x: 384, y: 250, dialog: '供桌摆着三副碗筷，中间那只碗落灰最少，像每年都有人重新擦过。' },
+            altar: { x: 384, y: 250, puzzleId: 'altar_ritual', dialog: '供桌摆着三副碗筷，中间那只碗落灰最少，像每年都有人重新擦过。' },
             black_cloth: { x: 384, y: 240, dialog: '黑布下是父亲的遗像。相框玻璃却映出另一张更年轻的脸，一闪就不见了。' },
             candles: [
                 { x: 354, y: 240 },
@@ -778,7 +778,7 @@ const Maps = {
     room_kitchen: {
         id: 'room_kitchen',
         name: '厨房',
-        purpose: '取得倒头饭并触发纸人变化',
+        purpose: '根据水槽、灶台与纸人手势还原饭桌座次',
         rewards: ['rice', 'paper_doll_event'],
         visual: { rain: false },
         width: 16,
@@ -804,9 +804,10 @@ const Maps = {
             sink: { x: 250, y: 50, dialog: '水龙头生锈了，拧不紧，每隔几秒就滴落一滴浑浊的水珠。滴答...滴答...在这死寂的屋子里，听起来像是时间的倒计时。灶台上有一层油腻的黑垢，那是母亲生前最在意的地方。' },
             cabinet: {
                 x: 400, y: 50, id: 'kitchen_cabinet',
+                puzzleId: 'kitchen_table',
                 interaction: { label: '封死的饭柜', verb: '检查', priority: 30, radius: 80, marker: true }
             },
-            npc: { x: 360, y: 160 },
+            npc: { x: 360, y: 160, clueId: 'kitchen_ghost_gesture', clueType: 'death' },
             interactables: [
                 {
                     id: 'kitchen_stove_marks', x: 150, y: 82, texture: 'stove',
@@ -969,10 +970,21 @@ const Maps = {
         ],
         objects: {
             playerStart: { x: 64, y: 200 },
-            desk: { x: 300, y: 200, dialog: '一张布满灰尘的工作台。上面放着各种奇怪的工具：刻刀、红线、符纸...还有一些未完成的木偶。原来...那些"纸人"都是父亲亲手做的？' },
+            desk: { x: 300, y: 200, puzzleId: 'secret_seals', dialog: '空火柴盒被四张纸扎封条压住，划火片藏在最下面。' },
             notes: [
-                { x: 300, y: 300, dialog: '工作台上的笔记："秀兰的病越来越重了。她总说看见了明儿。我也看见了...但我知道那不是明儿。那是心中的鬼。我要把它们封印起来。用这些木偶..."' },
-                { x: 100, y: 100, dialog: '墙上的血书："我没有疯！我没有疯！放我出去！"' }
+                {
+                    x: 300, y: 300, id: 'father_seal_note', clueId: 'father_seal_note', clueType: 'control',
+                    documentTitle: '封宅笔记', documentText: '门留归路，窗绝外念，井压水魂，棺锁亡名。四封错一处，整座宅子都会听见。',
+                    dialog: '父亲把封宅方法写成了四句。'
+                },
+                {
+                    x: 100, y: 100, id: 'puppet_shadow_map', clueId: 'puppet_shadow_map', clueType: 'control',
+                    documentTitle: '木偶投影', documentText: '烛痕把四只木偶投向墙面：东边像门框，西边是窗棂，南边垂井绳，北边钉着七点。',
+                    dialog: '墙上的木偶影子分别朝向四方。'
+                }
+            ],
+            interactables: [
+                { id: 'secret_seal_board', x: 300, y: 210, texture: 'desk', puzzleId: 'secret_seals', dialog: '四张封条压着一个空火柴盒。' }
             ],
             doors: [
                     { x: 0, y: 6, w: 1, h: 2, targetMap: 'room_bedroom_parents', targetX: 450, targetY: 400 }
@@ -1179,9 +1191,16 @@ const Maps = {
             playerStart: { x: 320, y: 100 },
             well: { x: 320, y: 320, dialog: '古老的枯井，井口被几块大石头死死压住，缝隙里塞满了画着符咒的黄纸。井底深处，似乎有冷风不断吹上来。小时候，我不小心把球踢到了井边，父亲发了疯一样打我，说井里住着吃人的怪物。' },
             incense: {
-                x: 550, y: 550, id: 'incense', dialog: '在树后发现了一把香。',
-                interaction: { label: '一把香', verb: '拾取', priority: 30, radius: 80, marker: true, blocksMovement: false }
+                x: 550, y: 550, id: 'incense', puzzleId: 'well_knots', dialog: '一把香被井绳拖进树根，只露出缠结的绳头。',
+                interaction: { label: '缠结的井绳', verb: '解结', priority: 30, radius: 80, marker: true, blocksMovement: false }
             },
+            interactables: [
+                {
+                    id: 'well_charm_marks', x: 390, y: 330, texture: 'trash_paper',
+                    clueId: 'well_charm_marks', clueType: 'illness', documentTitle: '受潮的三结符',
+                    documentText: '符上画着三种结：圆结镇水，双结锁门，短结牵孩子。最下面一行被水泡成了“莫解圆结”。'
+                }
+            ],
             trees: [
                 { x: 100, y: 200 },
                 { x: 500, y: 200 },
@@ -1278,14 +1297,20 @@ const Maps = {
         objects: {
             playerStart: { x: 320, y: 384 },
             spirit_money: {
-                x: 320, y: 100, id: 'spirit_money',
+                x: 320, y: 100, id: 'spirit_money', puzzleId: 'attic_debt',
                 dialog: '横梁上挂着一串串纸钱，随着气流轻轻晃动，发出沙沙的声音。就像是有无数个看不见的幽灵在窃窃私语。这些钱...是烧给谁的？',
-                interaction: { label: '一串纸钱', verb: '拾取', priority: 30, radius: 80, marker: true, blocksMovement: false }
+                interaction: { label: '四束纸钱', verb: '辨认', priority: 30, radius: 80, marker: true, blocksMovement: false }
             },
             interactables: [
                 {
                     id: 'attic_overview', x: 480, y: 160, texture: 'photo_frame',
-                    dialog: '从破窗能看见后院枯井、正厅烟气和走廊尽头，三条路最终都指向供桌。'
+                    clueId: 'attic_overview', clueType: 'death', documentTitle: '破窗外的坟位',
+                    documentText: '父亲和母亲的坟位都能从窗外看见。只有孩子的方向没有坟，正厅却年年摆着一只空碗。'
+                },
+                {
+                    id: 'father_debt_note', x: 165, y: 150, texture: 'trash_paper',
+                    clueId: 'father_debt_note', clueType: 'death', documentTitle: '十年纸钱账',
+                    documentText: '父亲记着：无尸、无牌位、照片缺角者，纸钱十年未断。名字一栏始终空白。'
                 }
             ],
             doors: [
@@ -1586,6 +1611,7 @@ const Puzzles = {
             offering_is_not_daily_bowl: '供位不是任何人的日常碗，它等的是没回来的人。'
         },
         hints: ['先用碗上的痕迹认出三个人。', '北位靠灶，西位背门，东位挨侧门；剩下的才是供位。'],
+        reward: { flag: 'hasRice', item: '倒头饭' },
         conclusion: 'empty_seat', successText: '饭桌终于摆回原样。南边那碗冷饭，从一开始就在等没有回来的我。'
     }),
     secret_seals: board({
@@ -1610,6 +1636,7 @@ const Puzzles = {
             seal_south: '南边圆口垂着井绳。', seal_north: '北边长方影子钉着七点。'
         },
         hints: ['先辨认四道影子的轮廓。', '按东门、西窗、南井、北棺放置。'],
+        reward: { flag: 'hasMatches', item: '火柴' },
         conclusion: 'sealed_house', successText: '封条下面压着划火片和火柴。父亲封的不是鬼，是这栋不肯结束的家。'
     }),
     well_knots: board({
@@ -1627,6 +1654,7 @@ const Puzzles = {
         conflicts: { child_mark: 'child_knot', leave_tied: 'water_knot' },
         messages: { child_knot: '纸飞机旁缝着的是短结。', water_knot: '湿符写明圆结镇水，不能解开。' },
         hints: ['纸人的袖口能认出孩子的结。', '解短结，保留圆结。'],
+        reward: { flag: 'hasIncense', item: '香' },
         successText: '短结一松，井绳带出一把受潮的香。圆结还在，井下的水没有继续上涨。'
     }),
     attic_debt: board({
@@ -1645,6 +1673,7 @@ const Puzzles = {
         conflicts: { debtor: 'debt_has_no_name', proof: 'parents_have_graves' },
         messages: { debt_has_no_name: '账页说债主没有牌位，也就不会写名字。', parents_have_graves: '坟位记录能证明父母不是那个无尸无牌位的人。' },
         hints: ['先排除已有坟位的人。', '选择无名短纸束，并用父母坟位记录作证。'],
+        reward: { flag: 'hasSpiritMoney', item: '纸钱' },
         conclusion: 'unpaid_debt', successText: '无名纸束落下来。父亲烧了十年纸钱，却从没敢在上面写我的名字。'
     }),
     school: board({
@@ -1700,7 +1729,7 @@ const Puzzles = {
     }),
     altar_ritual: board({
         id: 'altar_ritual', title: '把最后一顿饭送到正确的位置',
-        prerequisites: [],
+        prerequisites: ['empty_seat', 'sealed_house', 'unpaid_debt'],
         clues: [
             { id: 'empty_seat', label: '空位：饭等的是没有回来的孩子' },
             { id: 'sealed_house', label: '封宅：火只能在最后照出亡名' },
@@ -1721,6 +1750,7 @@ const Puzzles = {
             money_pays: '纸钱偿还旧债，不负责照明。', fire_reveals: '火最后点亮遗像，让亡者看见自己的名字。'
         },
         hints: ['四个位置的动词已经说明供品用途。', '饭留位、香引魂、纸钱偿债、火柴照真。'],
+        ritual: true,
         successText: '火光照过遗像，父亲的脸褪成了少年时的我。供桌一直在等我入席。'
     })
 };
@@ -2403,6 +2433,25 @@ function collectClue(gameState, clueId, clueType) {
     return true;
 }
 
+function applyPuzzleOutcome(gameState, puzzle) {
+    const flags = ensureStoryFlags(gameState);
+    const current = flags.puzzleProgress[puzzle.id] || { assignments: {}, attempts: 0 };
+    if (current.solved) return { newlyCompleted: false, rewardItem: puzzle.reward?.item || null };
+
+    flags.puzzleProgress[puzzle.id] = { ...current, solved: true };
+    if (puzzle.conclusion && !flags.caseConclusions.includes(puzzle.conclusion)) flags.caseConclusions.push(puzzle.conclusion);
+    if (puzzle.reward?.flag) gameState[puzzle.reward.flag] = true;
+    if (puzzle.id === 'school' || puzzle.id === 'hospital') {
+        flags.puzzles[puzzle.id] = true;
+        flags.memories[puzzle.id] = true;
+    }
+    if (puzzle.ritual) {
+        flags.ritualSolved = true;
+        gameState.candlesLit = 2;
+    }
+    return { newlyCompleted: true, rewardItem: puzzle.reward?.item || null };
+}
+
 function getTruthLevel(gameState) {
     const flags = ensureStoryFlags(gameState);
     const complete = flags.puzzles.school &&
@@ -2644,7 +2693,7 @@ function isMapPurposeComplete(gameState, mapId) {
         room_prologue: gameState.viewedEntrance,
         room_entrance: flags.endingChoice !== null,
         room_main: Boolean(gameState.candlesLit && flags.coffinOpened),
-        room_kitchen: gameState.hasRice && gameState.hasMatches,
+        room_kitchen: gameState.hasRice,
         room_corridor: flags.photoSetCollected,
         room_bathroom: flags.collectedClues.includes('bathroom_medicine_hint'),
         room_bedroom_parents: gameState.inventory.includes('地下室钥匙') && gameState.cabinetMoved,
@@ -3778,6 +3827,9 @@ class MapManager {
                 this.scene.interactables.add(obj);
                 if (data.dialog) obj.dialog = data.dialog;
                 if (data.id) obj.objId = data.id;
+                for (const key of ['clueId', 'clueType', 'documentTitle', 'documentText', 'puzzleId', 'itemGrant', 'memoryTrigger', 'memoryReturn', 'memoryComplete', 'endingChoice']) {
+                    if (data[key] !== undefined) obj[key] = data[key];
+                }
                 obj.interaction = normalizeInteractionMeta(data, { textureKey: obj.texture?.key });
                 if (obj.interaction.marker && !obj.interactionMarker) {
                     obj.interactionMarker = scene.add.circle(obj.x, obj.y - Math.max(18, obj.displayHeight * 0.55), 4, 0xffd27a, 0.85)
@@ -3893,7 +3945,7 @@ class MapManager {
                  scene.npc.setVisible(false);
                  scene.npc.body.enable = false;
             } else {
-                addToInteractables(scene.npc, { id: 'kitchen_ghost', interaction: { label: '灶台边的女人', verb: '询问', priority: 30, radius: 120, marker: true, blocksMovement: true } });
+                addToInteractables(scene.npc, { ...objs.npc, id: 'kitchen_ghost', interaction: { label: '灶台边的女人', verb: '观察', priority: 30, radius: 120, marker: true, blocksMovement: true } });
             }
         }
 
@@ -4308,6 +4360,10 @@ class InteractionManager {
         }
 
         const progress = flags.puzzleProgress[puzzle.id] || createPuzzleProgress(puzzle);
+        if (progress.solved) {
+            window.showDialog('主角', puzzle.successText);
+            return;
+        }
         window.showPuzzle({ ...puzzle, availableEvidence: evidenceIds }, progress, {
             onChange: nextProgress => {
                 flags.puzzleProgress[puzzle.id] = nextProgress;
@@ -4318,10 +4374,24 @@ class InteractionManager {
             onSuccess: () => {
                 const collected = obj.clueId && obj.clueType ? this.collectClue(obj.clueId, obj.clueType) : false;
                 if (collected && this.scene.playSound) this.scene.playSound(400, 'triangle', 0.4);
-                if (puzzle.conclusion && !flags.caseConclusions.includes(puzzle.conclusion)) flags.caseConclusions.push(puzzle.conclusion);
-                if (puzzle.id === 'school' || puzzle.id === 'hospital') {
-                    flags.puzzles[puzzle.id] = true;
-                    flags.memories[puzzle.id] = true;
+                const outcome = applyPuzzleOutcome(this.gameState, puzzle);
+                if (outcome.newlyCompleted && outcome.rewardItem) window.updateInventory(outcome.rewardItem);
+                if (puzzle.id === 'kitchen_table') this.scene.eventManager?.triggerPaperDollEvent();
+                if (puzzle.id === 'well_knots' && this.scene.incense) {
+                    this.scene.incense.destroy();
+                    this.scene.incense = null;
+                }
+                if (puzzle.id === 'attic_debt' && this.scene.spirit_money) {
+                    this.scene.spirit_money.destroy();
+                    this.scene.spirit_money = null;
+                }
+                if (puzzle.ritual) {
+                    this.scene.leftCandle?.setAlpha(1);
+                    this.scene.rightCandle?.setAlpha(1);
+                    this.scene.playSound(600, 'sine', 1);
+                    this.scene.doors?.getChildren().forEach(door => {
+                        if (door.targetMap === 'room_entrance') door.locked = false;
+                    });
                 }
                 this.scene.refreshObjective();
                 window.showDialog('主角', puzzle.successText, () => {
@@ -4648,12 +4718,7 @@ class InteractionManager {
 
                 if (obj.objId === 'kitchen_cabinet') {
                     if (!this.gameState.hasRice) {
-                        this.gameState.hasRice = true;
-                        window.updateInventory('倒头饭');
-                        scene.playSound(400, 'triangle', 0.5);
-                        window.showDialog('主角', `你获得了【倒头饭】。${getObjectReflection(this.gameState, 'rice')}`, () => {
-                            if (scene.eventManager) scene.eventManager.triggerPaperDollEvent();
-                        });
+                        this.openConfiguredPuzzle({ ...obj, puzzleId: 'kitchen_table' });
                     } else {
                         window.showDialog('主角', getObjectReflection(this.gameState, 'rice'));
                     }
@@ -4747,7 +4812,8 @@ class InteractionManager {
             }
 
             if (type === 'sink') {
-                window.showDialog('主角', '满是水垢的水槽...仿佛很久没人用过了。');
+                this.collectClue('kitchen_sink_bowls', 'control');
+                window.showDocument('水槽里的三只旧碗', '缺口大碗还带酒味，白瓷碗底结着药渍，蓝边小碗刻着一架纸飞机。它们属于不同的人。');
                 return;
             }
 
@@ -4845,19 +4911,13 @@ class InteractionManager {
 
             if (type === 'incense') {
                  if (this.gameState.hasIncense) return;
-                 this.gameState.hasIncense = true;
-                 window.updateInventory('香');
-                 if (scene.incense) { scene.incense.destroy(); scene.incense = null; }
-                 scene.playSound(400, 'triangle', 0.5);
+                 this.openConfiguredPuzzle({ ...obj, puzzleId: 'well_knots' });
                  return;
             }
 
             if (type === 'spirit_money') {
                  if (this.gameState.hasSpiritMoney) return;
-                 this.gameState.hasSpiritMoney = true;
-                 window.updateInventory('纸钱');
-                 if (scene.spirit_money) { scene.spirit_money.destroy(); scene.spirit_money = null; }
-                 scene.playSound(400, 'triangle', 0.5);
+                 this.openConfiguredPuzzle({ ...obj, puzzleId: 'attic_debt' });
                  return;
             }
 
@@ -4868,24 +4928,7 @@ class InteractionManager {
                     return;
                 }
                 if (this.gameState.hasRice && this.gameState.hasMatches && this.gameState.hasIncense && this.gameState.hasSpiritMoney) {
-                    scene.leftCandle.setAlpha(1);
-                    scene.rightCandle.setAlpha(1);
-                    scene.lights.addLight(scene.leftCandle.x, scene.leftCandle.y, 100).setColor(0xffaa00).setIntensity(1.5);
-                    scene.lights.addLight(scene.rightCandle.x, scene.rightCandle.y, 100).setColor(0xffaa00).setIntensity(1.5);
-                    scene.playSound(600, 'sine', 1);
-                    this.gameState.candlesLit = true;
-                    scene.doors?.getChildren().forEach(door => {
-                        if (door.targetMap === 'room_entrance') door.locked = false;
-                    });
-                    scene.refreshObjective();
-
-                    window.showDialog('主角', '（你摆上了倒头饭，点燃了香和蜡烛，烧了纸钱。火苗诡异地跳动了一下。）', () => {
-                        scene.time.delayedCall(500, () => {
-                            scene.cameras.main.shake(500, 0.02);
-                            scene.playSound(100, 'sawtooth', 3);
-                            window.showDialog('主角', '火光照过遗像，父亲的脸变成了少年时的我。供桌中间那副碗筷，原来一直在等我。');
-                        });
-                    });
+                    this.openConfiguredPuzzle({ ...obj, puzzleId: 'altar_ritual' });
                 } else {
                     let missing = [];
                     if (!this.gameState.hasRice) missing.push('倒头饭');
@@ -5004,7 +5047,8 @@ class InteractionManager {
             */
 
             if (type === 'kitchen_ghost') {
-                window.showDialog('奇怪的纸人', '（空洞的声音）...饿...好饿...给我饭...', () => {
+                this.collectClue('kitchen_ghost_gesture', 'death');
+                window.showDialog('奇怪的纸人', '它先指向灶边，又指向侧门，最后把手停在饭桌南侧的空位。', () => {
                     if (this.scene.gameState.hasRice) {
                         window.showDialog('主角', '这就是你要的饭吗？（似乎需要把饭放在某个地方）');
                     } else {

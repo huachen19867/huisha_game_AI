@@ -112,6 +112,25 @@ export function collectClue(gameState, clueId, clueType) {
     return true;
 }
 
+export function applyPuzzleOutcome(gameState, puzzle) {
+    const flags = ensureStoryFlags(gameState);
+    const current = flags.puzzleProgress[puzzle.id] || { assignments: {}, attempts: 0 };
+    if (current.solved) return { newlyCompleted: false, rewardItem: puzzle.reward?.item || null };
+
+    flags.puzzleProgress[puzzle.id] = { ...current, solved: true };
+    if (puzzle.conclusion && !flags.caseConclusions.includes(puzzle.conclusion)) flags.caseConclusions.push(puzzle.conclusion);
+    if (puzzle.reward?.flag) gameState[puzzle.reward.flag] = true;
+    if (puzzle.id === 'school' || puzzle.id === 'hospital') {
+        flags.puzzles[puzzle.id] = true;
+        flags.memories[puzzle.id] = true;
+    }
+    if (puzzle.ritual) {
+        flags.ritualSolved = true;
+        gameState.candlesLit = 2;
+    }
+    return { newlyCompleted: true, rewardItem: puzzle.reward?.item || null };
+}
+
 export function getTruthLevel(gameState) {
     const flags = ensureStoryFlags(gameState);
     const complete = flags.puzzles.school &&

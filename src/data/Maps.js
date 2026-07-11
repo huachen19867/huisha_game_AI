@@ -96,7 +96,7 @@ export const Maps = {
         objects: {
             playerStart: { x: 384, y: 450 },
             coffin: { x: 384, y: 150, dialog: '黑棺钉着七颗锁魂钉。里面每响一下，我的胸口也跟着疼一下。' },
-            altar: { x: 384, y: 250, dialog: '供桌摆着三副碗筷，中间那只碗落灰最少，像每年都有人重新擦过。' },
+            altar: { x: 384, y: 250, puzzleId: 'altar_ritual', dialog: '供桌摆着三副碗筷，中间那只碗落灰最少，像每年都有人重新擦过。' },
             black_cloth: { x: 384, y: 240, dialog: '黑布下是父亲的遗像。相框玻璃却映出另一张更年轻的脸，一闪就不见了。' },
             candles: [
                 { x: 354, y: 240 },
@@ -116,7 +116,7 @@ export const Maps = {
     room_kitchen: {
         id: 'room_kitchen',
         name: '厨房',
-        purpose: '取得倒头饭并触发纸人变化',
+        purpose: '根据水槽、灶台与纸人手势还原饭桌座次',
         rewards: ['rice', 'paper_doll_event'],
         visual: { rain: false },
         width: 16,
@@ -142,9 +142,10 @@ export const Maps = {
             sink: { x: 250, y: 50, dialog: '水龙头生锈了，拧不紧，每隔几秒就滴落一滴浑浊的水珠。滴答...滴答...在这死寂的屋子里，听起来像是时间的倒计时。灶台上有一层油腻的黑垢，那是母亲生前最在意的地方。' },
             cabinet: {
                 x: 400, y: 50, id: 'kitchen_cabinet',
+                puzzleId: 'kitchen_table',
                 interaction: { label: '封死的饭柜', verb: '检查', priority: 30, radius: 80, marker: true }
             },
-            npc: { x: 360, y: 160 },
+            npc: { x: 360, y: 160, clueId: 'kitchen_ghost_gesture', clueType: 'death' },
             interactables: [
                 {
                     id: 'kitchen_stove_marks', x: 150, y: 82, texture: 'stove',
@@ -307,10 +308,21 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 64, y: 200 },
-            desk: { x: 300, y: 200, dialog: '一张布满灰尘的工作台。上面放着各种奇怪的工具：刻刀、红线、符纸...还有一些未完成的木偶。原来...那些"纸人"都是父亲亲手做的？' },
+            desk: { x: 300, y: 200, puzzleId: 'secret_seals', dialog: '空火柴盒被四张纸扎封条压住，划火片藏在最下面。' },
             notes: [
-                { x: 300, y: 300, dialog: '工作台上的笔记："秀兰的病越来越重了。她总说看见了明儿。我也看见了...但我知道那不是明儿。那是心中的鬼。我要把它们封印起来。用这些木偶..."' },
-                { x: 100, y: 100, dialog: '墙上的血书："我没有疯！我没有疯！放我出去！"' }
+                {
+                    x: 300, y: 300, id: 'father_seal_note', clueId: 'father_seal_note', clueType: 'control',
+                    documentTitle: '封宅笔记', documentText: '门留归路，窗绝外念，井压水魂，棺锁亡名。四封错一处，整座宅子都会听见。',
+                    dialog: '父亲把封宅方法写成了四句。'
+                },
+                {
+                    x: 100, y: 100, id: 'puppet_shadow_map', clueId: 'puppet_shadow_map', clueType: 'control',
+                    documentTitle: '木偶投影', documentText: '烛痕把四只木偶投向墙面：东边像门框，西边是窗棂，南边垂井绳，北边钉着七点。',
+                    dialog: '墙上的木偶影子分别朝向四方。'
+                }
+            ],
+            interactables: [
+                { id: 'secret_seal_board', x: 300, y: 210, texture: 'desk', puzzleId: 'secret_seals', dialog: '四张封条压着一个空火柴盒。' }
             ],
             doors: [
                     { x: 0, y: 6, w: 1, h: 2, targetMap: 'room_bedroom_parents', targetX: 450, targetY: 400 }
@@ -517,9 +529,16 @@ export const Maps = {
             playerStart: { x: 320, y: 100 },
             well: { x: 320, y: 320, dialog: '古老的枯井，井口被几块大石头死死压住，缝隙里塞满了画着符咒的黄纸。井底深处，似乎有冷风不断吹上来。小时候，我不小心把球踢到了井边，父亲发了疯一样打我，说井里住着吃人的怪物。' },
             incense: {
-                x: 550, y: 550, id: 'incense', dialog: '在树后发现了一把香。',
-                interaction: { label: '一把香', verb: '拾取', priority: 30, radius: 80, marker: true, blocksMovement: false }
+                x: 550, y: 550, id: 'incense', puzzleId: 'well_knots', dialog: '一把香被井绳拖进树根，只露出缠结的绳头。',
+                interaction: { label: '缠结的井绳', verb: '解结', priority: 30, radius: 80, marker: true, blocksMovement: false }
             },
+            interactables: [
+                {
+                    id: 'well_charm_marks', x: 390, y: 330, texture: 'trash_paper',
+                    clueId: 'well_charm_marks', clueType: 'illness', documentTitle: '受潮的三结符',
+                    documentText: '符上画着三种结：圆结镇水，双结锁门，短结牵孩子。最下面一行被水泡成了“莫解圆结”。'
+                }
+            ],
             trees: [
                 { x: 100, y: 200 },
                 { x: 500, y: 200 },
@@ -616,14 +635,20 @@ export const Maps = {
         objects: {
             playerStart: { x: 320, y: 384 },
             spirit_money: {
-                x: 320, y: 100, id: 'spirit_money',
+                x: 320, y: 100, id: 'spirit_money', puzzleId: 'attic_debt',
                 dialog: '横梁上挂着一串串纸钱，随着气流轻轻晃动，发出沙沙的声音。就像是有无数个看不见的幽灵在窃窃私语。这些钱...是烧给谁的？',
-                interaction: { label: '一串纸钱', verb: '拾取', priority: 30, radius: 80, marker: true, blocksMovement: false }
+                interaction: { label: '四束纸钱', verb: '辨认', priority: 30, radius: 80, marker: true, blocksMovement: false }
             },
             interactables: [
                 {
                     id: 'attic_overview', x: 480, y: 160, texture: 'photo_frame',
-                    dialog: '从破窗能看见后院枯井、正厅烟气和走廊尽头，三条路最终都指向供桌。'
+                    clueId: 'attic_overview', clueType: 'death', documentTitle: '破窗外的坟位',
+                    documentText: '父亲和母亲的坟位都能从窗外看见。只有孩子的方向没有坟，正厅却年年摆着一只空碗。'
+                },
+                {
+                    id: 'father_debt_note', x: 165, y: 150, texture: 'trash_paper',
+                    clueId: 'father_debt_note', clueType: 'death', documentTitle: '十年纸钱账',
+                    documentText: '父亲记着：无尸、无牌位、照片缺角者，纸钱十年未断。名字一栏始终空白。'
                 }
             ],
             doors: [
