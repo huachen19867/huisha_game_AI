@@ -739,9 +739,9 @@ const Maps = {
         ],
         objects: {
             playerStart: { x: 384, y: 450 },
-            coffin: { x: 384, y: 150, dialog: '一口黑漆棺材，死气沉沉地横在屋子中央。棺材盖上钉着七颗长钉，每一颗都缠着浸透了黑狗血的红线。这是"锁魂钉"...他们在怕什么？怕里面的人出来吗？隐约间，我似乎听到了棺材里传来了指甲抓挠木板的声音...咯吱...咯吱...' },
-            altar: { x: 384, y: 250, dialog: '供桌上落满了厚厚的灰尘。香炉里插着三根断香，两短一长...人最忌讳的三长两短。供桌正中央摆着一个相框，被一块黑布死死地遮住。' },
-            black_cloth: { x: 384, y: 240, dialog: '（手颤抖着掀开黑布）是父亲的遗像。照片上的男人面容消瘦，颧骨高耸，那双眼睛...无论我走到哪里，似乎都在死死地盯着我。即使变成了照片，他的眼神依然让我感到窒息。' },
+            coffin: { x: 384, y: 150, dialog: '黑棺钉着七颗锁魂钉。里面每响一下，我的胸口也跟着疼一下。' },
+            altar: { x: 384, y: 250, dialog: '供桌摆着三副碗筷，中间那只碗落灰最少，像每年都有人重新擦过。' },
+            black_cloth: { x: 384, y: 240, dialog: '黑布下是父亲的遗像。相框玻璃却映出另一张更年轻的脸，一闪就不见了。' },
             candles: [
                 { x: 354, y: 240 },
                 { x: 414, y: 240 }
@@ -825,10 +825,10 @@ const Maps = {
             playerStart: { x: 176, y: 580 },
             locked_window: { x: 48, y: 100 },
             photos: [
-                { x: 48, y: 150, id: 1, text: '1998年，全家福。那时候父母笑得很开心，我被抱在怀里。照片的边缘有些发黄，幸福得像个假象。' },
-                { x: 272, y: 250, id: 2, text: '1999年，满月。我抓周抓了一支笔，父亲很高兴，说我以后一定有出息。母亲在旁边看着，眼神里却透着一丝忧虑。' },
-                { x: 48, y: 350, id: 3, text: '2003年，入学。我背着新书包，却笑不出来。父亲的手重重地按在我的肩膀上，像一座大山压得我喘不过气。' },
-                { x: 272, y: 450, id: 4, text: '2005年，争吵。照片被撕碎过又粘了起来。画面里只有父亲愤怒的背影和母亲掩面哭泣的样子。' }
+                { x: 48, y: 150, id: 1, text: '第一张全家福。母亲端着饭，父亲的手按在我肩上。照片右下角缺了一块。' },
+                { x: 272, y: 250, id: 2, text: '生日照里只有两碗长寿面，母亲却摆了三双筷子。' },
+                { x: 48, y: 350, id: 3, text: '入学那年，我把纸飞机藏在袖口。父亲按着我的肩，像怕我飞走。' },
+                { x: 272, y: 450, id: 4, text: '最后一张停在十年前的七月十四。照片里的我已经淡得只剩轮廓。' }
             ],
             doors: [
                 { x: 5, y: 0, w: 2, h: 1, targetMap: 'room_backyard', targetX: 320, targetY: 100 },
@@ -1110,7 +1110,7 @@ const Maps = {
             },
             desk: { x: 100, y: 150, id: 'my_desk', dialog: '这是我的书桌。上面刻着"早"字，但那只是我为了模仿鲁迅刻的。抽屉里塞满了没及格的试卷，每一次打开都需要勇气。' },
             diary: { x: 100, y: 140 },
-            toy_plane: { x: 300, y: 300, dialog: '一只折断机翼的纸飞机。是我七岁那年折的。我以为只要飞得够高，就能飞出围墙，飞出这个家。但它最终还是掉在了地上，被父亲一脚踩扁。' },
+            toy_plane: { x: 300, y: 300, dialog: '纸飞机的机翼被踩断了。背面是我的字：雨停前，我会回来吃饭。' },
             doors: [
                 { x: 0, y: 7, w: 1, h: 2, targetMap: 'room_corridor', targetX: 240, targetY: 368 }
             ]
@@ -1203,18 +1203,18 @@ const Maps = {
             interactables: [
                 {
                     id: 'basement_photo_corner', x: 304, y: 80, texture: 'photo_frame',
-                    dialog: '照片缺角上是小时候的我。它正好能补上走廊里的全家福。',
+                    dialog: '缺角上是少年时的我。背面写着：七月十四，明儿忌日。',
                     itemGrant: 'family_photo_corner'
                 },
                 {
                     id: 'basement_chain', x: 112, y: 176, texture: 'trash_paper',
                     clueId: 'basement_lock_chain', clueType: 'control',
-                    documentTitle: '锁门铁链', documentText: '铁链内侧有孩子指甲留下的抓痕。父亲不是在防外人，他是在防我逃走。'
+                    documentTitle: '锁门铁链', documentText: '铁链锁在门外。内侧的抓痕属于孩子，外侧还有父亲反复开锁又锁回去的磨痕。'
                 },
                 {
                     id: 'basement_scratches', x: 464, y: 176, texture: 'scratch',
                     clueId: 'basement_last_night', clueType: 'death',
-                    dialog: '墙上反复刻着：雨停之前，我一定要出去。'
+                    dialog: '墙上反复刻着：雨停前，我会回来吃饭。最后一个“回”字只写了一半。'
                 }
             ],
             doors: [
@@ -1466,7 +1466,7 @@ const Maps = {
                     y: 180,
                     texture: 'tile_mud',
                     tint: 0x88ccff,
-                    dialog: '前面的路没有灯，也没有人叫你的名字。只是雨小了一点。',
+                    dialog: '前面的路没有灯。身后的饭香越来越淡，雨声也第一次有了尽头。',
                     endingChoice: 'leave'
                 },
                 {
@@ -1475,7 +1475,7 @@ const Maps = {
                     y: 320,
                     texture: 'tile_wall',
                     tint: 0x884444,
-                    dialog: '身后的老宅亮起一盏灯，母亲在门里喊你吃饭。父亲没有骂人，只是沉默地等着。',
+                    dialog: '老宅亮起一盏灯。母亲喊你吃饭，父亲扶着门，像那场雨夜从未发生。',
                     endingChoice: 'return'
                 }
             ],
@@ -2085,6 +2085,7 @@ function createDefaultStoryFlags() {
         crashEvidence: { car: false, guardrail: false },
         coffinOpened: false,
         endingChoice: null,
+        narrativeBeatsSeen: [],
         postMemoryDialogShown: {
             school: false,
             hospital: false
@@ -2146,6 +2147,7 @@ function ensureStoryFlags(gameState) {
     flags.crashEvidence.guardrail = !!flags.crashEvidence.guardrail;
 
     if (flags.endingChoice === undefined) flags.endingChoice = null;
+    if (!Array.isArray(flags.narrativeBeatsSeen)) flags.narrativeBeatsSeen = [];
     if (!flags.postMemoryDialogShown) {
         flags.postMemoryDialogShown = { school: false, hospital: false };
     }
@@ -2206,6 +2208,83 @@ function canChooseCrashEnding(gameState) {
     return getTruthLevel(gameState) === 'complete' && flags.crashEvidence.car && flags.crashEvidence.guardrail;
 }
         // END bundled src/systems/StoryState.js
+
+        // BEGIN bundled src/systems/NarrativeDirector.js
+
+const MOTHER_CLUES = ['medical_record', 'bathroom_medicine_hint', 'prescription_note', 'unpaid_bill', 'hospital_diagnosis'];
+const ESCAPE_CLUES = ['locked_window', 'basement_lock_chain'];
+
+const NARRATIVE_BEATS = [
+    {
+        id: 'memorial_echo',
+        isReady: flags => flags.collectedClues.includes('diary_mother') && flags.photoSetCollected,
+        lines: [
+            { speaker: '主角', text: '等等。日记写的是“明儿的忌日”，照片也只停在十年前。' },
+            { speaker: '母亲的声音', text: '明儿，饭在锅里。别让它再凉了。' },
+            { speaker: '主角', text: '她不是把我当成死人……她是在等一个已经死去的人。' }
+        ]
+    },
+    {
+        id: 'escape_echo',
+        isReady: flags => ESCAPE_CLUES.some(id => flags.collectedClues.includes(id)) && flags.collectedClues.includes('toy_plane'),
+        lines: [
+            { speaker: '主角', text: '钉死的窗、折断的纸飞机……我早就计划过从这里逃走。' },
+            { speaker: '少年李明', text: '等雨小一点。我会回来吃饭。' },
+            { speaker: '主角', text: '这不是想象。我记得自己说过这句话。' }
+        ]
+    },
+    {
+        id: 'mother_echo',
+        isReady: flags => MOTHER_CLUES.filter(id => flags.collectedClues.includes(id)).length >= 2,
+        lines: [
+            { speaker: '主角', text: '诊断、处方、没交的钱……母亲不是疯了，是这个家不让她好起来。' },
+            { speaker: '母亲的声音', text: '明儿，饭在锅里。你先吃，别等我。' }
+        ]
+    }
+];
+
+function getNarrativePhase(gameState) {
+    const flags = ensureStoryFlags(gameState);
+    if (flags.coffinOpened) return 'acceptance';
+    if (flags.narrativeBeatsSeen.includes('escape_echo') || flags.narrativeBeatsSeen.includes('memorial_echo') || flags.photoSetCollected) return 'recognition';
+    if (flags.narrativeBeatsSeen.includes('mother_echo') || flags.clues.illness >= 2) return 'anger';
+    return 'denial';
+}
+
+function getPendingNarrativeBeat(gameState) {
+    const flags = ensureStoryFlags(gameState);
+    return NARRATIVE_BEATS.find(beat => !flags.narrativeBeatsSeen.includes(beat.id) && beat.isReady(flags)) || null;
+}
+
+function markNarrativeBeatSeen(gameState, beatId) {
+    const flags = ensureStoryFlags(gameState);
+    if (flags.narrativeBeatsSeen.includes(beatId)) return false;
+    flags.narrativeBeatsSeen.push(beatId);
+    return true;
+}
+
+function getNarrativeSummary(gameState) {
+    const phase = getNarrativePhase(gameState);
+    if (phase === 'acceptance') return '棺材里等的人是我。';
+    if (phase === 'recognition') return '所有日期都停在十年前的七月十四。';
+    if (phase === 'anger') return '母亲没有疯，是这个家不让她好起来。';
+    return '父亲死了，我只是回来避雨。';
+}
+
+function getObjectReflection(gameState, objectId) {
+    const phase = getNarrativePhase(gameState);
+    const late = phase === 'recognition' || phase === 'acceptance';
+    const reflections = {
+        rice: late ? '这碗饭等的人是我。它已经凉了十年。' : '给死人的饭。这个家连吃饭都像一条规矩。',
+        diary: late ? '母亲写的不是胡话。七月十四，是我的忌日。' : '母亲把活着的我写成了死人。她那时已经分不清了。',
+        locked_window: late ? '钉子不是新钉的。是记忆每晚把它们重新钉回去。' : '父亲连窗也不许我打开。',
+        toy_plane: late ? '背面是我的字：雨停前，我会回来吃饭。' : '折断的翅膀。小时候的我只想飞出去。',
+        altar: late ? '供桌等的不是父亲，是那个没有回家吃饭的孩子。' : '像是在等一场给父亲的祭祀。',
+        coffin: phase === 'acceptance' ? '纸飞机、校服纽扣、冷饭碗——他们把我的空位留了十年。' : '里面的抓挠声，为什么和我的心跳一样？'
+    };
+    return reflections[objectId] || '';
+}
+        // END bundled src/systems/NarrativeDirector.js
 
         // BEGIN bundled src/systems/RuntimeState.js
 function resolveSpawnCoordinate(value, fallback) {
@@ -2369,7 +2448,8 @@ function getObjectiveView(gameState, mapId) {
     return {
         main: getCurrentObjective(gameState, mapId),
         local: map?.purpose || '调查当前区域',
-        completed: isMapPurposeComplete(gameState, mapId)
+        completed: isMapPurposeComplete(gameState, mapId),
+        memory: getNarrativeSummary(gameState)
     };
 }
 
@@ -2379,7 +2459,7 @@ class ObjectiveManager {
         if (!this.element) return;
         const view = getObjectiveView(this.gameState, mapId);
         const localStatus = view.completed ? '本区域关键内容已完成' : view.local;
-        this.element.textContent = `主线：${view.main}\n当前区域：${localStatus}`;
+        this.element.textContent = `主线：${view.main}\n当前区域：${localStatus}\n记忆：${view.memory}`;
         this.element.style.whiteSpace = 'pre-line';
         this.element.style.display = 'block';
     }
@@ -2545,7 +2625,7 @@ class ChaseManager {
             this.scene.tweens.add({ targets: this.doorGlow, alpha: 0.65, duration: 450, yoyo: true, repeat: -1 });
         }
         if (showWarning && !this.arrivalWarning) {
-            this.arrivalWarning = this.scene.add.text(this.scene.scale.width / 2, 78, '它正从刚才的门追来', {
+            this.arrivalWarning = this.scene.add.text(this.scene.scale.width / 2, 78, '明儿，别跑，外面下雨', {
                 fontSize: '18px', color: '#ffb0a0', backgroundColor: '#300000', padding: { x: 10, y: 6 }
             }).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
         }
@@ -3964,7 +4044,9 @@ class InteractionManager {
     }
 
     collectClue(clueId, clueType) {
-        return collectClue(this.gameState, clueId, clueType);
+        const collected = collectClue(this.gameState, clueId, clueType);
+        if (collected) this.scene.queueNarrativeBeat?.();
+        return collected;
     }
 
     getTruthLevel() {
@@ -4274,16 +4356,16 @@ class InteractionManager {
             // 1. Memory Room
             if (type === 'memory_table' || (scene.currentMapId === 'room_memory' && (type === 'dad_ghost' || type === 'mom_ghost'))) {
                  // Hardcoded sequence for ending
-                window.showDialog('父亲的幻影', '（跪在地上，对着空气痛哭）明儿...我的明儿...是爸对不起你...那天我不该骂你...如果不把你锁起来...你就不会偷偷跑出去...就不会出车祸...', () => {
+                window.showDialog('父亲', '我锁过你的门，也藏过你妈的药。这些错不能拿一句“为你好”抵掉。', () => {
                     scene.time.delayedCall(1000, () => {
-                        window.showDialog('母亲', '（温柔地出现）明儿，饭菜都凉了。快来吃吧，我们一家人，终于团聚了。', () => {
+                        window.showDialog('母亲', '明儿，饭凉了。坐下吧，这次谁也不用走。', () => {
                             scene.cameras.main.shake(1000, 0.005);
-                            window.showDialog('主角', '爸，妈...其实我一直都知道。那场车祸...十年前就已经发生了。我早就该走了。', () => {
-                                window.showDialog('父亲', '（紧紧抓住主角的手）不！明儿，别走！我们已经错过了十年...剩下的时间，我们要永远在一起！', () => {
-                                    window.showDialog('主角', '（含泪微笑）好...我不走。我们永远不分开。', () => {
+                            window.showDialog('主角', '我知道这顿饭永远吃不完。但如果离开就要再失去你们一次……我不走了。', () => {
+                                window.showDialog('母亲', '母亲又说了一遍：“饭凉了。”碗里的热气回到最初的形状。', () => {
+                                    window.showDialog('父亲', '父亲起身，重新锁上了门。墙上的钟倒回七月十四零点。', () => {
                                         scene.cameras.main.fadeOut(4000, 255, 255, 255);
                                         scene.time.delayedCall(4000, () => {
-                                             window.showEndingScreen('结局：永远在一起', '在那个没有痛苦、没有分离的世界里，你们永远在一起。', () => {
+                                             window.showEndingScreen('结局：永远在一起', '你主动留在了最温暖的那一刻。从此每顿饭都会凉，每扇门都会再次锁上。', () => {
                                                  window.location.reload();
                                              });
                                         });
@@ -4308,11 +4390,11 @@ class InteractionManager {
                         this.gameState.hasRice = true;
                         window.updateInventory('倒头饭');
                         scene.playSound(400, 'triangle', 0.5);
-                        window.showDialog('主角', '柜子里有一碗发馊的饭...这是给死人的供品。你获得了【倒头饭】。', () => {
+                        window.showDialog('主角', `你获得了【倒头饭】。${getObjectReflection(this.gameState, 'rice')}`, () => {
                             if (scene.eventManager) scene.eventManager.triggerPaperDollEvent();
                         });
                     } else {
-                        window.showDialog('主角', '柜子已经空了。');
+                        window.showDialog('主角', getObjectReflection(this.gameState, 'rice'));
                     }
                     return;
                 } else if (obj.objId === 'parents_cabinet') {
@@ -4377,19 +4459,9 @@ class InteractionManager {
 
             if (type === 'diary') {
                 this.collectClue('diary_mother', 'illness');
-                const diaryContent = `
-七月十四日，阴。
-今天是明儿的忌日。
-我总觉得他还在这个家里。
-每天晚上，我都能听到走廊里有脚步声。
-不是老鼠，是孩子跑跳的声音。
-他最喜欢玩捉迷藏了。
-可是...那场车祸带走了他，也带走了我的魂。
-那个"疯子"（此处被涂黑）又喝醉了，他说听到了儿子的哭声。
-我也听到了。
-明儿，是你回来了吗？
-如果是你，带妈妈走吧。
-`;
+                const diaryContent = `七月十四。今天是明儿的忌日。
+我还是盛了三碗饭。老李把第三只碗摔了，夜里却又捡回来洗净。
+明儿，饭在锅里。你若回来，别再替妈妈受苦。`;
                 scene.triggerFlashback('diary');
                 if (!this.gameState.clues.includes('diary')) this.gameState.clues.push('diary');
                 window.showDocument('残破的日记', diaryContent);
@@ -4460,15 +4532,16 @@ class InteractionManager {
             }
 
             if (type === 'toy_plane') {
-                this.collectClue('toy_plane', 'death');
+                const collected = this.collectClue('toy_plane', 'death');
                 if (!this.gameState.clues.includes('plane')) this.gameState.clues.push('plane');
+                if (!collected) window.showDialog('主角', getObjectReflection(this.gameState, 'toy_plane'));
                 return;
             }
 
             if (type === 'locked_window') {
                 this.collectClue('locked_window', 'control');
                 if (!this.gameState.clues.includes('window')) this.gameState.clues.push('window');
-                window.showDialog('主角', '窗户从外面被钉死了。钉子很新，像是有人怕我再一次从这里逃出去。');
+                window.showDialog('主角', getObjectReflection(this.gameState, 'locked_window'));
                 return;
             }
 
@@ -4479,20 +4552,20 @@ class InteractionManager {
                          scene.switchScene('memory_crash', 120, 200);
                      });
                  } else if (route === 'ending_huisha') {
-                     window.showDialog('主角', '我终于明白了这个家为什么会变成这样。可还有什么东西被压在棺材里，没有说完。', () => {
+                     window.showDialog('主角', '父亲伤害了我们，母亲也被困在这里。至于棺材里是谁，我不想知道。', () => {
                          scene.cameras.main.fadeOut(3000, 120, 0, 0);
                          scene.time.delayedCall(3000, () => {
-                             window.showEndingScreen('结局：回煞', '你看见了父亲的控制，也看见了母亲的病。可你仍把最深的真相留在雨夜里，任它一遍遍回到这座宅子。', () => {
+                             window.showEndingScreen('结局：回煞', '你关上棺盖。墙边的黑影学会了我的站姿。下一场雨里，它会替父亲守门。', () => {
                                 scene.scene.start('TitleScene');
                                 window.globalGameState = null;
                              });
                          });
                      });
                  } else {
-                     window.showDialog('主角', '（回头看了一眼）...爸，妈，再见了。我要去过我自己的生活了。', () => {
+                     window.showDialog('主角', '我受够这个家了。只要不回头，我就还是活着的。', () => {
                         scene.cameras.main.fadeOut(3000, 255, 255, 255);
                         scene.time.delayedCall(3000, () => {
-                             window.showEndingScreen('结局：破茧', '你离开了那个家，再也没有回头。', () => {
+                             window.showEndingScreen('结局：破茧', '路边收音机正在重播十年前同一路段的少年死亡事故。身后很远的地方，仍有人喊你回家吃饭。', () => {
                                 scene.scene.start('TitleScene');
                                 window.globalGameState = null;
                              });
@@ -4549,7 +4622,7 @@ class InteractionManager {
                         scene.time.delayedCall(500, () => {
                             scene.cameras.main.shake(500, 0.02);
                             scene.playSound(100, 'sawtooth', 3);
-                            window.showDialog('主角', '蜡烛点燃了。火光摇曳中，我仿佛看到遗像上的人在笑...那是...我吗？这声音...是从棺材里传出来的？！');
+                            window.showDialog('主角', '火光照过遗像，父亲的脸变成了少年时的我。供桌中间那副碗筷，原来一直在等我。');
                         });
                     });
                 } else {
@@ -4559,7 +4632,7 @@ class InteractionManager {
                     if (!this.gameState.hasIncense) missing.push('香');
                     if (!this.gameState.hasSpiritMoney) missing.push('纸钱');
 
-                    window.showDialog('主角', `供桌上的遗像被黑布遮住了...香炉也是空的。好像在等待供奉。还缺：${missing.join('、')}。`);
+                    window.showDialog('主角', `${getObjectReflection(this.gameState, 'altar')} 还缺：${missing.join('、')}。`);
                 }
                 return;
             }
@@ -4570,14 +4643,16 @@ class InteractionManager {
                         const flags = this.ensureStoryFlags();
                         flags.coffinOpened = true;
                         this.collectClue('coffin_truth', 'death');
-                        window.showDialog('主角', '钥匙插进去了。这把锁...是我小时候藏玩具箱用的那把。真相就在里面。', () => {
+                        window.showDialog('主角', '钥匙插进去了。锁孔上的划痕和我的玩具箱一模一样。', () => {
                             scene.playSound(100, 'sawtooth', 2);
                             scene.refreshObjective();
-                            if (getTruthLevel(this.gameState) === 'complete') {
-                                window.showDialog('主角', '棺材里没有父亲，只有十年前雨夜里没能回家的我。', () => scene.switchScene('memory_crash', 120, 200));
-                            } else {
-                                window.showDialog('主角', '我知道家里发生了什么，但还没拼出自己死亡的全部过程。大门已经能打开了。');
-                            }
+                            window.showDialog('主角', '里面没有父亲，只有纸飞机、校服纽扣和一只凉透的饭碗。棺材里等的人是我。', () => {
+                                if (getTruthLevel(this.gameState) === 'complete') {
+                                    scene.switchScene('memory_crash', 120, 200);
+                                } else {
+                                    window.showDialog('主角', '我终于承认自己死在雨夜，但车祸前后的记忆还缺了一段。大门已经能打开了。');
+                                }
+                            });
                         });
                     } else {
                         window.showDialog('主角', '我有钥匙，但棺材周围的怨气太重了...上面的符咒还在闪烁。也许我应该先去供桌那边做点什么，平息亡魂的怨气。');
@@ -4587,7 +4662,7 @@ class InteractionManager {
                          window.showDialog('主角', '（惊恐）是父亲的声音！他...他没死？可是棺材盖上钉着七颗长钉，还缠着红线...这是在镇压什么？');
                      });
                 } else {
-                    // Default dialog is shown, no extra logic needed if candle not lit
+                    window.showDialog('主角', getObjectReflection(this.gameState, 'coffin'));
                 }
                 return;
             }
@@ -4609,12 +4684,13 @@ class InteractionManager {
                         this.gameState.corridorSolved = true;
                         const flags = this.ensureStoryFlags();
                         flags.photoSetCollected = true;
+                        scene.queueNarrativeBeat();
                         window.updateInventory('残缺全家福');
                         if (reconcileFamilyPhoto(this.gameState)) window.replaceInventoryItem('残缺全家福', '完整全家福');
                         scene.playSound(100, 'sawtooth', 2);
                         scene.cameras.main.flash(500, 255, 0, 0);
                         scene.time.delayedCall(500, () => {
-                            window.showDialog('主角', '走廊尽头的气息...似乎变了。墙上的照片...最后一张，是一场车祸的现场。');
+                            window.showDialog('主角', '四张照片拼在一起，年份只到十年前。缺掉的那一角，正好是我的脸。');
                         });
                     }
                 } else {
@@ -4723,7 +4799,7 @@ class InteractionManager {
                                                         scene.playSound(50, 'square', 4);
                                                         scene.cameras.main.flash(500, 255, 0, 0);
                                                         this.ensureStoryFlags().chasePhase = 'active';
-                                                        window.showDialog('恐怖的声音', '是他...那个把门窗都钉死的人！他不想让你打开棺材看到真相！快跑！！！', () => scene.chaseManager.start());
+                                                        window.showDialog('门外的男人', '明儿，别跑，外面下雨！', () => scene.chaseManager.start());
                                                     });
                                                 });
                                             });
@@ -4757,10 +4833,10 @@ class InteractionManager {
         flags.endingChoice = choice;
 
         if (choice === 'leave') {
-            window.showDialog('主角', '我不再回头了。雨声还在，可那座宅子终于离我越来越远。', () => {
+            window.showDialog('主角', '爸做错的事不会因为他后悔就消失，妈的痛也不该由我继续背。妈，饭别再热了。', () => {
                 scene.cameras.main.fadeOut(2500, 255, 255, 255);
                 scene.time.delayedCall(2500, () => {
-                    window.showEndingScreen('结局：归路', '你承认了死亡，也承认了自己曾经拼命想离开。路的尽头没有家，只有终于安静下来的雨。', () => {
+                    window.showEndingScreen('结局：归路', '你把全家福分成三份，允许每个人带着自己的错离开。十年来，雨第一次停了。', () => {
                         scene.scene.start('TitleScene');
                         window.globalGameState = null;
                     });
@@ -5211,6 +5287,8 @@ class GameScene extends Phaser.Scene {
         this.photos = null; // Reset photos group
         this.floorLayer = [];
         this.currentTarget = null;
+        this.narrativeBeatPlaying = false;
+        this.narrativeBeatTimer = null;
         this.leftCandle = null;
         this.rightCandle = null;
         this.shownCorridorHint = false;
@@ -5264,6 +5342,8 @@ class GameScene extends Phaser.Scene {
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             this.destroyJoystick();
             this.chaseManager?.destroy();
+            this.narrativeBeatTimer?.remove();
+            this.narrativeBeatTimer = null;
         });
 
         // Initialize Map Manager
@@ -5521,6 +5601,33 @@ class GameScene extends Phaser.Scene {
 
     refreshObjective() {
         this.objectiveManager?.refresh(this.currentMapId);
+    }
+
+    queueNarrativeBeat() {
+        if (this.narrativeBeatPlaying || this.narrativeBeatTimer) return;
+        this.narrativeBeatTimer = this.time.delayedCall(250, () => this.flushNarrativeBeat());
+    }
+
+    flushNarrativeBeat() {
+        this.narrativeBeatTimer = null;
+        if (window.dialogActive || this.isSwitching) {
+            this.queueNarrativeBeat();
+            return;
+        }
+        const beat = getPendingNarrativeBeat(this.gameState);
+        if (!beat) return;
+        this.narrativeBeatPlaying = true;
+        const showLine = index => {
+            if (index >= beat.lines.length) {
+                markNarrativeBeatSeen(this.gameState, beat.id);
+                this.narrativeBeatPlaying = false;
+                this.refreshObjective();
+                return;
+            }
+            const line = beat.lines[index];
+            window.showDialog(line.speaker, line.text, () => showLine(index + 1));
+        };
+        showLine(0);
     }
 
     updateSanity(delta) {
