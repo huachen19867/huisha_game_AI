@@ -41,20 +41,13 @@
 ## 🚀 快速开始 (推荐)
 直接双击运行目录下的 `StartGame.bat` 即可自动启动服务器并打开游戏。
 
-## 🧪 3D 原型
-标题页新增了“进入 3D 原型”入口，也可以直接访问 `prototype3d.html`。当前 3D 版本是第一阶段原型：保留 2D 主线不变，只提供正厅与走廊小段的 Three.js 低模探索、基础移动、目标提示、物件调查和返回标题。
-
-3D 美术不建议直接在代码里硬搓。后续生成老宅场景、贴图和道具参考时，优先使用 `docs/3D_ART_PROMPTS.md` 里的完整提示词包。
-
-`美术/` 是 3D 源素材库。当前原型已直接引用 `木墙.png`、`木地板.png`、`木梁.png`、`供桌区域.png`、`走廊墙面.png` 和 `纸钱与香灰.png`；其他素材先作为后续抠图、低模贴片或道具参考保留。
-
 ## 🛠️ 本地运行 (手动)
 如果你想手动运行：
 1. 右键点击 `server.ps1`，选择“使用 PowerShell 运行”。
 2. 浏览器访问 `http://localhost:8000`。
 
 ## 🧰 维护说明
-`index.html` 是可直接打开的单文件入口，源码仍以 `src` 目录为准。修改 `src` 后运行 `node tools\build_standalone_entry.mjs` 同步入口页，再运行 `node tools\verify_standalone_entry.mjs` 检查是否仍然适合本地双击启动。修改 3D 原型后，至少运行 `node tools\verify_3d_prototype.mjs` 和 `node tools\verify_3d_interaction_flow.mjs`。
+`index.html` 是可直接打开的单文件入口，源码仍以 `src` 目录为准。修改 `src` 后运行 `node tools\build_standalone_entry.mjs` 同步入口页，再运行 `node tools\verify_standalone_entry.mjs` 检查是否仍然适合本地双击启动。提交前运行 `node tools\verify_2d_only.mjs`，防止已归档的 3D 产品入口重新混入当前版本。
 
 ## 📦 部署与分享
 本项目为纯静态网页，推荐使用以下方式分享给朋友：
@@ -79,13 +72,12 @@
 .
 ├── index.html
 ├── phaser.min.js
-├── prototype3d.html
-├── vendor
 ├── StartGame.bat
 ├── server.ps1
+├── archive
+│   └── 3d                 # 历史美术与设计资料，不参与运行
 ├── src
 │   ├── data
-│   ├── 3d
 │   ├── entities
 │   ├── scenes
 │   └── systems
@@ -102,7 +94,6 @@
 - [路线图](ROADMAP.md)
 - [开发日志](DEV_LOG.md)
 - [游戏流程梳理](docs/GAME_FLOW.md)
-- [3D 美术生成提示词包](docs/3D_ART_PROMPTS.md)
 - [扩展设计文档](docs/superpowers/specs/2026-04-29-huisha-multi-ending-expansion-design.md)
 - [2D 稳定性与流程重构设计](docs/superpowers/specs/2026-07-11-huisha-2d-rework-design.md)
 
