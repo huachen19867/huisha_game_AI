@@ -104,6 +104,7 @@
 - [游戏流程梳理](docs/GAME_FLOW.md)
 - [3D 美术生成提示词包](docs/3D_ART_PROMPTS.md)
 - [扩展设计文档](docs/superpowers/specs/2026-04-29-huisha-multi-ending-expansion-design.md)
+- [2D 稳定性与流程重构设计](docs/superpowers/specs/2026-07-11-huisha-2d-rework-design.md)
 
 ## 📄 许可证
 
