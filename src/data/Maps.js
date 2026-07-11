@@ -515,7 +515,7 @@ export const Maps = {
     },
     room_basement: {
         id: 'room_basement',
-        name: '地下室',
+        name: '地下禁闭室',
         purpose: '取得全家福缺角与锁门证据',
         rewards: ['family_photo_corner', 'locked_chain_clue'],
         visual: {

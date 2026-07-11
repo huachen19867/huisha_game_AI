@@ -766,7 +766,7 @@ export class InteractionManager {
                                     scene.playSound(50, 'sawtooth', 4);
                                     scene.cameras.main.flash(200, 255, 0, 0);
                                     window.showDialog('主角', '（惊恐）一只惨白的手抓住了井沿！那是...那是一具泡得发肿的女尸！', () => {
-                                        window.showDialog('尸体', '为什么...不救我...你看着我死的...你就站在那里...看着我割开了手腕...', () => {
+                                        window.showDialog('尸体', '你看着我割开手腕……后来我走到井边时，你也没能来……', () => {
                                             window.showDialog('主角', '不！不是这样的！我被关起来了！我出不去！', () => {
                                                 window.showDialog('尸体', '撒谎...把钥匙给我...（猛地扑上来）', () => {
                                                     scene.playSound(600, 'sine', 1);

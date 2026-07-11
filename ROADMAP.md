@@ -1,28 +1,17 @@
-# Project: Returns (回煞) - Expansion Roadmap
+# 《回煞》路线图
 
-## Phase 1: Core Architecture Refactor (Current Focus)
-- **Scene Management**: Move from hardcoded map to data-driven Map System (`src/data/Maps.js`).
-- **Transition System**: Seamless fade-in/out transitions between rooms/scenes.
-- **Global State**: Persist inventory, story flags, and player status across scenes.
-- **Save/Load System**: Basic `localStorage` implementation.
+## 已完成的 2D 核心
 
-## Phase 2: Content Expansion
-- **Map Design**:
-  - Main Hall (Current)
-  - Corridor (Spooky, narrow)
-  - Backyard (Rainy, stealth section)
-  - Bedroom (Puzzle heavy)
-  - Kitchen (Chase sequence starter)
-- **Narrative**:
-  - Deepen the lore (Notes, diaries).
-  - Add more dialogue interactions.
-  - "Paper Doll" mechanic: The doll follows/teleports when you aren't looking.
+当前版本已经完成数据驱动的 18 张地图、单文件直开入口、跨地图剧情状态、明确目标提示、供品与钥匙链、学校和医院两段轻谜题、躲藏与 6 秒短追逐、全家福反制，以及“破茧 / 回煞 / 归路 / 永远在一起”四结局。
 
-## Phase 3: Advanced Gameplay
-- **Chase Mechanics**: Enemy AI that patrols and chases line-of-sight.
-- **Hiding Spots**: Closets/Under beds (Hold breath mechanic).
-- **Puzzles**: Inventory combination puzzles (e.g., Key + Oil = Oiled Key).
+稳定性底座已覆盖按 `delta` 计算的冲刺、体力与理智，静态碰撞体同步，移动端 DOM 监听清理，室内外雨效分离，当前地图失败重试和空间音效场景引用。`localStorage` 存档尚未实现，不能把跨刷新保存列为已有能力。
 
-## Phase 4: Polish
-- **Audio**: Footsteps matching surface, dynamic music intensity.
-- **Visuals**: Better lighting, particle effects (dust, rain), post-processing.
+## 下一阶段：试玩反馈与表现打磨
+
+下一轮优先收集完整流程的玩家数据：每章耗时、迷路点、谜题错误次数、追逐失败次数和四结局到达率。根据数据调整目标文案、门槛和地图动线，不再新增无产出的过渡地图。
+
+表现层重点是原创 2D 场景美术、关键证据插图、分区域脚步声、追逐音乐动态层和对白校对。所有氛围效果继续遵守“主路和交互物先可读，再增加恐怖感”的边界。
+
+## 后续候选
+
+存档/读档、无障碍选项、可调文字速度、手柄支持和多语言都属于候选项，只有在当前 20–30 分钟主流程经试玩稳定后再进入实现。
