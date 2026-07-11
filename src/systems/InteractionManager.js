@@ -1,7 +1,7 @@
 import { canChooseCrashEnding, collectClue, ensureStoryFlags, getExitRoute, getTruthLevel, reconcileFamilyPhoto } from './StoryState.js';
 import { syncStaticBody } from './PhysicsSync.js';
 import { Puzzles, canStartPuzzle } from '../data/Puzzles.js';
-import { formatInteractionPrompt, normalizeInteractionMeta, scoreInteractionCandidate } from './InteractionRules.js';
+import { formatInteractionPrompt, normalizeInteractionMeta, selectInteractionCandidate } from './InteractionRules.js';
 import { getObjectReflection } from './NarrativeDirector.js';
 
 export class InteractionManager {
@@ -101,8 +101,7 @@ export class InteractionManager {
         // Generic interactions are selected by story priority, facing and then distance.
         // MapManager adds almost everything to scene.interactables
         if (!target && scene.interactables) {
-            let bestScore = -Infinity;
-            let closestObj = null;
+            const candidates = [];
 
             scene.interactables.getChildren().forEach(obj => {
                 // If object is hidden/disabled, skip
@@ -127,13 +126,11 @@ export class InteractionManager {
                     const dy = obj.y - py;
                     const length = Math.hypot(dx, dy) || 1;
                     const facingDot = (dx / length) * (scene.player.facingX || 0) + (dy / length) * (scene.player.facingY || 1);
-                    const score = scoreInteractionCandidate({ distance: dist, priority: obj.interaction.priority, facingDot });
-                    if (score > bestScore) {
-                        bestScore = score;
-                        closestObj = obj;
-                    }
+                    candidates.push({ obj, distance: dist, priority: obj.interaction.priority, facingDot });
                 }
             });
+
+            const closestObj = selectInteractionCandidate(candidates)?.obj || null;
 
             // DEBUG: Force interaction debug if safe or ghost is nearby
             // scene.interactables.getChildren().forEach(obj => {

@@ -140,8 +140,19 @@ export const Maps = {
         objects: {
             playerStart: { x: 64, y: 240 },
             sink: { x: 250, y: 50, dialog: '水龙头生锈了，拧不紧，每隔几秒就滴落一滴浑浊的水珠。滴答...滴答...在这死寂的屋子里，听起来像是时间的倒计时。灶台上有一层油腻的黑垢，那是母亲生前最在意的地方。' },
-            cabinet: { x: 400, y: 50, id: 'kitchen_cabinet' },
+            cabinet: {
+                x: 400, y: 50, id: 'kitchen_cabinet',
+                interaction: { label: '封死的饭柜', verb: '检查', priority: 30, radius: 80, marker: true }
+            },
             npc: { x: 360, y: 160 },
+            interactables: [
+                {
+                    id: 'kitchen_stove_marks', x: 150, y: 82, texture: 'stove',
+                    clueId: 'kitchen_stove_marks', clueType: 'control',
+                    documentTitle: '灶台边的灰痕',
+                    documentText: '灰里压着一张饭桌轮廓：灶在北，侧门在东。父亲写过“我坐背门的位置”。'
+                }
+            ],
             doors: [
                 { x: 0, y: 7, w: 1, h: 2, targetMap: 'room_main', targetX: 700, targetY: 272 }
             ]

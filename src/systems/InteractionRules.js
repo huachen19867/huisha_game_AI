@@ -48,6 +48,20 @@ export function scoreInteractionCandidate({ distance, priority, facingDot }) {
     return priority * 1000 + facingDot * 200 - distance;
 }
 
+export const INTERACTION_FOCUS_BAND = 28;
+
+export function selectInteractionCandidate(candidates, focusBand = INTERACTION_FOCUS_BAND) {
+    if (!candidates.length) return null;
+    const nearest = Math.min(...candidates.map(candidate => candidate.distance));
+    return candidates
+        .filter(candidate => candidate.distance <= nearest + focusBand)
+        .sort((a, b) => {
+            const scoreA = a.priority * 10 + a.facingDot * 40 - a.distance;
+            const scoreB = b.priority * 10 + b.facingDot * 40 - b.distance;
+            return scoreB - scoreA;
+        })[0] || null;
+}
+
 export function formatInteractionPrompt(meta) {
     return `${meta.verb}：${meta.label}  [空格/E]`;
 }
