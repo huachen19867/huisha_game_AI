@@ -1,7 +1,8 @@
 const TEXTURE_LABELS = {
     altar: '供桌', bed: '床', cabinet: '衣柜', car: '汽车', coffin: '棺材',
-    desk: '书桌', diary: '日记', kitchen_sink: '水槽', safe: '保险柜',
-    stove: '灶台', toilet: '马桶', toy_plane: '纸飞机', well: '井'
+    desk: '书桌', diary: '日记', kitchen_sink: '水槽', npc_paper: '人影',
+    photo_frame: '照片', safe: '保险柜', scratch: '抓痕', stove: '灶台',
+    toilet: '马桶', toy_plane: '纸飞机', trash_paper: '纸张', well: '井'
 };
 
 const ID_LABELS = {
@@ -13,6 +14,7 @@ function inferVerb(data, textureKey) {
     if (data.interaction?.verb) return data.interaction.verb;
     if (data.itemGrant || data.id === 'incense' || data.id === 'spirit_money') return '拾取';
     if (data.documentText || data.documentTitle || data.clueId) return '阅读';
+    if (textureKey === 'photo_frame') return '查看';
     if (data.endingChoice) return '选择';
     if (data.memoryTrigger || data.puzzleId) return '触碰';
     if (textureKey === 'cabinet' || data.id?.includes('cabinet')) return '躲藏';

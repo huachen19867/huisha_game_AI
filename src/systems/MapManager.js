@@ -1,5 +1,5 @@
 import { Maps } from '../data/Maps.js';
-import { syncStaticBody } from './PhysicsSync.js';
+import { syncCustomStaticBody, syncStaticBody } from './PhysicsSync.js';
 import { normalizeInteractionMeta } from './InteractionRules.js';
 
 export class MapManager {
@@ -157,8 +157,12 @@ export class MapManager {
                 if (isHorror) photo.setPipeline('Light2D');
                 photo.photoId = photoData.id;
                 photo.dialogText = photoData.text;
-                // Photos are handled specifically in InteractionManager but we can add them to interactables too
-                this.scene.interactables.add(photo);
+                addToInteractables(photo, {
+                    ...photoData,
+                    id: `photo_${photoData.id}`,
+                    interactLabel: `${photoData.id} 号旧照片`,
+                    interaction: { label: `${photoData.id} 号旧照片`, verb: '查看', priority: 30, radius: 80, marker: true, blocksMovement: false }
+                });
             });
         }
 
@@ -231,9 +235,9 @@ export class MapManager {
             if (scene.gameState.hasRice && scene.gameState.hasMatches) {
                  scene.npc.setVisible(false);
                  scene.npc.body.enable = false;
+            } else {
+                addToInteractables(scene.npc, { id: 'kitchen_ghost', interaction: { label: '灶台边的女人', verb: '询问', priority: 30, radius: 120, marker: true, blocksMovement: true } });
             }
-            // NPC interaction is distance based in InteractionManager, but adding to group doesn't hurt
-            this.scene.interactables.add(scene.npc);
         }
 
         if (objs.well) {
@@ -247,9 +251,7 @@ export class MapManager {
             objs.trees.forEach(treeData => {
                 const tree = scene.trees.create(treeData.x, treeData.y, 'tree');
                 if (isHorror && !scene.isMobile) tree.setPipeline('Light2D');
-                tree.body.setSize(14, 28);
-                tree.body.setOffset(25, 34);
-                syncStaticBody(tree);
+                syncCustomStaticBody(tree, 14, 28, 25, 34);
             });
         }
 
@@ -363,9 +365,7 @@ export class MapManager {
                 syncStaticBody(scene.family_rules);
             }
 
-            // Force add to interactables since it has no dialog/id in map data
-            this.scene.interactables.add(scene.family_rules);
-            addToInteractables(scene.family_rules, objs.family_rules);
+            addToInteractables(scene.family_rules, { ...objs.family_rules, id: 'family_rules', interaction: { label: '墙上的家规', verb: '阅读', priority: 30, radius: 80, marker: true, blocksMovement: true } });
         }
 
         if (objs.safe) {
@@ -385,9 +385,7 @@ export class MapManager {
                 syncStaticBody(scene.safe); // Important for Static Bodies!
             }
 
-            // Force add to interactables (even if no dialog/id in map data)
-            this.scene.interactables.add(scene.safe);
-            addToInteractables(scene.safe, objs.safe);
+            addToInteractables(scene.safe, { ...objs.safe, id: objs.safe.id || 'safe', interaction: { label: '保险柜', verb: '输入密码', priority: 30, radius: 120, marker: true, blocksMovement: true } });
         }
 
         if (objs.wet_paper) {
@@ -403,7 +401,7 @@ export class MapManager {
             addToInteractables(scene.wet_paper, objs.wet_paper);
         }
 
-        if (objs.incense) {
+        if (objs.incense && !scene.gameState.hasIncense) {
             scene.incense = this.scene.add.image(objs.incense.x, objs.incense.y, 'trash_paper');
             if (isHorror) scene.incense.setPipeline('Light2D');
             scene.incense.setTint(0x884400);
@@ -420,7 +418,7 @@ export class MapManager {
             }).setDepth(100);
         }
 
-        if (objs.spirit_money) {
+        if (objs.spirit_money && !scene.gameState.hasSpiritMoney) {
             scene.spirit_money = this.scene.add.image(objs.spirit_money.x, objs.spirit_money.y, 'trash_paper');
             if (isHorror) scene.spirit_money.setPipeline('Light2D');
             scene.spirit_money.setTint(0xffff00);
@@ -448,8 +446,7 @@ export class MapManager {
                 const toy = scene.toys.create(toyData.x, toyData.y, toyData.frame);
                 if (isHorror) toy.setPipeline('Light2D');
                 if (toyData.dialog) {
-                    toy.dialog = toyData.dialog;
-                    this.scene.interactables.add(toy);
+                    addToInteractables(toy, { ...toyData, id: toyData.id || `toy_${toyData.x}_${toyData.y}` });
                 }
             });
         }
@@ -460,8 +457,7 @@ export class MapManager {
                 const scratch = this.scene.add.image(scratchData.x, scratchData.y, 'scratch');
                 if (isHorror) scratch.setPipeline('Light2D');
                 if (scratchData.dialog) {
-                    scratch.dialog = scratchData.dialog;
-                    this.scene.interactables.add(scratch);
+                    addToInteractables(scratch, { ...scratchData, id: scratchData.id || `scratch_${scratchData.x}_${scratchData.y}` });
                 }
             });
         }
@@ -474,8 +470,7 @@ export class MapManager {
                 note.setTint(0xffcc00);
                 if (isHorror) note.setPipeline('Light2D');
                 if (noteData.dialog) {
-                    note.dialog = noteData.dialog;
-                    this.scene.interactables.add(note);
+                    addToInteractables(note, { ...noteData, id: noteData.id || `note_${noteData.x}_${noteData.y}` });
                 }
             });
         }
@@ -593,7 +588,7 @@ export class MapManager {
             syncStaticBody(scene.dad);
             // Add interaction
             scene.dad.objId = 'dad_ghost';
-            this.scene.interactables.add(scene.dad);
+            addToInteractables(scene.dad, { id: 'dad_ghost', interaction: { label: '父亲的影子', verb: '对话', priority: 30, radius: 120, marker: true, blocksMovement: true } });
 
             // Mom (Right)
             scene.mom = this.furniture.create(objs.parents_npc.x + 40, objs.parents_npc.y, 'npc_paper');
@@ -601,7 +596,7 @@ export class MapManager {
             syncStaticBody(scene.mom);
             // Add interaction
             scene.mom.objId = 'mom_ghost';
-            this.scene.interactables.add(scene.mom);
+            addToInteractables(scene.mom, { id: 'mom_ghost', interaction: { label: '母亲的影子', verb: '对话', priority: 30, radius: 120, marker: true, blocksMovement: true } });
         }
 
         if (objs.black_cloth) {

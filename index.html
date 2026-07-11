@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" href="data:,">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>回煞 - 民俗恐怖游戏</title>
     <!-- Error Handler -->
@@ -1102,7 +1103,11 @@ const Maps = {
         objects: {
             playerStart: { x: 64, y: 240 },
             bed: { x: 400, y: 150, dialog: '我的床。很小，很硬。床单是我最喜欢的蓝色，上面印着卡通图案。这是我在这个家里唯一的避风港。以前我总是躲在被子里，用手电筒照着漫画书，那是唯一的亮光。' },
-            cabinet: { x: 400, y: 350 },
+            cabinet: {
+                x: 400, y: 350, id: 'my_cabinet',
+                dialog: '柜门里还挂着十年前的校服。这里空间很窄，却比房间中央安全。',
+                interaction: { label: '我的衣柜', verb: '躲藏', priority: 20, radius: 90, marker: false, blocksMovement: true }
+            },
             desk: { x: 100, y: 150, id: 'my_desk', dialog: '这是我的书桌。上面刻着"早"字，但那只是我为了模仿鲁迅刻的。抽屉里塞满了没及格的试卷，每一次打开都需要勇气。' },
             diary: { x: 100, y: 140 },
             toy_plane: { x: 300, y: 300, dialog: '一只折断机翼的纸飞机。是我七岁那年折的。我以为只要飞得够高，就能飞出围墙，飞出这个家。但它最终还是掉在了地上，被父亲一脚踩扁。' },
@@ -1144,7 +1149,10 @@ const Maps = {
         objects: {
             playerStart: { x: 320, y: 100 },
             well: { x: 320, y: 320, dialog: '古老的枯井，井口被几块大石头死死压住，缝隙里塞满了画着符咒的黄纸。井底深处，似乎有冷风不断吹上来。小时候，我不小心把球踢到了井边，父亲发了疯一样打我，说井里住着吃人的怪物。' },
-            incense: { x: 550, y: 550, dialog: '在树后发现了一把香。' },
+            incense: {
+                x: 550, y: 550, id: 'incense', dialog: '在树后发现了一把香。',
+                interaction: { label: '一把香', verb: '拾取', priority: 30, radius: 80, marker: true, blocksMovement: false }
+            },
             trees: [
                 { x: 100, y: 200 },
                 { x: 500, y: 200 },
@@ -1240,7 +1248,11 @@ const Maps = {
         ],
         objects: {
             playerStart: { x: 320, y: 384 },
-            spirit_money: { x: 320, y: 100, dialog: '横梁上挂着一串串纸钱，随着气流轻轻晃动，发出沙沙的声音。就像是有无数个看不见的幽灵在窃窃私语。这些钱...是烧给谁的？' },
+            spirit_money: {
+                x: 320, y: 100, id: 'spirit_money',
+                dialog: '横梁上挂着一串串纸钱，随着气流轻轻晃动，发出沙沙的声音。就像是有无数个看不见的幽灵在窃窃私语。这些钱...是烧给谁的？',
+                interaction: { label: '一串纸钱', verb: '拾取', priority: 30, radius: 80, marker: true, blocksMovement: false }
+            },
             interactables: [
                 {
                     id: 'attic_overview', x: 480, y: 160, texture: 'photo_frame',
@@ -2227,6 +2239,62 @@ function updateStaminaState({ stamina, maxStamina, exhausted, wantsRun, isMoving
 }
         // END bundled src/systems/RuntimeState.js
 
+        // BEGIN bundled src/systems/InteractionRules.js
+const TEXTURE_LABELS = {
+    altar: '供桌', bed: '床', cabinet: '衣柜', car: '汽车', coffin: '棺材',
+    desk: '书桌', diary: '日记', kitchen_sink: '水槽', npc_paper: '人影',
+    photo_frame: '照片', safe: '保险柜', scratch: '抓痕', stove: '灶台',
+    toilet: '马桶', toy_plane: '纸飞机', trash_paper: '纸张', well: '井'
+};
+
+const ID_LABELS = {
+    kitchen_ghost: '灶台边的女人', dad_ghost: '父亲的影子', mom_ghost: '母亲的影子',
+    parents_cabinet: '父母的衣柜', kitchen_cabinet: '厨房柜子', my_cabinet: '我的衣柜'
+};
+
+function inferVerb(data, textureKey) {
+    if (data.interaction?.verb) return data.interaction.verb;
+    if (data.itemGrant || data.id === 'incense' || data.id === 'spirit_money') return '拾取';
+    if (data.documentText || data.documentTitle || data.clueId) return '阅读';
+    if (textureKey === 'photo_frame') return '查看';
+    if (data.endingChoice) return '选择';
+    if (data.memoryTrigger || data.puzzleId) return '触碰';
+    if (textureKey === 'cabinet' || data.id?.includes('cabinet')) return '躲藏';
+    if (textureKey === 'bed') return '躲藏';
+    return '调查';
+}
+
+function normalizeInteractionMeta(data = {}, fallback = {}) {
+    const textureKey = fallback.textureKey || data.texture || '';
+    const label = data.interaction?.label
+        || data.interactLabel
+        || data.documentTitle
+        || data.label
+        || ID_LABELS[data.id]
+        || TEXTURE_LABELS[textureKey]
+        || (data.id ? data.id.replaceAll('_', ' ') : '可疑物件');
+    const isStory = Boolean(data.clueId || data.itemGrant || data.puzzleId || data.memoryTrigger || data.endingChoice || data.documentText);
+    const isFurniture = ['altar', 'bed', 'cabinet', 'car', 'coffin', 'desk', 'safe', 'stove', 'well'].includes(textureKey)
+        || ['parents_cabinet', 'kitchen_cabinet', 'my_cabinet'].includes(data.id);
+    return {
+        label,
+        verb: inferVerb(data, textureKey),
+        priority: data.interaction?.priority ?? (isStory ? 30 : data.dialog ? 20 : 10),
+        radius: data.interaction?.radius ?? (textureKey === 'car' ? 120 : 80),
+        marker: data.interaction?.marker ?? isStory,
+        blocksMovement: data.interaction?.blocksMovement ?? isFurniture
+    };
+}
+
+function scoreInteractionCandidate({ distance, priority, facingDot }) {
+    return priority * 1000 + facingDot * 200 - distance;
+}
+
+function formatInteractionPrompt(meta) {
+    return `${meta.verb}：${meta.label}  [空格/E]`;
+}
+        // END bundled src/systems/InteractionRules.js
+
         // BEGIN bundled src/systems/DomListenerRegistry.js
 class DomListenerRegistry {
     constructor() {
@@ -2252,16 +2320,41 @@ class DomListenerRegistry {
 
         // BEGIN bundled src/systems/ObjectiveManager.js
 
+function isMapPurposeComplete(gameState, mapId) {
+    const flags = ensureStoryFlags(gameState);
+    const completed = {
+        room_prologue: gameState.viewedEntrance,
+        room_entrance: flags.endingChoice !== null,
+        room_main: Boolean(gameState.candlesLit && flags.coffinOpened),
+        room_kitchen: gameState.hasRice && gameState.hasMatches,
+        room_corridor: flags.photoSetCollected,
+        room_bathroom: flags.collectedClues.includes('bathroom_medicine_hint'),
+        room_bedroom_parents: gameState.inventory.includes('地下室钥匙') && gameState.cabinetMoved,
+        room_secret: gameState.hasMatches,
+        room_study: flags.puzzles.school,
+        room_medicine: flags.puzzles.hospital,
+        room_bedroom_me: flags.collectedClues.includes('diary_mother') && flags.collectedClues.includes('toy_plane'),
+        room_backyard: gameState.hasIncense && gameState.hasRedKey,
+        room_basement: flags.familyPhotoCornerFound,
+        room_attic: gameState.hasSpiritMoney,
+        memory_school: flags.puzzles.school,
+        memory_hospital: flags.puzzles.hospital,
+        memory_crash: flags.crashEvidence.car && flags.crashEvidence.guardrail,
+        room_memory: flags.endingChoice !== null
+    };
+    return Boolean(completed[mapId]);
+}
+
 function getCurrentObjective(gameState, mapId) {
     const flags = ensureStoryFlags(gameState);
     if (mapId === 'room_prologue') return '沿公路寻找避雨处';
     if (!gameState.doorSlammed) return '进入老宅，调查正厅里的黑布遗像';
     const missing = [
-        ['hasRice', '倒头饭'], ['hasMatches', '火柴'],
-        ['hasIncense', '香'], ['hasSpiritMoney', '纸钱']
+        ['hasRice', '倒头饭（厨房）'], ['hasMatches', '火柴（密室）'],
+        ['hasIncense', '香（后院）'], ['hasSpiritMoney', '纸钱（阁楼）']
     ].filter(([key]) => !gameState[key]).map(([, label]) => label);
-    if (missing.length) return `找齐供品：${missing.join('、')}`;
-    if (!flags.puzzles.school || !flags.puzzles.hospital) return '调查旧书房与药柜小间';
+    if (missing.length) return `完成供桌仪式：寻找${missing.join('、')}`;
+    if (!flags.puzzles.school || !flags.puzzles.hospital) return '还原两段记忆：从旧书房进入学校，从药柜小间进入医院';
     if (!flags.photoSetCollected) return '调查走廊里的四张旧照片';
     if (!flags.familyPhotoCornerFound) return '用地下室钥匙进入地下禁闭室寻找照片缺角';
     if (flags.chasePhase === 'active') return '躲藏 6 秒，或把完整全家福带回正厅';
@@ -2271,63 +2364,276 @@ function getCurrentObjective(gameState, mapId) {
     return '根据已经查明的真相作出选择';
 }
 
+function getObjectiveView(gameState, mapId) {
+    const map = Maps[mapId];
+    return {
+        main: getCurrentObjective(gameState, mapId),
+        local: map?.purpose || '调查当前区域',
+        completed: isMapPurposeComplete(gameState, mapId)
+    };
+}
+
 class ObjectiveManager {
     constructor(gameState, element) { this.gameState = gameState; this.element = element; }
     refresh(mapId) {
         if (!this.element) return;
-        this.element.textContent = `目标：${getCurrentObjective(this.gameState, mapId)}`;
+        const view = getObjectiveView(this.gameState, mapId);
+        const localStatus = view.completed ? '本区域关键内容已完成' : view.local;
+        this.element.textContent = `主线：${view.main}\n当前区域：${localStatus}`;
+        this.element.style.whiteSpace = 'pre-line';
         this.element.style.display = 'block';
     }
     hide() { if (this.element) this.element.style.display = 'none'; }
 }
         // END bundled src/systems/ObjectiveManager.js
 
+        // BEGIN bundled src/systems/GridNavigation.js
+const GRID_SIZE = 32;
+
+function worldToGrid(x, y) {
+    return { x: Math.floor(x / GRID_SIZE), y: Math.floor(y / GRID_SIZE) };
+}
+
+function gridToWorld(cell) {
+    return { x: cell.x * GRID_SIZE + GRID_SIZE / 2, y: cell.y * GRID_SIZE + GRID_SIZE / 2 };
+}
+
+function createNavigationGrid(mapData, blockedRects = [], forceOpen = []) {
+    const grid = mapData.map(row => row.map(tile => tile === 0));
+    for (const rect of blockedRects) {
+        const left = Math.floor(rect.x / GRID_SIZE);
+        const right = Math.floor((rect.x + Math.max(1, rect.width) - 1) / GRID_SIZE);
+        const top = Math.floor(rect.y / GRID_SIZE);
+        const bottom = Math.floor((rect.y + Math.max(1, rect.height) - 1) / GRID_SIZE);
+        for (let y = top; y <= bottom; y++) {
+            for (let x = left; x <= right; x++) {
+                if (grid[y]?.[x] !== undefined) grid[y][x] = false;
+            }
+        }
+    }
+    for (const cell of forceOpen) {
+        if (grid[cell.y]?.[cell.x] !== undefined) grid[cell.y][cell.x] = true;
+    }
+    return grid;
+}
+
+function findGridPath(grid, start, goal) {
+    if (!grid[start.y]?.[start.x] || !grid[goal.y]?.[goal.x]) return [];
+    const queue = [start];
+    let head = 0;
+    const startKey = `${start.x},${start.y}`;
+    const cameFrom = new Map([[startKey, null]]);
+    const directions = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+    while (head < queue.length) {
+        const current = queue[head++];
+        if (current.x === goal.x && current.y === goal.y) {
+            const path = [];
+            let key = `${goal.x},${goal.y}`;
+            while (key) {
+                const [x, y] = key.split(',').map(Number);
+                path.push({ x, y });
+                key = cameFrom.get(key);
+            }
+            return path.reverse();
+        }
+        for (const [dx, dy] of directions) {
+            const next = { x: current.x + dx, y: current.y + dy };
+            const key = `${next.x},${next.y}`;
+            if (grid[next.y]?.[next.x] && !cameFrom.has(key)) {
+                cameFrom.set(key, `${current.x},${current.y}`);
+                queue.push(next);
+            }
+        }
+    }
+    return [];
+}
+
+function findSafeDoorSpawn(grid, door, playerCell, minDistance = 5) {
+    const start = {
+        x: door.x + Math.floor((door.w || 1) / 2),
+        y: door.y + Math.floor((door.h || 1) / 2)
+    };
+    const queue = [start];
+    let head = 0;
+    const seen = new Set([`${start.x},${start.y}`]);
+    while (head < queue.length) {
+        const current = queue[head++];
+        const distance = Math.abs(current.x - playerCell.x) + Math.abs(current.y - playerCell.y);
+        if (grid[current.y]?.[current.x] && distance >= minDistance) return current;
+        for (const [dx, dy] of [[1,0], [0,1], [-1,0], [0,-1]]) {
+            const next = { x: current.x + dx, y: current.y + dy };
+            const key = `${next.x},${next.y}`;
+            if (!seen.has(key) && grid[next.y]?.[next.x]) {
+                seen.add(key);
+                queue.push(next);
+            }
+        }
+    }
+    return null;
+}
+        // END bundled src/systems/GridNavigation.js
+
         // BEGIN bundled src/systems/ChaseManager.js
 
-
 const HIDE_ESCAPE_MS = 6000;
+const DOOR_BANG_MS = 2000;
+const WARNING_MS = 3000;
+const ARRIVAL_DELAY_MS = 4000;
+const MATERIALIZE_MS = 600;
+const REPATH_MS = 350;
+const SPAWN_RETRY_MS = 500;
+
+function getArrivalStage(elapsedMs) {
+    if (elapsedMs >= ARRIVAL_DELAY_MS) return 'arriving';
+    if (elapsedMs >= WARNING_MS) return 'warning';
+    if (elapsedMs >= DOOR_BANG_MS) return 'door_bang';
+    return 'approaching';
+}
 
 class ChaseManager {
-    constructor(scene) { this.scene = scene; this.chaser = null; this.hideTimer = null; this.caught = false; }
+    constructor(scene) {
+        this.scene = scene;
+        this.chaser = null;
+        this.hideTimer = null;
+        this.arrivalTimers = [];
+        this.spawnRetryTimer = null;
+        this.arrivalWarning = null;
+        this.doorGlow = null;
+        this.caught = false;
+        this.materializing = false;
+        this.path = [];
+        this.nextRepathAt = 0;
+        this.lastTargetKey = '';
+    }
 
-    resolveSpawn() {
-        const map = Maps[this.scene.currentMapId];
-        const player = this.scene.player.sprite;
-        const candidates = [];
-        if (this.scene.previousMapId) {
-            const door = map.objects.doors?.find(item => item.targetMap === this.scene.previousMapId);
-            if (door) candidates.push({ x: door.x * 32 + (door.w || 1) * 16, y: door.y * 32 + (door.h || 1) * 16 });
-        }
-        candidates.push(
-            { x: player.x + 160, y: player.y }, { x: player.x - 160, y: player.y },
-            { x: player.x, y: player.y + 160 }, { x: player.x, y: player.y - 160 }
-        );
-        return candidates.find(point => {
-            const tx = Math.floor(point.x / 32);
-            const ty = Math.floor(point.y / 32);
-            return map.data[ty]?.[tx] === 0 && Phaser.Math.Distance.Between(point.x, point.y, player.x, player.y) >= 96;
-        }) || map.objects.playerStart;
+    getArrivalDoor() {
+        const doors = Maps[this.scene.currentMapId]?.objects?.doors || [];
+        return doors.find(door => door.targetMap === this.scene.previousMapId) || doors[0] || null;
+    }
+
+    getDoorWorldPosition(door) {
+        return {
+            x: door.x * 32 + (door.w || 1) * 16,
+            y: door.y * 32 + (door.h || 1) * 16
+        };
     }
 
     start() {
-        if (this.chaser?.active) return;
         const flags = ensureStoryFlags(this.scene.gameState);
         flags.chasePhase = 'active';
         this.scene.gameState.isChasing = true;
-        const spawn = this.resolveSpawn();
-        this.chaser = this.scene.physics.add.sprite(spawn.x, spawn.y, 'npc_paper').setTint(0xff0000).setAlpha(0.8);
+        if (this.chaser?.active || this.arrivalTimers.length || this.spawnRetryTimer) return;
+
+        const door = this.getArrivalDoor();
+        if (!door) return;
+        this.pendingDoor = door;
+        this.arrivalTimers.push(
+            this.scene.time.delayedCall(DOOR_BANG_MS, () => this.telegraphDoor(false)),
+            this.scene.time.delayedCall(WARNING_MS, () => this.telegraphDoor(true)),
+            this.scene.time.delayedCall(ARRIVAL_DELAY_MS, () => this.attemptSpawn())
+        );
+        this.scene.refreshObjective();
+    }
+
+    telegraphDoor(showWarning) {
+        if (!this.pendingDoor) return;
+        const point = this.getDoorWorldPosition(this.pendingDoor);
+        this.scene.soundManager?.playSpatialNoise(0.35, point.x, point.y);
+        this.scene.cameras.main.shake(showWarning ? 140 : 100, showWarning ? 0.006 : 0.004);
+        if (!this.doorGlow) {
+            this.doorGlow = this.scene.add.circle(point.x, point.y, 26, 0x8b0000, 0.25).setDepth(340);
+            this.scene.tweens.add({ targets: this.doorGlow, alpha: 0.65, duration: 450, yoyo: true, repeat: -1 });
+        }
+        if (showWarning && !this.arrivalWarning) {
+            this.arrivalWarning = this.scene.add.text(this.scene.scale.width / 2, 78, '它正从刚才的门追来', {
+                fontSize: '18px', color: '#ffb0a0', backgroundColor: '#300000', padding: { x: 10, y: 6 }
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
+        }
+    }
+
+    createGrid(forceOpen = []) {
+        const map = Maps[this.scene.currentMapId];
+        return createNavigationGrid(map.data, this.scene.navigationBlockedRects || [], forceOpen);
+    }
+
+    attemptSpawn() {
+        this.arrivalTimers = [];
+        if (!this.pendingDoor || this.chaser?.active) return;
+        const playerCell = worldToGrid(this.scene.player.sprite.x, this.scene.player.sprite.y);
+        const grid = this.createGrid([playerCell]);
+        const spawnCell = findSafeDoorSpawn(grid, this.pendingDoor, playerCell, 5);
+        if (!spawnCell) {
+            this.spawnRetryTimer = this.scene.time.delayedCall(SPAWN_RETRY_MS, () => {
+                this.spawnRetryTimer = null;
+                this.attemptSpawn();
+            });
+            return;
+        }
+        this.spawnAt(gridToWorld(spawnCell));
+    }
+
+    spawnAt(spawn) {
+        this.clearArrivalVisuals();
+        this.materializing = true;
+        this.chaser = this.scene.physics.add.sprite(spawn.x, spawn.y, 'npc_paper').setTint(0xff0000).setAlpha(0);
         if (!this.scene.isMobile) this.chaser.setPipeline('Light2D');
         this.scene.chaser = this.chaser;
+        this.chaser.body.enable = false;
         this.scene.physics.add.collider(this.chaser, this.scene.walls);
         this.scene.physics.add.collider(this.chaser, this.scene.furniture);
         if (this.scene.trees) this.scene.physics.add.collider(this.chaser, this.scene.trees);
         this.scene.physics.add.overlap(this.scene.player.sprite, this.chaser, () => this.handleCaught());
-        this.scene.refreshObjective();
+        this.scene.cameras.main.shake(180, 0.008);
+        this.scene.tweens.add({
+            targets: this.chaser,
+            alpha: 0.82,
+            duration: MATERIALIZE_MS,
+            onComplete: () => {
+                if (!this.chaser?.active) return;
+                this.chaser.body.enable = true;
+                this.materializing = false;
+                this.nextRepathAt = 0;
+                if (this.scene.gameState.isHidden) this.startHideEscape();
+            }
+        });
     }
 
     update() {
-        if (!this.chaser?.active || this.scene.gameState.isHidden || this.caught) return;
-        this.scene.physics.moveToObject(this.chaser, this.scene.player.sprite, 100);
+        if (!this.chaser?.active || this.materializing || this.caught) return;
+        if (this.scene.gameState.isHidden) {
+            this.chaser.setVelocity(0);
+            return;
+        }
+
+        const now = this.scene.time.now;
+        const chaserCell = worldToGrid(this.chaser.x, this.chaser.y);
+        const playerCell = worldToGrid(this.scene.player.sprite.x, this.scene.player.sprite.y);
+        const targetKey = `${playerCell.x},${playerCell.y}`;
+        if (now >= this.nextRepathAt || targetKey !== this.lastTargetKey || this.path.length < 2) {
+            const grid = this.createGrid([chaserCell, playerCell]);
+            this.path = findGridPath(grid, chaserCell, playerCell);
+            this.nextRepathAt = now + REPATH_MS;
+            this.lastTargetKey = targetKey;
+        }
+
+        const nextCell = this.path[1];
+        if (!nextCell) {
+            this.chaser.setVelocity(0);
+            return;
+        }
+        const target = gridToWorld(nextCell);
+        if (Phaser.Math.Distance.Between(this.chaser.x, this.chaser.y, target.x, target.y) < 8) {
+            this.path.shift();
+        }
+        this.scene.physics.moveTo(this.chaser, target.x, target.y, 100);
+
+        const distance = Phaser.Math.Distance.Between(this.chaser.x, this.chaser.y, this.scene.player.sprite.x, this.scene.player.sprite.y);
+        const intensity = Math.max(0, 1 - distance / 500);
+        this.scene.dangerOverlay?.setAlpha(intensity * 0.55);
+        if (intensity > 0 && now >= (this.nextHeartbeatAt || 0)) {
+            this.scene.soundManager?.playHeartbeat(intensity);
+            this.nextHeartbeatAt = now + 350 + distance;
+        }
     }
 
     startHideEscape() {
@@ -2344,11 +2650,13 @@ class ChaseManager {
         const flags = ensureStoryFlags(this.scene.gameState);
         if (flags.chasePhase !== 'active') return;
         this.cancelHideEscape();
+        this.cancelArrival();
         flags.chasePhase = 'escaped';
         this.scene.gameState.isChasing = false;
         this.chaser?.destroy();
         this.chaser = null;
         this.scene.chaser = null;
+        this.scene.dangerOverlay?.setAlpha(0);
         const text = reason === 'photo'
             ? '全家福里的三个人同时看向黑影。它停下了，像终于认出了你。'
             : '脚步声在柜门外停了六秒，随后慢慢远去。';
@@ -2357,18 +2665,45 @@ class ChaseManager {
     }
 
     handleCaught() {
-        if (this.caught) return;
+        if (this.caught || this.materializing || this.scene.gameState.isHidden) return;
         this.caught = true;
         this.scene.physics.pause();
         window.showDialog('暴怒的黑影', '抓到你了……但这次记忆没有把你送回最初。', () => {
             this.scene.physics.resume();
             this.scene.gameState.isHidden = false;
             const map = Maps[this.scene.currentMapId];
-            this.scene.scene.restart({ mapId: this.scene.currentMapId, x: map.objects.playerStart.x, y: map.objects.playerStart.y, previousMapId: this.scene.previousMapId });
+            this.scene.scene.restart({
+                mapId: this.scene.currentMapId,
+                x: map.objects.playerStart.x,
+                y: map.objects.playerStart.y,
+                previousMapId: this.scene.previousMapId
+            });
         });
     }
 
-    destroy() { this.cancelHideEscape(); this.chaser?.destroy(); this.chaser = null; this.scene.chaser = null; }
+    clearArrivalVisuals() {
+        this.doorGlow?.destroy();
+        this.arrivalWarning?.destroy();
+        this.doorGlow = null;
+        this.arrivalWarning = null;
+    }
+
+    cancelArrival() {
+        this.arrivalTimers.forEach(timer => timer?.remove());
+        this.arrivalTimers = [];
+        this.spawnRetryTimer?.remove();
+        this.spawnRetryTimer = null;
+        this.clearArrivalVisuals();
+        this.pendingDoor = null;
+    }
+
+    destroy() {
+        this.cancelHideEscape();
+        this.cancelArrival();
+        this.chaser?.destroy();
+        this.chaser = null;
+        this.scene.chaser = null;
+    }
 }
         // END bundled src/systems/ChaseManager.js
 
@@ -2658,6 +2993,8 @@ class Player {
         this.speed = 150;
         this.runSpeed = 250;
         this.lastStepTime = 0;
+        this.facingX = 0;
+        this.facingY = 1;
 
         // Stamina System
         this.maxStamina = 100;
@@ -2804,6 +3141,10 @@ class Player {
                 moveY /= len;
             }
 
+            const facingLength = Math.hypot(moveX, moveY) || 1;
+            this.facingX = moveX / facingLength;
+            this.facingY = moveY / facingLength;
+
             const currentSpeed = this.isRunning ? this.runSpeed : this.speed;
             this.sprite.setVelocityX(moveX * currentSpeed);
             this.sprite.setVelocityY(moveY * currentSpeed);
@@ -2902,6 +3243,14 @@ function syncStaticBody(gameObject) {
     }
     return false;
 }
+
+function syncCustomStaticBody(gameObject, width, height, offsetX, offsetY) {
+    if (!gameObject?.body) return false;
+    syncStaticBody(gameObject);
+    gameObject.body.setSize(width, height);
+    gameObject.body.setOffset(offsetX, offsetY);
+    return true;
+}
         // END bundled src/systems/PhysicsSync.js
 
         // BEGIN bundled src/systems/EventManager.js
@@ -2990,7 +3339,6 @@ class EventManager {
         // END bundled src/systems/EventManager.js
 
         // BEGIN bundled src/systems/MapManager.js
-
 
 class MapManager {
     constructor(scene) {
@@ -3083,21 +3431,22 @@ class MapManager {
                     if (mapId !== 'room_memory' && !this.scene.isMobile) {
                         wall.setPipeline('Light2D');
                     }
-                } else {
-                    // Random clutter on floor (5% chance)
-                    if (visual.debris !== false && Math.random() < 0.05 && mapId !== 'room_backyard' && mapId !== 'room_entrance' && mapId !== 'room_memory') {
-                        const debris = this.scene.add.image(x * 32 + 16 + Phaser.Math.Between(-8, 8), y * 32 + 16 + Phaser.Math.Between(-8, 8), 'trash_paper');
-                        debris.setRotation(Phaser.Math.FloatBetween(0, 6.28));
-                        debris.setAlpha(0.7);
-                        if (visual.paperTint !== undefined) debris.setTint(visual.paperTint);
-                        debris.setPipeline('Light2D');
-                        this.floorLayer.push(debris);
-                    }
                 }
             }
         }
 
         this.createObjects(mapDef.objects, mapId);
+        this.scene.navigationBlockedRects = this.getNavigationBlockedRects();
+    }
+
+    getNavigationBlockedRects() {
+        const groups = [this.furniture, this.scene.trees].filter(Boolean);
+        return groups.flatMap(group => group.getChildren()).filter(obj => obj.active && obj.body?.enable).map(obj => ({
+            x: obj.body.x,
+            y: obj.body.y,
+            width: obj.body.width,
+            height: obj.body.height
+        }));
     }
 
     createObjects(objs, mapId) {
@@ -3110,6 +3459,21 @@ class MapManager {
                 this.scene.interactables.add(obj);
                 if (data.dialog) obj.dialog = data.dialog;
                 if (data.id) obj.objId = data.id;
+                obj.interaction = normalizeInteractionMeta(data, { textureKey: obj.texture?.key });
+                if (obj.interaction.marker && !obj.interactionMarker) {
+                    obj.interactionMarker = scene.add.circle(obj.x, obj.y - Math.max(18, obj.displayHeight * 0.55), 4, 0xffd27a, 0.85)
+                        .setStrokeStyle(1, 0xffffff, 0.9)
+                        .setDepth(350);
+                    scene.tweens.add({
+                        targets: obj.interactionMarker,
+                        alpha: { from: 0.35, to: 0.9 },
+                        scale: { from: 0.8, to: 1.15 },
+                        duration: 900,
+                        yoyo: true,
+                        repeat: -1
+                    });
+                    obj.once?.('destroy', () => obj.interactionMarker?.destroy());
+                }
             }
         };
 
@@ -3131,8 +3495,12 @@ class MapManager {
                 if (isHorror) photo.setPipeline('Light2D');
                 photo.photoId = photoData.id;
                 photo.dialogText = photoData.text;
-                // Photos are handled specifically in InteractionManager but we can add them to interactables too
-                this.scene.interactables.add(photo);
+                addToInteractables(photo, {
+                    ...photoData,
+                    id: `photo_${photoData.id}`,
+                    interactLabel: `${photoData.id} 号旧照片`,
+                    interaction: { label: `${photoData.id} 号旧照片`, verb: '查看', priority: 30, radius: 80, marker: true, blocksMovement: false }
+                });
             });
         }
 
@@ -3205,9 +3573,9 @@ class MapManager {
             if (scene.gameState.hasRice && scene.gameState.hasMatches) {
                  scene.npc.setVisible(false);
                  scene.npc.body.enable = false;
+            } else {
+                addToInteractables(scene.npc, { id: 'kitchen_ghost', interaction: { label: '灶台边的女人', verb: '询问', priority: 30, radius: 120, marker: true, blocksMovement: true } });
             }
-            // NPC interaction is distance based in InteractionManager, but adding to group doesn't hurt
-            this.scene.interactables.add(scene.npc);
         }
 
         if (objs.well) {
@@ -3221,6 +3589,7 @@ class MapManager {
             objs.trees.forEach(treeData => {
                 const tree = scene.trees.create(treeData.x, treeData.y, 'tree');
                 if (isHorror && !scene.isMobile) tree.setPipeline('Light2D');
+                syncCustomStaticBody(tree, 14, 28, 25, 34);
             });
         }
 
@@ -3334,9 +3703,7 @@ class MapManager {
                 syncStaticBody(scene.family_rules);
             }
 
-            // Force add to interactables since it has no dialog/id in map data
-            this.scene.interactables.add(scene.family_rules);
-            addToInteractables(scene.family_rules, objs.family_rules);
+            addToInteractables(scene.family_rules, { ...objs.family_rules, id: 'family_rules', interaction: { label: '墙上的家规', verb: '阅读', priority: 30, radius: 80, marker: true, blocksMovement: true } });
         }
 
         if (objs.safe) {
@@ -3356,9 +3723,7 @@ class MapManager {
                 syncStaticBody(scene.safe); // Important for Static Bodies!
             }
 
-            // Force add to interactables (even if no dialog/id in map data)
-            this.scene.interactables.add(scene.safe);
-            addToInteractables(scene.safe, objs.safe);
+            addToInteractables(scene.safe, { ...objs.safe, id: objs.safe.id || 'safe', interaction: { label: '保险柜', verb: '输入密码', priority: 30, radius: 120, marker: true, blocksMovement: true } });
         }
 
         if (objs.wet_paper) {
@@ -3374,7 +3739,7 @@ class MapManager {
             addToInteractables(scene.wet_paper, objs.wet_paper);
         }
 
-        if (objs.incense) {
+        if (objs.incense && !scene.gameState.hasIncense) {
             scene.incense = this.scene.add.image(objs.incense.x, objs.incense.y, 'trash_paper');
             if (isHorror) scene.incense.setPipeline('Light2D');
             scene.incense.setTint(0x884400);
@@ -3391,7 +3756,7 @@ class MapManager {
             }).setDepth(100);
         }
 
-        if (objs.spirit_money) {
+        if (objs.spirit_money && !scene.gameState.hasSpiritMoney) {
             scene.spirit_money = this.scene.add.image(objs.spirit_money.x, objs.spirit_money.y, 'trash_paper');
             if (isHorror) scene.spirit_money.setPipeline('Light2D');
             scene.spirit_money.setTint(0xffff00);
@@ -3419,8 +3784,7 @@ class MapManager {
                 const toy = scene.toys.create(toyData.x, toyData.y, toyData.frame);
                 if (isHorror) toy.setPipeline('Light2D');
                 if (toyData.dialog) {
-                    toy.dialog = toyData.dialog;
-                    this.scene.interactables.add(toy);
+                    addToInteractables(toy, { ...toyData, id: toyData.id || `toy_${toyData.x}_${toyData.y}` });
                 }
             });
         }
@@ -3431,8 +3795,7 @@ class MapManager {
                 const scratch = this.scene.add.image(scratchData.x, scratchData.y, 'scratch');
                 if (isHorror) scratch.setPipeline('Light2D');
                 if (scratchData.dialog) {
-                    scratch.dialog = scratchData.dialog;
-                    this.scene.interactables.add(scratch);
+                    addToInteractables(scratch, { ...scratchData, id: scratchData.id || `scratch_${scratchData.x}_${scratchData.y}` });
                 }
             });
         }
@@ -3445,8 +3808,7 @@ class MapManager {
                 note.setTint(0xffcc00);
                 if (isHorror) note.setPipeline('Light2D');
                 if (noteData.dialog) {
-                    note.dialog = noteData.dialog;
-                    this.scene.interactables.add(note);
+                    addToInteractables(note, { ...noteData, id: noteData.id || `note_${noteData.x}_${noteData.y}` });
                 }
             });
         }
@@ -3491,7 +3853,7 @@ class MapManager {
                 item.endingChoice = data.endingChoice;
                 item.endingWeight = data.endingWeight;
                 item.interactLabel = data.interactLabel;
-                scene.interactables.add(item);
+                addToInteractables(item, data);
             });
         }
 
@@ -3564,7 +3926,7 @@ class MapManager {
             syncStaticBody(scene.dad);
             // Add interaction
             scene.dad.objId = 'dad_ghost';
-            this.scene.interactables.add(scene.dad);
+            addToInteractables(scene.dad, { id: 'dad_ghost', interaction: { label: '父亲的影子', verb: '对话', priority: 30, radius: 120, marker: true, blocksMovement: true } });
 
             // Mom (Right)
             scene.mom = this.furniture.create(objs.parents_npc.x + 40, objs.parents_npc.y, 'npc_paper');
@@ -3572,7 +3934,7 @@ class MapManager {
             syncStaticBody(scene.mom);
             // Add interaction
             scene.mom.objId = 'mom_ghost';
-            this.scene.interactables.add(scene.mom);
+            addToInteractables(scene.mom, { id: 'mom_ghost', interaction: { label: '母亲的影子', verb: '对话', priority: 30, radius: 120, marker: true, blocksMovement: true } });
         }
 
         if (objs.black_cloth) {
@@ -3585,8 +3947,6 @@ class MapManager {
         // END bundled src/systems/MapManager.js
 
         // BEGIN bundled src/systems/InteractionManager.js
-
-
 
 class InteractionManager {
     constructor(scene) {
@@ -3680,17 +4040,10 @@ class InteractionManager {
         // Interaction distance threshold
         const INTERACT_DIST = 80;
 
-        // --- 1. Priority Interactions (Logic Heavy / Conditional) ---
-        // These are objects that might NOT be in the generic loop or need special conditions
-
-        if (scene.npc && scene.npc.visible) {
-            if (this.getDistanceToObj(px, py, scene.npc) < 100) target = { type: 'npc', obj: scene.npc };
-        }
-
-        // --- 2. Generic Interactions (Everything in interactables group) ---
+        // Generic interactions are selected by story priority, facing and then distance.
         // MapManager adds almost everything to scene.interactables
         if (!target && scene.interactables) {
-            let closestDist = Infinity;
+            let bestScore = -Infinity;
             let closestObj = null;
 
             scene.interactables.getChildren().forEach(obj => {
@@ -3699,22 +4052,27 @@ class InteractionManager {
 
                 const dist = this.getDistanceToObj(px, py, obj);
 
-                // Adjust threshold based on object type if needed
-                let threshold = INTERACT_DIST;
-                if (obj.texture && obj.texture.key === 'car') threshold = 120; // Bigger reach for cars
-                if (obj.objId === 'parents_cabinet') threshold = 100; // Easier access for secret room
-                if (obj.texture && obj.texture.key === 'toy_plane') threshold = 40; // Harder to accidentally click
-                if (obj.texture && obj.texture.key === 'well') threshold = 100; // Easier access for well
-                if (obj.objId === 'dad_ghost' || obj.objId === 'mom_ghost' || obj.objId === 'kitchen_ghost') threshold = 120; // Increased reach
-                if (obj === scene.safe || obj.objId === 'safe' || (obj.texture && obj.texture.key === 'safe')) threshold = 120; // Increased reach for safe
-                if (obj === scene.family_rules) threshold = 80; // Reset to normal range now that it has body
-
-
+                obj.interaction ||= normalizeInteractionMeta({
+                    id: obj.objId,
+                    dialog: obj.dialog,
+                    documentTitle: obj.documentTitle,
+                    documentText: obj.documentText,
+                    clueId: obj.clueId,
+                    itemGrant: obj.itemGrant,
+                    puzzleId: obj.puzzleId,
+                    memoryTrigger: obj.memoryTrigger,
+                    endingChoice: obj.endingChoice
+                }, { textureKey: obj.texture?.key });
+                const threshold = obj.interaction.radius || INTERACT_DIST;
                 if (dist < threshold) {
-                    if (dist < closestDist) {
-                        closestDist = dist;
+                    const dx = obj.x - px;
+                    const dy = obj.y - py;
+                    const length = Math.hypot(dx, dy) || 1;
+                    const facingDot = (dx / length) * (scene.player.facingX || 0) + (dy / length) * (scene.player.facingY || 1);
+                    const score = scoreInteractionCandidate({ distance: dist, priority: obj.interaction.priority, facingDot });
+                    if (score > bestScore) {
+                        bestScore = score;
                         closestObj = obj;
-                        // this.debugInteraction(px, py, closestObj, closestDist, threshold);
                     }
                 }
             });
@@ -3793,6 +4151,7 @@ class InteractionManager {
         }
 
         if (target) {
+            scene.interactText.setText(formatInteractionPrompt(target.obj.interaction || normalizeInteractionMeta({ id: target.obj.objId }, { textureKey: target.obj.texture?.key })));
             scene.interactText.setPosition(px, py - 40).setVisible(true);
             scene.currentTarget = target;
 
@@ -4094,8 +4453,7 @@ class InteractionManager {
                 window.showDialog('主角', '你捡起了那把【血红钥匙】...上面还沾着未干的血迹。', () => {
                     if (!this.gameState.isChasing) {
                         this.ensureStoryFlags().chasePhase = 'active';
-                        scene.chaseManager.start();
-                        window.showDialog('主角', '（周围的温度突然降低了...有什么东西来了！）');
+                        window.showDialog('主角', '（周围的温度突然降低了...有什么东西来了！）', () => scene.chaseManager.start());
                     }
                 });
                 return;
@@ -4365,18 +4723,7 @@ class InteractionManager {
                                                         scene.playSound(50, 'square', 4);
                                                         scene.cameras.main.flash(500, 255, 0, 0);
                                                         this.ensureStoryFlags().chasePhase = 'active';
-                                                        scene.chaseManager.start();
-                                                        scene.chaseTimer = scene.time.addEvent({
-                                                            delay: 2000,
-                                                            callback: () => {
-                                                                scene.cameras.main.shake(200, 0.01);
-                                                                if (scene.soundManager && scene.chaser && scene.chaser.active) {
-                                                                    scene.soundManager.playSpatialNoise(0.5, scene.chaser.x, scene.chaser.y);
-                                                                }
-                                                            },
-                                                            loop: true
-                                                        });
-                                                        window.showDialog('恐怖的声音', '是他...那个把门窗都钉死的人！他不想让你打开棺材看到真相！快跑！！！');
+                                                        window.showDialog('恐怖的声音', '是他...那个把门窗都钉死的人！他不想让你打开棺材看到真相！快跑！！！', () => scene.chaseManager.start());
                                                     });
                                                 });
                                             });
@@ -4810,16 +5157,6 @@ class IntroScene extends Phaser.Scene {
 
         // BEGIN bundled src/scenes/GameScene.js
 
-
-
-
-
-
-
-
-
-
-
 class GameScene extends Phaser.Scene {
     constructor() {
         super('GameScene');
@@ -5081,19 +5418,6 @@ class GameScene extends Phaser.Scene {
              });
         }
 
-        if (this.gameState.isChasing) {
-             this.chaseTimer = this.time.addEvent({
-                 delay: 2000,
-                 callback: () => {
-                     this.cameras.main.shake(200, 0.01);
-                     if (this.soundManager && this.chaser && this.chaser.active) {
-                        this.soundManager.playSpatialNoise(0.5, this.chaser.x, this.chaser.y);
-                     }
-                 },
-                 loop: true
-             });
-        }
-
         this.showPostMemoryDialog();
     }
 
@@ -5216,186 +5540,6 @@ class GameScene extends Phaser.Scene {
             if (Math.random() < 0.01 && this.soundManager) {
                 this.soundManager.playSpatialNoise(0.5, this.player.sprite.x + Phaser.Math.Between(-100, 100), this.player.sprite.y + Phaser.Math.Between(-100, 100));
             }
-            // Visual Shake
-            if (Math.random() < 0.05) {
-                this.cameras.main.shake(100, 0.005);
-            }
-        }
-    }
-
-    spawnChaser() {
-        if (this.chaser) return; // Already spawned
-
-        let spawnX, spawnY;
-        let fromDoor = false;
-
-        // Try to find the door leading back to previous map
-        if (this.previousMapId) {
-             const mapData = Maps[this.currentMapId];
-             if (mapData && mapData.objects.doors) {
-                 const door = mapData.objects.doors.find(d => d.targetMap === this.previousMapId);
-                 if (door) {
-                     // Found the door we came from
-                     const w = (door.w || 1) * 32;
-                     const h = (door.h || 1) * 32;
-                     spawnX = (door.x * 32) + (w / 2);
-                     spawnY = (door.y * 32) + (h / 2);
-                     fromDoor = true;
-                 }
-             }
-        }
-
-        if (!fromDoor) {
-             // Fallback: Random distance
-             spawnX = this.player.sprite.x + (Math.random() > 0.5 ? 200 : -200);
-             spawnY = this.player.sprite.y + (Math.random() > 0.5 ? 200 : -200);
-        }
-
-        this.chaser = this.physics.add.sprite(spawnX, spawnY, 'npc_paper').setPipeline('Light2D');
-        this.chaser.setTint(0xff0000); // Red tint for danger
-
-        // Dark Aura Particles (Evil Spirit Effect)
-        if (!this.isMobile) {
-            this.chaserAura = this.add.particles(0, 0, 'rain', {
-                speed: { min: 10, max: 30 },
-                scale: { start: 0.8, end: 0 },
-                alpha: { start: 0.6, end: 0 },
-                tint: 0x000000,
-                quantity: 2,
-                lifespan: 800,
-                follow: this.chaser
-            });
-            this.chaserAura.setDepth(this.chaser.depth - 1);
-        }
-
-        // Add collision with walls and static objects
-        this.physics.add.collider(this.chaser, this.walls);
-        this.physics.add.collider(this.chaser, this.furniture);
-        if (this.trees) this.physics.add.collider(this.chaser, this.trees);
-        // Explicitly add collision with coffin if it exists (it's in furniture group, but double check)
-        if (this.coffin) this.physics.add.collider(this.chaser, this.coffin);
-
-        if (fromDoor) {
-             // If from door, start invisible and disabled, then fade in
-             this.chaser.setAlpha(0);
-             this.chaser.body.enable = false;
-
-             // Give player 2 seconds to run before ghost enters
-             this.time.delayedCall(2000, () => {
-                 if (this.soundManager) this.soundManager.playNoise(1.0); // Door bang sound
-
-                 this.tweens.add({
-                    targets: this.chaser,
-                    alpha: 0.8,
-                    duration: 500,
-                    onComplete: () => {
-                        if (this.chaser) this.chaser.body.enable = true;
-                    }
-                 });
-             });
-        } else {
-             this.chaser.setAlpha(0.8);
-        }
-
-        this.physics.add.overlap(this.player.sprite, this.chaser, () => {
-            if (!this.gameState.isHidden) {
-                // Game Over Logic
-                this.physics.pause();
-                this.chaser.body.setVelocity(0);
-                window.showDialog('暴怒的黑影', '抓到你了……但这次记忆没有把你送回最初。', () => {
-                    this.physics.resume();
-                    this.gameState.isHidden = false;
-                    const retryMap = Maps[this.currentMapId];
-                    this.scene.restart({
-                        mapId: this.currentMapId,
-                        x: retryMap.objects.playerStart.x,
-                        y: retryMap.objects.playerStart.y,
-                        previousMapId: this.previousMapId
-                    });
-                });
-            }
-        });
-    }
-
-    updateChaser() {
-        // No chaser in memory room
-        if (this.currentMapId === 'room_memory') return;
-
-        // Reset danger effect if no chaser
-        if (!this.chaser || !this.chaser.active || !this.gameState.isChasing) {
-            if (this.dangerOverlay) this.dangerOverlay.setAlpha(0);
-            return;
-        }
-
-        // Calculate distance for effects
-        const dist = Phaser.Math.Distance.Between(this.chaser.x, this.chaser.y, this.player.sprite.x, this.player.sprite.y);
-
-        // Dynamic Horror Effects
-        if (dist < 500) { // Increased range
-            // Visual: Red pulse scaling with distance
-            const intensity = 1 - (dist / 500);
-            this.dangerOverlay.setAlpha(intensity * 0.8 + Math.sin(this.time.now / 100) * 0.2); // Stronger effect
-
-            // Audio: Heartbeat
-            // Frequency increases with proximity (1000ms down to 400ms)
-            const beatInterval = 300 + (dist / 500) * 500;
-            if (this.time.now > (this.nextHeartbeat || 0)) {
-                if (this.soundManager) this.soundManager.playHeartbeat(intensity);
-                this.nextHeartbeat = this.time.now + beatInterval;
-                // Camera bump
-                this.cameras.main.shake(100, 0.01 * intensity);
-            }
-        } else {
-            this.dangerOverlay.setAlpha(0);
-        }
-
-        // Use a timer to prevent rapid direction changes
-        const now = this.time.now;
-        if (!this.chaser.nextDecisionTime) this.chaser.nextDecisionTime = 0;
-
-        // Check if stuck (velocity is low OR hitting a wall)
-        // Note: checking body.blocked requires that physics world has updated.
-        // If we just spawned, velocity is 0, so give it a kickstart if needed.
-        const isStuck = this.chaser.body.velocity.length() < 10 || !this.chaser.body.blocked.none;
-
-        if (this.gameState.isHidden) {
-             // Pure wander logic (Blind to player position)
-
-             // If stuck and decision timer allows, pick a new direction
-             if (isStuck && now > this.chaser.nextDecisionTime) {
-                 // Pick a random direction and move
-                 const angle = Math.random() * Math.PI * 2;
-                 this.chaser.body.setVelocity(Math.cos(angle) * 80, Math.sin(angle) * 80);
-                 // Don't change again for 1 second to give it time to move out of corner
-                 this.chaser.nextDecisionTime = now + 1000;
-             }
-
-             // Small chance to change direction spontaneously (if not stuck)
-             if (!isStuck && Math.random() < 0.01 && now > this.chaser.nextDecisionTime) {
-                 const angle = Math.random() * Math.PI * 2;
-                 this.chaser.body.setVelocity(Math.cos(angle) * 80, Math.sin(angle) * 80);
-                 this.chaser.nextDecisionTime = now + 1000;
-             }
-        } else {
-            // Chase logic
-            const speed = 100;
-            const dist = Phaser.Math.Distance.Between(this.chaser.x, this.chaser.y, this.player.sprite.x, this.player.sprite.y);
-
-            // Stuck detection during chase
-            if (isStuck && dist > 50 && now > this.chaser.nextDecisionTime) {
-                // Stuck! Try to move perpendicular or away for a moment
-                const angleToPlayer = Phaser.Math.Angle.Between(this.chaser.x, this.chaser.y, this.player.sprite.x, this.player.sprite.y);
-                const avoidAngle = angleToPlayer + (Math.random() > 0.5 ? 1.5 : -1.5); // Turn 90 degrees
-
-                this.chaser.body.setVelocity(Math.cos(avoidAngle) * speed, Math.sin(avoidAngle) * speed);
-                this.chaser.nextDecisionTime = now + 500;
-                return; // SKIP moveToObject this frame to allow velocity to apply
-            }
-
-            // 1. Move towards player (Only if not in "avoidance mode" from previous stuck)
-            if (now > this.chaser.nextDecisionTime) {
-                this.physics.moveToObject(this.chaser, this.player.sprite, speed);
-            }
         }
     }
 
@@ -5416,8 +5560,6 @@ class GameScene extends Phaser.Scene {
     }
 
     triggerRealEnding() {
-         // Stop chase timer if any
-         if (this.chaseTimer) this.chaseTimer.remove();
          this.gameState.isChasing = false;
 
          document.getElementById('inventory').style.display = 'none';
@@ -5548,12 +5690,6 @@ class GameScene extends Phaser.Scene {
                 this.gameState.storyFlags.chasePhase = 'active';
                 this.chaseManager.start();
             }
-
-            // Teleport chaser nearby
-            if (this.chaser) {
-                const angle = Math.random() * Math.PI * 2;
-                this.chaser.setPosition(this.player.sprite.x + Math.cos(angle) * 100, this.player.sprite.y + Math.sin(angle) * 100);
-            }
         });
     }
 
@@ -5603,14 +5739,6 @@ class GameScene extends Phaser.Scene {
             // Disable Flashlight
             if (this.player.flashlight) this.player.flashlight.setAlpha(0);
             if (this.player.lightSource) this.player.lightSource.setIntensity(0);
-
-            // Force Chaser to start wandering AWAY immediately
-            if (this.chaser && this.chaser.active && this.gameState.isChasing) {
-                 const angle = Phaser.Math.Angle.Between(this.player.sprite.x, this.player.sprite.y, this.chaser.x, this.chaser.y);
-                 // Add some randomness but generally away
-                 const randomAngle = angle + Phaser.Math.FloatBetween(-1.0, 1.0);
-                 this.chaser.body.setVelocity(Math.cos(randomAngle) * 80, Math.sin(randomAngle) * 80);
-            }
 
             // Hide UI
             document.getElementById('inventory').style.display = 'none';
@@ -6211,6 +6339,7 @@ class GameScene extends Phaser.Scene {
         // Start Game
         try {
             const game = new Phaser.Game(config);
+            window.__huishaGame = game;
             console.log("Game started successfully");
         } catch (e) {
             console.error("Phaser Init Error", e);

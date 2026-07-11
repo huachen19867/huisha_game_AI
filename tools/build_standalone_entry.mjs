@@ -29,7 +29,7 @@ const sourceFiles = [
 
 function stripModuleSyntax(source) {
     return source
-        .replace(/^\s*import\s+.+?;\s*$/gm, '')
+        .replace(/^[ \t]*import(?:[ \t]+[\s\S]*?[ \t]+from)?[ \t]+['"][^'"]+['"];[ \t]*\r?\n?/gm, '')
         .replace(/^export\s+class\s+/gm, 'class ')
         .replace(/^export\s+function\s+/gm, 'function ')
         .replace(/^export\s+const\s+/gm, 'const ');

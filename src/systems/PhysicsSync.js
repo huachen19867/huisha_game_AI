@@ -10,3 +10,11 @@ export function syncStaticBody(gameObject) {
     }
     return false;
 }
+
+export function syncCustomStaticBody(gameObject, width, height, offsetX, offsetY) {
+    if (!gameObject?.body) return false;
+    syncStaticBody(gameObject);
+    gameObject.body.setSize(width, height);
+    gameObject.body.setOffset(offsetX, offsetY);
+    return true;
+}

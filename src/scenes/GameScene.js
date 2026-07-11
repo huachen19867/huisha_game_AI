@@ -413,8 +413,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     triggerRealEnding() {
-         // Stop chase timer if any
-         if (this.chaseTimer) this.chaseTimer.remove();
          this.gameState.isChasing = false;
 
          document.getElementById('inventory').style.display = 'none';

@@ -13,6 +13,11 @@ state.hasRice = state.hasMatches = state.hasIncense = state.hasSpiritMoney = tru
 assert.equal(getCurrentObjective(state, 'room_main'), '还原两段记忆：从旧书房进入学校，从药柜小间进入医院');
 view = getObjectiveView(state, 'room_kitchen');
 assert.equal(view.completed, true);
+view = getObjectiveView(state, 'room_bedroom_me');
+assert.equal(view.completed, false);
+state.storyFlags.collectedClues.push('diary_mother', 'toy_plane');
+view = getObjectiveView(state, 'room_bedroom_me');
+assert.equal(view.completed, true);
 state.storyFlags.puzzles.school = true;
 state.storyFlags.puzzles.hospital = true;
 assert.equal(getCurrentObjective(state, 'room_corridor'), '调查走廊里的四张旧照片');

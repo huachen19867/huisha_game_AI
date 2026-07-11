@@ -8,6 +8,11 @@ const moduleScripts = [...indexHtml.matchAll(/<script\b[^>]*type=["']module["'][
 assert.equal(moduleScripts.length, 1, 'index.html should have one inline module script');
 assert.doesNotMatch(
     moduleScripts[0][1],
+    /^\s*import\b/m,
+    'standalone entry must strip both single-line and multiline imports'
+);
+assert.doesNotMatch(
+    moduleScripts[0][1],
     /^\s*import\s+.+from\s+['"]\.\/src\//m,
     'index.html must not import src modules at runtime; file:// launch blocks module imports'
 );

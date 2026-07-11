@@ -14,7 +14,7 @@ function isMapPurposeComplete(gameState, mapId) {
         room_secret: gameState.hasMatches,
         room_study: flags.puzzles.school,
         room_medicine: flags.puzzles.hospital,
-        room_bedroom_me: flags.collectedClues.includes('diary') || flags.clues.death > 0,
+        room_bedroom_me: flags.collectedClues.includes('diary_mother') && flags.collectedClues.includes('toy_plane'),
         room_backyard: gameState.hasIncense && gameState.hasRedKey,
         room_basement: flags.familyPhotoCornerFound,
         room_attic: gameState.hasSpiritMoney,

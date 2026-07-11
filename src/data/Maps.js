@@ -505,7 +505,10 @@ export const Maps = {
         objects: {
             playerStart: { x: 320, y: 100 },
             well: { x: 320, y: 320, dialog: '古老的枯井，井口被几块大石头死死压住，缝隙里塞满了画着符咒的黄纸。井底深处，似乎有冷风不断吹上来。小时候，我不小心把球踢到了井边，父亲发了疯一样打我，说井里住着吃人的怪物。' },
-            incense: { x: 550, y: 550, dialog: '在树后发现了一把香。' },
+            incense: {
+                x: 550, y: 550, id: 'incense', dialog: '在树后发现了一把香。',
+                interaction: { label: '一把香', verb: '拾取', priority: 30, radius: 80, marker: true, blocksMovement: false }
+            },
             trees: [
                 { x: 100, y: 200 },
                 { x: 500, y: 200 },
@@ -601,7 +604,11 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 320, y: 384 },
-            spirit_money: { x: 320, y: 100, dialog: '横梁上挂着一串串纸钱，随着气流轻轻晃动，发出沙沙的声音。就像是有无数个看不见的幽灵在窃窃私语。这些钱...是烧给谁的？' },
+            spirit_money: {
+                x: 320, y: 100, id: 'spirit_money',
+                dialog: '横梁上挂着一串串纸钱，随着气流轻轻晃动，发出沙沙的声音。就像是有无数个看不见的幽灵在窃窃私语。这些钱...是烧给谁的？',
+                interaction: { label: '一串纸钱', verb: '拾取', priority: 30, radius: 80, marker: true, blocksMovement: false }
+            },
             interactables: [
                 {
                     id: 'attic_overview', x: 480, y: 160, texture: 'photo_frame',
