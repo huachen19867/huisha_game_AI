@@ -1,4 +1,5 @@
 import { collectClue, ensureStoryFlags, getTruthLevel } from './StoryState.js';
+import { syncStaticBody } from './PhysicsSync.js';
 
 export class InteractionManager {
     constructor(scene) {
@@ -338,6 +339,7 @@ export class InteractionManager {
                                 duration: 1000,
                                 ease: 'Power2',
                                 onComplete: () => {
+                                    syncStaticBody(obj);
                                     this.gameState.cabinetMoved = true;
                                     if (scene.soundManager) scene.soundManager.playNoise(1.0);
 

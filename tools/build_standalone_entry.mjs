@@ -11,6 +11,7 @@ const sourceFiles = [
     'src/systems/StartRoute.js',
     'src/systems/SoundManager.js',
     'src/entities/Player.js',
+    'src/systems/PhysicsSync.js',
     'src/systems/EventManager.js',
     'src/systems/MapManager.js',
     'src/systems/InteractionManager.js',

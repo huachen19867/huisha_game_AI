@@ -1,4 +1,5 @@
 import { Maps } from '../data/Maps.js';
+import { syncStaticBody } from './PhysicsSync.js';
 
 export class MapManager {
     constructor(scene) {
@@ -123,6 +124,7 @@ export class MapManager {
                 const h = obj.height;
                 obj.body.setSize(w * 0.8, h * 0.3);
                 obj.body.setOffset(w * 0.1, h * 0.7);
+                syncStaticBody(obj);
             }
         };
 
@@ -144,7 +146,7 @@ export class MapManager {
             // Explicitly set immovable and refresh
             if (scene.coffin.body) {
                 scene.coffin.body.immovable = true;
-                scene.coffin.refreshBody();
+                syncStaticBody(scene.coffin);
             }
             addToInteractables(scene.coffin, objs.coffin);
         }
@@ -200,7 +202,7 @@ export class MapManager {
 
             // Interaction setup
             scene.npc.objId = 'kitchen_ghost';
-            scene.npc.refreshBody(); // Ensure body is active
+            syncStaticBody(scene.npc); // Ensure body is active
 
 
             if (scene.gameState.hasRice && scene.gameState.hasMatches) {
@@ -239,6 +241,7 @@ export class MapManager {
              if (isHorror && !scene.isMobile) scene.car.setPipeline('Light2D');
              scene.car.body.setSize(60, 100);
              scene.car.body.setOffset(2, 14);
+             syncStaticBody(scene.car);
              // No setupFurniture here as it has custom bounds already
              addToInteractables(scene.car, objs.car);
         }
@@ -331,7 +334,7 @@ export class MapManager {
                 // Make it a thin strip at the top wall
                 scene.family_rules.body.setSize(32, 10);
                 scene.family_rules.body.setOffset(0, 20);
-                scene.family_rules.refreshBody();
+                syncStaticBody(scene.family_rules);
             }
 
             // Force add to interactables since it has no dialog/id in map data
@@ -353,7 +356,7 @@ export class MapManager {
                 const h = scene.safe.height;
                 scene.safe.body.setSize(w * 0.9, h * 0.5);
                 scene.safe.body.setOffset(w * 0.05, h * 0.5);
-                scene.safe.refreshBody(); // Important for Static Bodies!
+                syncStaticBody(scene.safe); // Important for Static Bodies!
             }
 
             // Force add to interactables (even if no dialog/id in map data)
@@ -471,11 +474,7 @@ export class MapManager {
                 if (isHorror && !scene.isMobile) item.setPipeline('Light2D');
 
                 scene.physics.add.existing(item, true);
-                if (typeof item.refreshBody === 'function') {
-                    item.refreshBody();
-                } else if (item.body && typeof item.body.updateFromGameObject === 'function') {
-                    item.body.updateFromGameObject();
-                }
+                syncStaticBody(item);
 
                 item.objId = data.id;
                 item.dialog = data.dialog;
@@ -559,7 +558,7 @@ export class MapManager {
             // Dad (Left)
             scene.dad = this.furniture.create(objs.parents_npc.x - 40, objs.parents_npc.y, 'npc_paper');
             scene.dad.setTint(0xaaaaaa);
-            scene.dad.refreshBody();
+            syncStaticBody(scene.dad);
             // Add interaction
             scene.dad.objId = 'dad_ghost';
             this.scene.interactables.add(scene.dad);
@@ -567,7 +566,7 @@ export class MapManager {
             // Mom (Right)
             scene.mom = this.furniture.create(objs.parents_npc.x + 40, objs.parents_npc.y, 'npc_paper');
             scene.mom.setTint(0xaaaaaa);
-            scene.mom.refreshBody();
+            syncStaticBody(scene.mom);
             // Add interaction
             scene.mom.objId = 'mom_ghost';
             this.scene.interactables.add(scene.mom);
