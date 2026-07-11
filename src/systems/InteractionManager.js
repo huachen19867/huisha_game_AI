@@ -1,6 +1,7 @@
 import { canChooseCrashEnding, collectClue, ensureStoryFlags, getExitRoute, getTruthLevel, reconcileFamilyPhoto } from './StoryState.js';
 import { syncStaticBody } from './PhysicsSync.js';
 import { Puzzles, canStartPuzzle } from '../data/Puzzles.js';
+import { formatInteractionPrompt, normalizeInteractionMeta, scoreInteractionCandidate } from './InteractionRules.js';
 
 export class InteractionManager {
     constructor(scene) {
@@ -94,17 +95,10 @@ export class InteractionManager {
         // Interaction distance threshold
         const INTERACT_DIST = 80;
 
-        // --- 1. Priority Interactions (Logic Heavy / Conditional) ---
-        // These are objects that might NOT be in the generic loop or need special conditions
-
-        if (scene.npc && scene.npc.visible) {
-            if (this.getDistanceToObj(px, py, scene.npc) < 100) target = { type: 'npc', obj: scene.npc };
-        }
-
-        // --- 2. Generic Interactions (Everything in interactables group) ---
+        // Generic interactions are selected by story priority, facing and then distance.
         // MapManager adds almost everything to scene.interactables
         if (!target && scene.interactables) {
-            let closestDist = Infinity;
+            let bestScore = -Infinity;
             let closestObj = null;
 
             scene.interactables.getChildren().forEach(obj => {
@@ -113,22 +107,27 @@ export class InteractionManager {
 
                 const dist = this.getDistanceToObj(px, py, obj);
 
-                // Adjust threshold based on object type if needed
-                let threshold = INTERACT_DIST;
-                if (obj.texture && obj.texture.key === 'car') threshold = 120; // Bigger reach for cars
-                if (obj.objId === 'parents_cabinet') threshold = 100; // Easier access for secret room
-                if (obj.texture && obj.texture.key === 'toy_plane') threshold = 40; // Harder to accidentally click
-                if (obj.texture && obj.texture.key === 'well') threshold = 100; // Easier access for well
-                if (obj.objId === 'dad_ghost' || obj.objId === 'mom_ghost' || obj.objId === 'kitchen_ghost') threshold = 120; // Increased reach
-                if (obj === scene.safe || obj.objId === 'safe' || (obj.texture && obj.texture.key === 'safe')) threshold = 120; // Increased reach for safe
-                if (obj === scene.family_rules) threshold = 80; // Reset to normal range now that it has body
-
-
+                obj.interaction ||= normalizeInteractionMeta({
+                    id: obj.objId,
+                    dialog: obj.dialog,
+                    documentTitle: obj.documentTitle,
+                    documentText: obj.documentText,
+                    clueId: obj.clueId,
+                    itemGrant: obj.itemGrant,
+                    puzzleId: obj.puzzleId,
+                    memoryTrigger: obj.memoryTrigger,
+                    endingChoice: obj.endingChoice
+                }, { textureKey: obj.texture?.key });
+                const threshold = obj.interaction.radius || INTERACT_DIST;
                 if (dist < threshold) {
-                    if (dist < closestDist) {
-                        closestDist = dist;
+                    const dx = obj.x - px;
+                    const dy = obj.y - py;
+                    const length = Math.hypot(dx, dy) || 1;
+                    const facingDot = (dx / length) * (scene.player.facingX || 0) + (dy / length) * (scene.player.facingY || 1);
+                    const score = scoreInteractionCandidate({ distance: dist, priority: obj.interaction.priority, facingDot });
+                    if (score > bestScore) {
+                        bestScore = score;
                         closestObj = obj;
-                        // this.debugInteraction(px, py, closestObj, closestDist, threshold);
                     }
                 }
             });
@@ -207,6 +206,7 @@ export class InteractionManager {
         }
 
         if (target) {
+            scene.interactText.setText(formatInteractionPrompt(target.obj.interaction || normalizeInteractionMeta({ id: target.obj.objId }, { textureKey: target.obj.texture?.key })));
             scene.interactText.setPosition(px, py - 40).setVisible(true);
             scene.currentTarget = target;
 

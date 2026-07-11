@@ -19,6 +19,8 @@ export class Player {
         this.speed = 150;
         this.runSpeed = 250;
         this.lastStepTime = 0;
+        this.facingX = 0;
+        this.facingY = 1;
 
         // Stamina System
         this.maxStamina = 100;
@@ -164,6 +166,10 @@ export class Player {
                 moveX /= len;
                 moveY /= len;
             }
+
+            const facingLength = Math.hypot(moveX, moveY) || 1;
+            this.facingX = moveX / facingLength;
+            this.facingY = moveY / facingLength;
 
             const currentSpeed = this.isRunning ? this.runSpeed : this.speed;
             this.sprite.setVelocityX(moveX * currentSpeed);

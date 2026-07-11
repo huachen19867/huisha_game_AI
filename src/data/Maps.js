@@ -459,7 +459,11 @@ export const Maps = {
         objects: {
             playerStart: { x: 64, y: 240 },
             bed: { x: 400, y: 150, dialog: '我的床。很小，很硬。床单是我最喜欢的蓝色，上面印着卡通图案。这是我在这个家里唯一的避风港。以前我总是躲在被子里，用手电筒照着漫画书，那是唯一的亮光。' },
-            cabinet: { x: 400, y: 350 },
+            cabinet: {
+                x: 400, y: 350, id: 'my_cabinet',
+                dialog: '柜门里还挂着十年前的校服。这里空间很窄，却比房间中央安全。',
+                interaction: { label: '我的衣柜', verb: '躲藏', priority: 20, radius: 90, marker: false, blocksMovement: true }
+            },
             desk: { x: 100, y: 150, id: 'my_desk', dialog: '这是我的书桌。上面刻着"早"字，但那只是我为了模仿鲁迅刻的。抽屉里塞满了没及格的试卷，每一次打开都需要勇气。' },
             diary: { x: 100, y: 140 },
             toy_plane: { x: 300, y: 300, dialog: '一只折断机翼的纸飞机。是我七岁那年折的。我以为只要飞得够高，就能飞出围墙，飞出这个家。但它最终还是掉在了地上，被父亲一脚踩扁。' },

@@ -9,6 +9,7 @@ const sourceFiles = [
     'src/systems/TextureGenerator.js',
     'src/systems/StoryState.js',
     'src/systems/RuntimeState.js',
+    'src/systems/InteractionRules.js',
     'src/systems/DomListenerRegistry.js',
     'src/systems/ObjectiveManager.js',
     'src/systems/ChaseManager.js',

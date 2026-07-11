@@ -1,5 +1,6 @@
 import { Maps } from '../data/Maps.js';
 import { syncStaticBody } from './PhysicsSync.js';
+import { normalizeInteractionMeta } from './InteractionRules.js';
 
 export class MapManager {
     constructor(scene) {
@@ -119,6 +120,21 @@ export class MapManager {
                 this.scene.interactables.add(obj);
                 if (data.dialog) obj.dialog = data.dialog;
                 if (data.id) obj.objId = data.id;
+                obj.interaction = normalizeInteractionMeta(data, { textureKey: obj.texture?.key });
+                if (obj.interaction.marker && !obj.interactionMarker) {
+                    obj.interactionMarker = scene.add.circle(obj.x, obj.y - Math.max(18, obj.displayHeight * 0.55), 4, 0xffd27a, 0.85)
+                        .setStrokeStyle(1, 0xffffff, 0.9)
+                        .setDepth(350);
+                    scene.tweens.add({
+                        targets: obj.interactionMarker,
+                        alpha: { from: 0.35, to: 0.9 },
+                        scale: { from: 0.8, to: 1.15 },
+                        duration: 900,
+                        yoyo: true,
+                        repeat: -1
+                    });
+                    obj.once?.('destroy', () => obj.interactionMarker?.destroy());
+                }
             }
         };
 
@@ -500,7 +516,7 @@ export class MapManager {
                 item.endingChoice = data.endingChoice;
                 item.endingWeight = data.endingWeight;
                 item.interactLabel = data.interactLabel;
-                scene.interactables.add(item);
+                addToInteractables(item, data);
             });
         }
 
