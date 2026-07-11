@@ -491,6 +491,8 @@ export class MapManager {
                 item.memoryTrigger = data.memoryTrigger;
                 item.memoryReturn = data.memoryReturn;
                 item.memoryComplete = data.memoryComplete;
+                item.puzzleId = data.puzzleId;
+                item.itemGrant = data.itemGrant;
                 item.endingChoice = data.endingChoice;
                 item.endingWeight = data.endingWeight;
                 item.interactLabel = data.interactLabel;

@@ -33,11 +33,11 @@ assert.ok(
     'room_medicine must include a hospital memory trigger'
 );
 assert.ok(
-    Maps.memory_school.objects.interactables.some(item => item.memoryReturn?.mapId === 'room_study' && item.memoryComplete === 'school'),
+    Maps.memory_school.objects.interactables.some(item => item.memoryReturn?.mapId === 'room_study' && item.puzzleId === 'school'),
     'memory_school must include a completing return to room_study'
 );
 assert.ok(
-    Maps.memory_hospital.objects.interactables.some(item => item.memoryReturn?.mapId === 'room_medicine' && item.memoryComplete === 'hospital'),
+    Maps.memory_hospital.objects.interactables.some(item => item.memoryReturn?.mapId === 'room_medicine' && item.puzzleId === 'hospital'),
     'memory_hospital must include a completing return to room_medicine'
 );
 assert.ok(

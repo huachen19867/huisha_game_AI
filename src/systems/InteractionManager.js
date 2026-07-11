@@ -1,5 +1,6 @@
 import { collectClue, ensureStoryFlags, getTruthLevel } from './StoryState.js';
 import { syncStaticBody } from './PhysicsSync.js';
+import { Puzzles, canStartPuzzle } from '../data/Puzzles.js';
 
 export class InteractionManager {
     constructor(scene) {
@@ -148,7 +149,7 @@ export class InteractionManager {
                 // Identify specific objects by reference OR texture/properties
                 // Priority: Specific IDs/Refs -> Generic Textures
 
-                if (obj.memoryTrigger || obj.memoryReturn || obj.clueType || obj.documentText || obj.endingChoice) type = 'story_object';
+                if (obj.puzzleId || obj.itemGrant || obj.memoryTrigger || obj.memoryReturn || obj.clueType || obj.documentText || obj.endingChoice) type = 'story_object';
                 else if (obj === scene.safe || obj.objId === 'safe' || (obj.texture && obj.texture.key === 'safe')) type = 'safe';
                 else if (obj.objId === 'dad_ghost') type = 'dad_ghost';
                 else if (obj.objId === 'mom_ghost') type = 'mom_ghost';
@@ -253,6 +254,26 @@ export class InteractionManager {
         const executeLogic = () => {
 
             if (type === 'story_object') {
+                if (obj.puzzleId) {
+                    const flags = this.ensureStoryFlags();
+                    const puzzle = Puzzles[obj.puzzleId];
+                    if (!canStartPuzzle(puzzle, flags.collectedClues)) {
+                        window.showDialog('主角', '先调查这段记忆中的另外两件证据。');
+                        return;
+                    }
+                    window.showPuzzle(puzzle, () => {
+                        const collected = obj.clueId && obj.clueType ? this.collectClue(obj.clueId, obj.clueType) : false;
+                        if (collected && scene.playSound) scene.playSound(400, 'triangle', 0.4);
+                        flags.puzzles[obj.puzzleId] = true;
+                        flags.memories[obj.puzzleId] = true;
+                        scene.refreshObjective();
+                        window.showDialog('主角', puzzle.successText, () => {
+                            if (obj.memoryReturn) scene.switchScene(obj.memoryReturn.mapId, obj.memoryReturn.x, obj.memoryReturn.y);
+                        });
+                    });
+                    return;
+                }
+
                 const afterClue = () => {
                     if (obj.memoryComplete) {
                         const flags = this.ensureStoryFlags();

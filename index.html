@@ -459,6 +459,38 @@
             white-space: pre-wrap;
         }
 
+        #puzzle-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 2600;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.86);
+            pointer-events: auto;
+        }
+        #puzzle-panel {
+            width: min(620px, 92vw);
+            max-height: 86vh;
+            overflow: auto;
+            padding: 24px;
+            color: #eadfc9;
+            background: #19140f;
+            border: 2px solid #775c42;
+            box-sizing: border-box;
+        }
+        #puzzle-options { display: grid; gap: 10px; margin: 18px 0; }
+        #puzzle-options button, #puzzle-controls button {
+            padding: 12px;
+            color: #eadfc9;
+            background: #35291f;
+            border: 1px solid #775c42;
+            cursor: pointer;
+        }
+        #puzzle-controls { display: flex; gap: 10px; justify-content: flex-end; }
+        #puzzle-status { min-height: 24px; color: #d9a06d; }
+
         /* Tooltip for inventory */
         #tooltip {
             position: fixed;
@@ -560,6 +592,19 @@
             <div id="doc-close">X</div>
             <div id="doc-title"></div>
             <div id="doc-content"></div>
+        </div>
+    </div>
+
+    <div id="puzzle-overlay">
+        <div id="puzzle-panel">
+            <h2 id="puzzle-title"></h2>
+            <div id="puzzle-order"></div>
+            <div id="puzzle-options"></div>
+            <div id="puzzle-status"></div>
+            <div id="puzzle-controls">
+                <button id="puzzle-reset">重置</button>
+                <button id="puzzle-close">关闭</button>
+            </div>
         </div>
     </div>
 
@@ -1271,7 +1316,7 @@ const Maps = {
                     dialog: '几张试卷按年份排好，最后一张背面写着：我不想回家。',
                     clueId: 'school_last_argument',
                     clueType: 'control',
-                    memoryComplete: 'school',
+                    puzzleId: 'school',
                     memoryReturn: { mapId: 'room_study', x: 330, y: 290 }
                 }
             ],
@@ -1342,7 +1387,7 @@ const Maps = {
                     dialog: '缴费单在灯下慢慢变湿，像有人刚刚哭过。你听见母亲说：明儿，不要怪我。',
                     clueId: 'hospital_mother_voice',
                     clueType: 'illness',
-                    memoryComplete: 'hospital',
+                    puzzleId: 'hospital',
                     memoryReturn: { mapId: 'room_medicine', x: 150, y: 300 }
                 }
             ],
@@ -1463,6 +1508,41 @@ const Maps = {
     }
 };
         // END bundled src/data/Maps.js
+
+        // BEGIN bundled src/data/Puzzles.js
+const Puzzles = {
+    school: {
+        id: 'school', title: '把试卷按年份排好',
+        prerequisites: ['school_blackboard', 'school_report'],
+        options: [
+            { id: 'exam_1988', label: '1988：离家前最后一次考试' },
+            { id: 'exam_1986', label: '1986：第一次被罚站' },
+            { id: 'exam_1987', label: '1987：奖状背面的红字' }
+        ],
+        answer: ['exam_1986', 'exam_1987', 'exam_1988'],
+        successText: '三张试卷连成了父亲控制逐年加深的轨迹。'
+    },
+    hospital: {
+        id: 'hospital', title: '拼出治疗被阻断的过程',
+        prerequisites: ['hospital_window', 'hospital_ward'],
+        options: [
+            { id: 'unpaid_bill', label: '未缴费单：家丑不可外扬' },
+            { id: 'diagnosis', label: '诊断：需要规律服药与住院观察' },
+            { id: 'prescription', label: '处方：医生开出的治疗方案' }
+        ],
+        answer: ['diagnosis', 'prescription', 'unpaid_bill'],
+        successText: '母亲不是不肯治疗，而是治疗被父亲亲手中断。'
+    }
+};
+
+function canStartPuzzle(puzzle, collectedClues) {
+    return puzzle.prerequisites.every(id => collectedClues.includes(id));
+}
+
+function isPuzzleAnswerCorrect(puzzle, answer) {
+    return answer.length === puzzle.answer.length && answer.every((id, index) => id === puzzle.answer[index]);
+}
+        // END bundled src/data/Puzzles.js
 
         // BEGIN bundled src/systems/TextureGenerator.js
 class TextureGenerator {
@@ -3312,6 +3392,8 @@ class MapManager {
                 item.memoryTrigger = data.memoryTrigger;
                 item.memoryReturn = data.memoryReturn;
                 item.memoryComplete = data.memoryComplete;
+                item.puzzleId = data.puzzleId;
+                item.itemGrant = data.itemGrant;
                 item.endingChoice = data.endingChoice;
                 item.endingWeight = data.endingWeight;
                 item.interactLabel = data.interactLabel;
@@ -3409,6 +3491,7 @@ class MapManager {
         // END bundled src/systems/MapManager.js
 
         // BEGIN bundled src/systems/InteractionManager.js
+
 
 
 class InteractionManager {
@@ -3558,7 +3641,7 @@ class InteractionManager {
                 // Identify specific objects by reference OR texture/properties
                 // Priority: Specific IDs/Refs -> Generic Textures
 
-                if (obj.memoryTrigger || obj.memoryReturn || obj.clueType || obj.documentText || obj.endingChoice) type = 'story_object';
+                if (obj.puzzleId || obj.itemGrant || obj.memoryTrigger || obj.memoryReturn || obj.clueType || obj.documentText || obj.endingChoice) type = 'story_object';
                 else if (obj === scene.safe || obj.objId === 'safe' || (obj.texture && obj.texture.key === 'safe')) type = 'safe';
                 else if (obj.objId === 'dad_ghost') type = 'dad_ghost';
                 else if (obj.objId === 'mom_ghost') type = 'mom_ghost';
@@ -3663,6 +3746,26 @@ class InteractionManager {
         const executeLogic = () => {
 
             if (type === 'story_object') {
+                if (obj.puzzleId) {
+                    const flags = this.ensureStoryFlags();
+                    const puzzle = Puzzles[obj.puzzleId];
+                    if (!canStartPuzzle(puzzle, flags.collectedClues)) {
+                        window.showDialog('主角', '先调查这段记忆中的另外两件证据。');
+                        return;
+                    }
+                    window.showPuzzle(puzzle, () => {
+                        const collected = obj.clueId && obj.clueType ? this.collectClue(obj.clueId, obj.clueType) : false;
+                        if (collected && scene.playSound) scene.playSound(400, 'triangle', 0.4);
+                        flags.puzzles[obj.puzzleId] = true;
+                        flags.memories[obj.puzzleId] = true;
+                        scene.refreshObjective();
+                        window.showDialog('主角', puzzle.successText, () => {
+                            if (obj.memoryReturn) scene.switchScene(obj.memoryReturn.mapId, obj.memoryReturn.x, obj.memoryReturn.y);
+                        });
+                    });
+                    return;
+                }
+
                 const afterClue = () => {
                     if (obj.memoryComplete) {
                         const flags = this.ensureStoryFlags();
@@ -5526,6 +5629,11 @@ class GameScene extends Phaser.Scene {
         const docTitle = document.getElementById('doc-title');
         const docContent = document.getElementById('doc-content');
         const docClose = document.getElementById('doc-close');
+        const puzzleOverlay = document.getElementById('puzzle-overlay');
+        const puzzleTitle = document.getElementById('puzzle-title');
+        const puzzleOrder = document.getElementById('puzzle-order');
+        const puzzleOptions = document.getElementById('puzzle-options');
+        const puzzleStatus = document.getElementById('puzzle-status');
         const staminaContainer = document.getElementById('stamina-container');
         const staminaBar = document.getElementById('stamina-bar');
 
@@ -5609,6 +5717,40 @@ class GameScene extends Phaser.Scene {
             docOverlay.style.display = 'none';
             window.dialogActive = false; // Resume game
         });
+
+        window.showPuzzle = function(config, onSuccess) {
+            let selected = [];
+            const render = () => {
+                puzzleOrder.textContent = selected.length ? `顺序：${selected.map(id => config.options.find(option => option.id === id).label).join(' → ')}` : '顺序：尚未选择';
+                puzzleOptions.innerHTML = '';
+                config.options.filter(option => !selected.includes(option.id)).forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option.label;
+                    button.onclick = () => {
+                        selected.push(option.id);
+                        if (selected.length === config.answer.length) {
+                            if (isPuzzleAnswerCorrect(config, selected)) {
+                                puzzleOverlay.style.display = 'none';
+                                window.dialogActive = false;
+                                onSuccess();
+                                return;
+                            }
+                            puzzleStatus.textContent = '顺序不对，再看一眼证据。';
+                            selected = [];
+                        }
+                        render();
+                    };
+                    puzzleOptions.appendChild(button);
+                });
+            };
+            puzzleTitle.textContent = config.title;
+            puzzleStatus.textContent = '';
+            puzzleOverlay.style.display = 'flex';
+            window.dialogActive = true;
+            render();
+            document.getElementById('puzzle-reset').onclick = () => { selected = []; puzzleStatus.textContent = ''; render(); };
+            document.getElementById('puzzle-close').onclick = () => { puzzleOverlay.style.display = 'none'; window.dialogActive = false; };
+        };
 
         // Ending Logic
         window.triggerHorrorEnding = function(onComplete) {

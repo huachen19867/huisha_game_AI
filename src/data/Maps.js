@@ -673,7 +673,7 @@ export const Maps = {
                     dialog: '几张试卷按年份排好，最后一张背面写着：我不想回家。',
                     clueId: 'school_last_argument',
                     clueType: 'control',
-                    memoryComplete: 'school',
+                    puzzleId: 'school',
                     memoryReturn: { mapId: 'room_study', x: 330, y: 290 }
                 }
             ],
@@ -744,7 +744,7 @@ export const Maps = {
                     dialog: '缴费单在灯下慢慢变湿，像有人刚刚哭过。你听见母亲说：明儿，不要怪我。',
                     clueId: 'hospital_mother_voice',
                     clueType: 'illness',
-                    memoryComplete: 'hospital',
+                    puzzleId: 'hospital',
                     memoryReturn: { mapId: 'room_medicine', x: 150, y: 300 }
                 }
             ],
