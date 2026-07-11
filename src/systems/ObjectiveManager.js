@@ -1,5 +1,6 @@
 import { ensureStoryFlags } from './StoryState.js';
 import { Maps } from '../data/Maps.js';
+import { getNarrativeSummary } from './NarrativeDirector.js';
 
 function isMapPurposeComplete(gameState, mapId) {
     const flags = ensureStoryFlags(gameState);
@@ -50,7 +51,8 @@ export function getObjectiveView(gameState, mapId) {
     return {
         main: getCurrentObjective(gameState, mapId),
         local: map?.purpose || '调查当前区域',
-        completed: isMapPurposeComplete(gameState, mapId)
+        completed: isMapPurposeComplete(gameState, mapId),
+        memory: getNarrativeSummary(gameState)
     };
 }
 
@@ -60,7 +62,7 @@ export class ObjectiveManager {
         if (!this.element) return;
         const view = getObjectiveView(this.gameState, mapId);
         const localStatus = view.completed ? '本区域关键内容已完成' : view.local;
-        this.element.textContent = `主线：${view.main}\n当前区域：${localStatus}`;
+        this.element.textContent = `主线：${view.main}\n当前区域：${localStatus}\n记忆：${view.memory}`;
         this.element.style.whiteSpace = 'pre-line';
         this.element.style.display = 'block';
     }

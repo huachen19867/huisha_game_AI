@@ -2,6 +2,7 @@ import { canChooseCrashEnding, collectClue, ensureStoryFlags, getExitRoute, getT
 import { syncStaticBody } from './PhysicsSync.js';
 import { Puzzles, canStartPuzzle } from '../data/Puzzles.js';
 import { formatInteractionPrompt, normalizeInteractionMeta, scoreInteractionCandidate } from './InteractionRules.js';
+import { getObjectReflection } from './NarrativeDirector.js';
 
 export class InteractionManager {
     constructor(scene) {
@@ -365,11 +366,11 @@ export class InteractionManager {
                         this.gameState.hasRice = true;
                         window.updateInventory('倒头饭');
                         scene.playSound(400, 'triangle', 0.5);
-                        window.showDialog('主角', '柜子里有一碗发馊的饭...这是给死人的供品。你获得了【倒头饭】。', () => {
+                        window.showDialog('主角', `你获得了【倒头饭】。${getObjectReflection(this.gameState, 'rice')}`, () => {
                             if (scene.eventManager) scene.eventManager.triggerPaperDollEvent();
                         });
                     } else {
-                        window.showDialog('主角', '柜子已经空了。');
+                        window.showDialog('主角', getObjectReflection(this.gameState, 'rice'));
                     }
                     return;
                 } else if (obj.objId === 'parents_cabinet') {
@@ -517,15 +518,16 @@ export class InteractionManager {
             }
 
             if (type === 'toy_plane') {
-                this.collectClue('toy_plane', 'death');
+                const collected = this.collectClue('toy_plane', 'death');
                 if (!this.gameState.clues.includes('plane')) this.gameState.clues.push('plane');
+                if (!collected) window.showDialog('主角', getObjectReflection(this.gameState, 'toy_plane'));
                 return;
             }
 
             if (type === 'locked_window') {
                 this.collectClue('locked_window', 'control');
                 if (!this.gameState.clues.includes('window')) this.gameState.clues.push('window');
-                window.showDialog('主角', '窗户从外面被钉死了。钉子很新，像是有人怕我再一次从这里逃出去。');
+                window.showDialog('主角', getObjectReflection(this.gameState, 'locked_window'));
                 return;
             }
 
@@ -616,7 +618,7 @@ export class InteractionManager {
                     if (!this.gameState.hasIncense) missing.push('香');
                     if (!this.gameState.hasSpiritMoney) missing.push('纸钱');
 
-                    window.showDialog('主角', `供桌上的遗像被黑布遮住了...香炉也是空的。好像在等待供奉。还缺：${missing.join('、')}。`);
+                    window.showDialog('主角', `${getObjectReflection(this.gameState, 'altar')} 还缺：${missing.join('、')}。`);
                 }
                 return;
             }
@@ -644,7 +646,7 @@ export class InteractionManager {
                          window.showDialog('主角', '（惊恐）是父亲的声音！他...他没死？可是棺材盖上钉着七颗长钉，还缠着红线...这是在镇压什么？');
                      });
                 } else {
-                    // Default dialog is shown, no extra logic needed if candle not lit
+                    window.showDialog('主角', getObjectReflection(this.gameState, 'coffin'));
                 }
                 return;
             }
