@@ -11,5 +11,6 @@ assert.match(sceneSource, /this\.narrativeBeatPlaying/);
 assert.match(sceneSource, /getPendingNarrativeBeat\(this\.gameState\)/);
 assert.match(sceneSource, /markNarrativeBeatSeen\(this\.gameState, beat\.id\)/);
 assert.match(sceneSource, /if \(window\.dialogActive \|\| this\.isSwitching\)/);
+assert.match(interactionSource, /flags\.photoSetCollected = true;\s+scene\.queueNarrativeBeat\(\)/);
 
 console.log('Narrative runtime contract verification passed');

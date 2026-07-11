@@ -95,9 +95,9 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 384, y: 450 },
-            coffin: { x: 384, y: 150, dialog: '一口黑漆棺材，死气沉沉地横在屋子中央。棺材盖上钉着七颗长钉，每一颗都缠着浸透了黑狗血的红线。这是"锁魂钉"...他们在怕什么？怕里面的人出来吗？隐约间，我似乎听到了棺材里传来了指甲抓挠木板的声音...咯吱...咯吱...' },
-            altar: { x: 384, y: 250, dialog: '供桌上落满了厚厚的灰尘。香炉里插着三根断香，两短一长...人最忌讳的三长两短。供桌正中央摆着一个相框，被一块黑布死死地遮住。' },
-            black_cloth: { x: 384, y: 240, dialog: '（手颤抖着掀开黑布）是父亲的遗像。照片上的男人面容消瘦，颧骨高耸，那双眼睛...无论我走到哪里，似乎都在死死地盯着我。即使变成了照片，他的眼神依然让我感到窒息。' },
+            coffin: { x: 384, y: 150, dialog: '黑棺钉着七颗锁魂钉。里面每响一下，我的胸口也跟着疼一下。' },
+            altar: { x: 384, y: 250, dialog: '供桌摆着三副碗筷，中间那只碗落灰最少，像每年都有人重新擦过。' },
+            black_cloth: { x: 384, y: 240, dialog: '黑布下是父亲的遗像。相框玻璃却映出另一张更年轻的脸，一闪就不见了。' },
             candles: [
                 { x: 354, y: 240 },
                 { x: 414, y: 240 }
@@ -181,10 +181,10 @@ export const Maps = {
             playerStart: { x: 176, y: 580 },
             locked_window: { x: 48, y: 100 },
             photos: [
-                { x: 48, y: 150, id: 1, text: '1998年，全家福。那时候父母笑得很开心，我被抱在怀里。照片的边缘有些发黄，幸福得像个假象。' },
-                { x: 272, y: 250, id: 2, text: '1999年，满月。我抓周抓了一支笔，父亲很高兴，说我以后一定有出息。母亲在旁边看着，眼神里却透着一丝忧虑。' },
-                { x: 48, y: 350, id: 3, text: '2003年，入学。我背着新书包，却笑不出来。父亲的手重重地按在我的肩膀上，像一座大山压得我喘不过气。' },
-                { x: 272, y: 450, id: 4, text: '2005年，争吵。照片被撕碎过又粘了起来。画面里只有父亲愤怒的背影和母亲掩面哭泣的样子。' }
+                { x: 48, y: 150, id: 1, text: '第一张全家福。母亲端着饭，父亲的手按在我肩上。照片右下角缺了一块。' },
+                { x: 272, y: 250, id: 2, text: '生日照里只有两碗长寿面，母亲却摆了三双筷子。' },
+                { x: 48, y: 350, id: 3, text: '入学那年，我把纸飞机藏在袖口。父亲按着我的肩，像怕我飞走。' },
+                { x: 272, y: 450, id: 4, text: '最后一张停在十年前的七月十四。照片里的我已经淡得只剩轮廓。' }
             ],
             doors: [
                 { x: 5, y: 0, w: 2, h: 1, targetMap: 'room_backyard', targetX: 320, targetY: 100 },
@@ -466,7 +466,7 @@ export const Maps = {
             },
             desk: { x: 100, y: 150, id: 'my_desk', dialog: '这是我的书桌。上面刻着"早"字，但那只是我为了模仿鲁迅刻的。抽屉里塞满了没及格的试卷，每一次打开都需要勇气。' },
             diary: { x: 100, y: 140 },
-            toy_plane: { x: 300, y: 300, dialog: '一只折断机翼的纸飞机。是我七岁那年折的。我以为只要飞得够高，就能飞出围墙，飞出这个家。但它最终还是掉在了地上，被父亲一脚踩扁。' },
+            toy_plane: { x: 300, y: 300, dialog: '纸飞机的机翼被踩断了。背面是我的字：雨停前，我会回来吃饭。' },
             doors: [
                 { x: 0, y: 7, w: 1, h: 2, targetMap: 'room_corridor', targetX: 240, targetY: 368 }
             ]
@@ -559,18 +559,18 @@ export const Maps = {
             interactables: [
                 {
                     id: 'basement_photo_corner', x: 304, y: 80, texture: 'photo_frame',
-                    dialog: '照片缺角上是小时候的我。它正好能补上走廊里的全家福。',
+                    dialog: '缺角上是少年时的我。背面写着：七月十四，明儿忌日。',
                     itemGrant: 'family_photo_corner'
                 },
                 {
                     id: 'basement_chain', x: 112, y: 176, texture: 'trash_paper',
                     clueId: 'basement_lock_chain', clueType: 'control',
-                    documentTitle: '锁门铁链', documentText: '铁链内侧有孩子指甲留下的抓痕。父亲不是在防外人，他是在防我逃走。'
+                    documentTitle: '锁门铁链', documentText: '铁链锁在门外。内侧的抓痕属于孩子，外侧还有父亲反复开锁又锁回去的磨痕。'
                 },
                 {
                     id: 'basement_scratches', x: 464, y: 176, texture: 'scratch',
                     clueId: 'basement_last_night', clueType: 'death',
-                    dialog: '墙上反复刻着：雨停之前，我一定要出去。'
+                    dialog: '墙上反复刻着：雨停前，我会回来吃饭。最后一个“回”字只写了一半。'
                 }
             ],
             doors: [
@@ -822,7 +822,7 @@ export const Maps = {
                     y: 180,
                     texture: 'tile_mud',
                     tint: 0x88ccff,
-                    dialog: '前面的路没有灯，也没有人叫你的名字。只是雨小了一点。',
+                    dialog: '前面的路没有灯。身后的饭香越来越淡，雨声也第一次有了尽头。',
                     endingChoice: 'leave'
                 },
                 {
@@ -831,7 +831,7 @@ export const Maps = {
                     y: 320,
                     texture: 'tile_wall',
                     tint: 0x884444,
-                    dialog: '身后的老宅亮起一盏灯，母亲在门里喊你吃饭。父亲没有骂人，只是沉默地等着。',
+                    dialog: '老宅亮起一盏灯。母亲喊你吃饭，父亲扶着门，像那场雨夜从未发生。',
                     endingChoice: 'return'
                 }
             ],

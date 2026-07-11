@@ -78,7 +78,7 @@ export class ChaseManager {
             this.scene.tweens.add({ targets: this.doorGlow, alpha: 0.65, duration: 450, yoyo: true, repeat: -1 });
         }
         if (showWarning && !this.arrivalWarning) {
-            this.arrivalWarning = this.scene.add.text(this.scene.scale.width / 2, 78, '它正从刚才的门追来', {
+            this.arrivalWarning = this.scene.add.text(this.scene.scale.width / 2, 78, '明儿，别跑，外面下雨', {
                 fontSize: '18px', color: '#ffb0a0', backgroundColor: '#300000', padding: { x: 10, y: 6 }
             }).setOrigin(0.5).setScrollFactor(0).setDepth(1000);
         }

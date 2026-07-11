@@ -332,16 +332,16 @@ export class InteractionManager {
             // 1. Memory Room
             if (type === 'memory_table' || (scene.currentMapId === 'room_memory' && (type === 'dad_ghost' || type === 'mom_ghost'))) {
                  // Hardcoded sequence for ending
-                window.showDialog('父亲的幻影', '（跪在地上，对着空气痛哭）明儿...我的明儿...是爸对不起你...那天我不该骂你...如果不把你锁起来...你就不会偷偷跑出去...就不会出车祸...', () => {
+                window.showDialog('父亲', '我锁过你的门，也藏过你妈的药。这些错不能拿一句“为你好”抵掉。', () => {
                     scene.time.delayedCall(1000, () => {
-                        window.showDialog('母亲', '（温柔地出现）明儿，饭菜都凉了。快来吃吧，我们一家人，终于团聚了。', () => {
+                        window.showDialog('母亲', '明儿，饭凉了。坐下吧，这次谁也不用走。', () => {
                             scene.cameras.main.shake(1000, 0.005);
-                            window.showDialog('主角', '爸，妈...其实我一直都知道。那场车祸...十年前就已经发生了。我早就该走了。', () => {
-                                window.showDialog('父亲', '（紧紧抓住主角的手）不！明儿，别走！我们已经错过了十年...剩下的时间，我们要永远在一起！', () => {
-                                    window.showDialog('主角', '（含泪微笑）好...我不走。我们永远不分开。', () => {
+                            window.showDialog('主角', '我知道这顿饭永远吃不完。但如果离开就要再失去你们一次……我不走了。', () => {
+                                window.showDialog('母亲', '母亲又说了一遍：“饭凉了。”碗里的热气回到最初的形状。', () => {
+                                    window.showDialog('父亲', '父亲起身，重新锁上了门。墙上的钟倒回七月十四零点。', () => {
                                         scene.cameras.main.fadeOut(4000, 255, 255, 255);
                                         scene.time.delayedCall(4000, () => {
-                                             window.showEndingScreen('结局：永远在一起', '在那个没有痛苦、没有分离的世界里，你们永远在一起。', () => {
+                                             window.showEndingScreen('结局：永远在一起', '你主动留在了最温暖的那一刻。从此每顿饭都会凉，每扇门都会再次锁上。', () => {
                                                  window.location.reload();
                                              });
                                         });
@@ -435,19 +435,9 @@ export class InteractionManager {
 
             if (type === 'diary') {
                 this.collectClue('diary_mother', 'illness');
-                const diaryContent = `
-七月十四日，阴。
-今天是明儿的忌日。
-我总觉得他还在这个家里。
-每天晚上，我都能听到走廊里有脚步声。
-不是老鼠，是孩子跑跳的声音。
-他最喜欢玩捉迷藏了。
-可是...那场车祸带走了他，也带走了我的魂。
-那个"疯子"（此处被涂黑）又喝醉了，他说听到了儿子的哭声。
-我也听到了。
-明儿，是你回来了吗？
-如果是你，带妈妈走吧。
-`;
+                const diaryContent = `七月十四。今天是明儿的忌日。
+我还是盛了三碗饭。老李把第三只碗摔了，夜里却又捡回来洗净。
+明儿，饭在锅里。你若回来，别再替妈妈受苦。`;
                 scene.triggerFlashback('diary');
                 if (!this.gameState.clues.includes('diary')) this.gameState.clues.push('diary');
                 window.showDocument('残破的日记', diaryContent);
@@ -538,20 +528,20 @@ export class InteractionManager {
                          scene.switchScene('memory_crash', 120, 200);
                      });
                  } else if (route === 'ending_huisha') {
-                     window.showDialog('主角', '我终于明白了这个家为什么会变成这样。可还有什么东西被压在棺材里，没有说完。', () => {
+                     window.showDialog('主角', '父亲伤害了我们，母亲也被困在这里。至于棺材里是谁，我不想知道。', () => {
                          scene.cameras.main.fadeOut(3000, 120, 0, 0);
                          scene.time.delayedCall(3000, () => {
-                             window.showEndingScreen('结局：回煞', '你看见了父亲的控制，也看见了母亲的病。可你仍把最深的真相留在雨夜里，任它一遍遍回到这座宅子。', () => {
+                             window.showEndingScreen('结局：回煞', '你关上棺盖。墙边的黑影学会了我的站姿。下一场雨里，它会替父亲守门。', () => {
                                 scene.scene.start('TitleScene');
                                 window.globalGameState = null;
                              });
                          });
                      });
                  } else {
-                     window.showDialog('主角', '（回头看了一眼）...爸，妈，再见了。我要去过我自己的生活了。', () => {
+                     window.showDialog('主角', '我受够这个家了。只要不回头，我就还是活着的。', () => {
                         scene.cameras.main.fadeOut(3000, 255, 255, 255);
                         scene.time.delayedCall(3000, () => {
-                             window.showEndingScreen('结局：破茧', '你离开了那个家，再也没有回头。', () => {
+                             window.showEndingScreen('结局：破茧', '路边收音机正在重播十年前同一路段的少年死亡事故。身后很远的地方，仍有人喊你回家吃饭。', () => {
                                 scene.scene.start('TitleScene');
                                 window.globalGameState = null;
                              });
@@ -608,7 +598,7 @@ export class InteractionManager {
                         scene.time.delayedCall(500, () => {
                             scene.cameras.main.shake(500, 0.02);
                             scene.playSound(100, 'sawtooth', 3);
-                            window.showDialog('主角', '蜡烛点燃了。火光摇曳中，我仿佛看到遗像上的人在笑...那是...我吗？这声音...是从棺材里传出来的？！');
+                            window.showDialog('主角', '火光照过遗像，父亲的脸变成了少年时的我。供桌中间那副碗筷，原来一直在等我。');
                         });
                     });
                 } else {
@@ -629,11 +619,11 @@ export class InteractionManager {
                         const flags = this.ensureStoryFlags();
                         flags.coffinOpened = true;
                         this.collectClue('coffin_truth', 'death');
-                        window.showDialog('主角', '钥匙插进去了。这把锁...是我小时候藏玩具箱用的那把。真相就在里面。', () => {
+                        window.showDialog('主角', '钥匙插进去了。锁孔上的划痕和我的玩具箱一模一样。', () => {
                             scene.playSound(100, 'sawtooth', 2);
                             scene.refreshObjective();
                             if (getTruthLevel(this.gameState) === 'complete') {
-                                window.showDialog('主角', '棺材里没有父亲，只有十年前雨夜里没能回家的我。', () => scene.switchScene('memory_crash', 120, 200));
+                                window.showDialog('主角', '里面没有父亲，只有纸飞机、校服纽扣和一只凉透的饭碗。棺材里等的人是我。', () => scene.switchScene('memory_crash', 120, 200));
                             } else {
                                 window.showDialog('主角', '我知道家里发生了什么，但还没拼出自己死亡的全部过程。大门已经能打开了。');
                             }
@@ -668,12 +658,13 @@ export class InteractionManager {
                         this.gameState.corridorSolved = true;
                         const flags = this.ensureStoryFlags();
                         flags.photoSetCollected = true;
+                        scene.queueNarrativeBeat();
                         window.updateInventory('残缺全家福');
                         if (reconcileFamilyPhoto(this.gameState)) window.replaceInventoryItem('残缺全家福', '完整全家福');
                         scene.playSound(100, 'sawtooth', 2);
                         scene.cameras.main.flash(500, 255, 0, 0);
                         scene.time.delayedCall(500, () => {
-                            window.showDialog('主角', '走廊尽头的气息...似乎变了。墙上的照片...最后一张，是一场车祸的现场。');
+                            window.showDialog('主角', '四张照片拼在一起，年份只到十年前。缺掉的那一角，正好是我的脸。');
                         });
                     }
                 } else {
@@ -782,7 +773,7 @@ export class InteractionManager {
                                                         scene.playSound(50, 'square', 4);
                                                         scene.cameras.main.flash(500, 255, 0, 0);
                                                         this.ensureStoryFlags().chasePhase = 'active';
-                                                        window.showDialog('恐怖的声音', '是他...那个把门窗都钉死的人！他不想让你打开棺材看到真相！快跑！！！', () => scene.chaseManager.start());
+                                                        window.showDialog('门外的男人', '明儿，别跑，外面下雨！', () => scene.chaseManager.start());
                                                     });
                                                 });
                                             });
@@ -816,10 +807,10 @@ export class InteractionManager {
         flags.endingChoice = choice;
 
         if (choice === 'leave') {
-            window.showDialog('主角', '我不再回头了。雨声还在，可那座宅子终于离我越来越远。', () => {
+            window.showDialog('主角', '爸做错的事不会因为他后悔就消失，妈的痛也不该由我继续背。妈，饭别再热了。', () => {
                 scene.cameras.main.fadeOut(2500, 255, 255, 255);
                 scene.time.delayedCall(2500, () => {
-                    window.showEndingScreen('结局：归路', '你承认了死亡，也承认了自己曾经拼命想离开。路的尽头没有家，只有终于安静下来的雨。', () => {
+                    window.showEndingScreen('结局：归路', '你把全家福分成三份，允许每个人带着自己的错离开。十年来，雨第一次停了。', () => {
                         scene.scene.start('TitleScene');
                         window.globalGameState = null;
                     });
