@@ -2282,6 +2282,96 @@ class ObjectiveManager {
 }
         // END bundled src/systems/ObjectiveManager.js
 
+        // BEGIN bundled src/systems/ChaseManager.js
+
+
+const HIDE_ESCAPE_MS = 6000;
+
+class ChaseManager {
+    constructor(scene) { this.scene = scene; this.chaser = null; this.hideTimer = null; this.caught = false; }
+
+    resolveSpawn() {
+        const map = Maps[this.scene.currentMapId];
+        const player = this.scene.player.sprite;
+        const candidates = [];
+        if (this.scene.previousMapId) {
+            const door = map.objects.doors?.find(item => item.targetMap === this.scene.previousMapId);
+            if (door) candidates.push({ x: door.x * 32 + (door.w || 1) * 16, y: door.y * 32 + (door.h || 1) * 16 });
+        }
+        candidates.push(
+            { x: player.x + 160, y: player.y }, { x: player.x - 160, y: player.y },
+            { x: player.x, y: player.y + 160 }, { x: player.x, y: player.y - 160 }
+        );
+        return candidates.find(point => {
+            const tx = Math.floor(point.x / 32);
+            const ty = Math.floor(point.y / 32);
+            return map.data[ty]?.[tx] === 0 && Phaser.Math.Distance.Between(point.x, point.y, player.x, player.y) >= 96;
+        }) || map.objects.playerStart;
+    }
+
+    start() {
+        if (this.chaser?.active) return;
+        const flags = ensureStoryFlags(this.scene.gameState);
+        flags.chasePhase = 'active';
+        this.scene.gameState.isChasing = true;
+        const spawn = this.resolveSpawn();
+        this.chaser = this.scene.physics.add.sprite(spawn.x, spawn.y, 'npc_paper').setTint(0xff0000).setAlpha(0.8);
+        if (!this.scene.isMobile) this.chaser.setPipeline('Light2D');
+        this.scene.chaser = this.chaser;
+        this.scene.physics.add.collider(this.chaser, this.scene.walls);
+        this.scene.physics.add.collider(this.chaser, this.scene.furniture);
+        if (this.scene.trees) this.scene.physics.add.collider(this.chaser, this.scene.trees);
+        this.scene.physics.add.overlap(this.scene.player.sprite, this.chaser, () => this.handleCaught());
+        this.scene.refreshObjective();
+    }
+
+    update() {
+        if (!this.chaser?.active || this.scene.gameState.isHidden || this.caught) return;
+        this.scene.physics.moveToObject(this.chaser, this.scene.player.sprite, 100);
+    }
+
+    startHideEscape() {
+        if (!this.chaser?.active || this.hideTimer) return;
+        this.hideTimer = this.scene.time.delayedCall(HIDE_ESCAPE_MS, () => {
+            this.hideTimer = null;
+            if (this.scene.gameState.isHidden) this.escape('hide');
+        });
+    }
+
+    cancelHideEscape() { this.hideTimer?.remove(); this.hideTimer = null; }
+
+    escape(reason) {
+        const flags = ensureStoryFlags(this.scene.gameState);
+        if (flags.chasePhase !== 'active') return;
+        this.cancelHideEscape();
+        flags.chasePhase = 'escaped';
+        this.scene.gameState.isChasing = false;
+        this.chaser?.destroy();
+        this.chaser = null;
+        this.scene.chaser = null;
+        const text = reason === 'photo'
+            ? '全家福里的三个人同时看向黑影。它停下了，像终于认出了你。'
+            : '脚步声在柜门外停了六秒，随后慢慢远去。';
+        window.showDialog('主角', text);
+        this.scene.refreshObjective();
+    }
+
+    handleCaught() {
+        if (this.caught) return;
+        this.caught = true;
+        this.scene.physics.pause();
+        window.showDialog('暴怒的黑影', '抓到你了……但这次记忆没有把你送回最初。', () => {
+            this.scene.physics.resume();
+            this.scene.gameState.isHidden = false;
+            const map = Maps[this.scene.currentMapId];
+            this.scene.scene.restart({ mapId: this.scene.currentMapId, x: map.objects.playerStart.x, y: map.objects.playerStart.y, previousMapId: this.scene.previousMapId });
+        });
+    }
+
+    destroy() { this.cancelHideEscape(); this.chaser?.destroy(); this.chaser = null; this.scene.chaser = null; }
+}
+        // END bundled src/systems/ChaseManager.js
+
         // BEGIN bundled src/systems/StartRoute.js
 
 function resolveStartRoute(search = '') {
@@ -3746,6 +3836,17 @@ class InteractionManager {
         const executeLogic = () => {
 
             if (type === 'story_object') {
+                if (obj.itemGrant === 'family_photo_corner') {
+                    const flags = this.ensureStoryFlags();
+                    if (!flags.familyPhotoCornerFound) {
+                        flags.familyPhotoCornerFound = true;
+                        window.updateInventory('全家福缺角');
+                        if (reconcileFamilyPhoto(this.gameState)) window.replaceInventoryItem('残缺全家福', '完整全家福');
+                        scene.refreshObjective();
+                    }
+                    return;
+                }
+
                 if (obj.puzzleId) {
                     const flags = this.ensureStoryFlags();
                     const puzzle = Puzzles[obj.puzzleId];
@@ -3978,8 +4079,8 @@ class InteractionManager {
                 scene.playSound(600, 'triangle', 0.5);
                 window.showDialog('主角', '你捡起了那把【血红钥匙】...上面还沾着未干的血迹。', () => {
                     if (!this.gameState.isChasing) {
-                        this.gameState.isChasing = true;
-                        scene.spawnChaser();
+                        this.ensureStoryFlags().chasePhase = 'active';
+                        scene.chaseManager.start();
                         window.showDialog('主角', '（周围的温度突然降低了...有什么东西来了！）');
                     }
                 });
@@ -4055,6 +4156,11 @@ class InteractionManager {
             }
 
             if (type === 'altar') {
+                const flags = this.ensureStoryFlags();
+                if (flags.chasePhase === 'active' && flags.familyPhotoAssembled) {
+                    scene.chaseManager.escape('photo');
+                    return;
+                }
                 if (this.gameState.hasRice && this.gameState.hasMatches && this.gameState.hasIncense && this.gameState.hasSpiritMoney) {
                     scene.leftCandle.setAlpha(1);
                     scene.rightCandle.setAlpha(1);
@@ -4118,6 +4224,10 @@ class InteractionManager {
 
                     if (this.gameState.viewedPhotos.length >= 4 && !this.gameState.corridorSolved) {
                         this.gameState.corridorSolved = true;
+                        const flags = this.ensureStoryFlags();
+                        flags.photoSetCollected = true;
+                        window.updateInventory('残缺全家福');
+                        if (reconcileFamilyPhoto(this.gameState)) window.replaceInventoryItem('残缺全家福', '完整全家福');
                         scene.playSound(100, 'sawtooth', 2);
                         scene.cameras.main.flash(500, 255, 0, 0);
                         scene.time.delayedCall(500, () => {
@@ -4229,8 +4339,8 @@ class InteractionManager {
 
                                                         scene.playSound(50, 'square', 4);
                                                         scene.cameras.main.flash(500, 255, 0, 0);
-                                                        this.gameState.isChasing = true;
-                                                        scene.spawnChaser();
+                                                        this.ensureStoryFlags().chasePhase = 'active';
+                                                        scene.chaseManager.start();
                                                         scene.chaseTimer = scene.time.addEvent({
                                                             delay: 2000,
                                                             callback: () => {
@@ -4684,6 +4794,7 @@ class IntroScene extends Phaser.Scene {
 
 
 
+
 class GameScene extends Phaser.Scene {
     constructor() {
         super('GameScene');
@@ -4788,7 +4899,10 @@ class GameScene extends Phaser.Scene {
         // Joystick Logic
         this.joystick = { x: 0, y: 0, active: false };
         this.initJoystick();
-        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyJoystick());
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            this.destroyJoystick();
+            this.chaseManager?.destroy();
+        });
 
         // Initialize Map Manager
         this.mapManager = new MapManager(this);
@@ -4799,6 +4913,7 @@ class GameScene extends Phaser.Scene {
         const startX = resolveSpawnCoordinate(this.playerStartX, mapData.objects.playerStart.x);
         const startY = resolveSpawnCoordinate(this.playerStartY, mapData.objects.playerStart.y);
         this.player = new Player(this, startX, startY);
+        this.chaseManager = new ChaseManager(this);
 
         // Colliders
         this.physics.add.collider(this.player.sprite, this.walls);
@@ -4811,8 +4926,8 @@ class GameScene extends Phaser.Scene {
         }
 
         // Spawn Chaser if active (Persist chase across scenes)
-        if (this.gameState.isChasing) {
-            this.spawnChaser();
+        if (this.gameState.isChasing || this.gameState.storyFlags.chasePhase === 'active') {
+            this.chaseManager.start();
         }
 
         // Camera
@@ -4964,7 +5079,7 @@ class GameScene extends Phaser.Scene {
         }
 
         // Update Chaser AI per frame for smoother movement
-        this.updateChaser();
+        this.chaseManager.update();
 
         // Hiding Logic
         if (this.gameState.isHidden) {
@@ -5405,8 +5520,8 @@ class GameScene extends Phaser.Scene {
 
         window.showDialog('主角', '糟糕！声音引来了它！', () => {
             if (!this.chaser) {
-                this.gameState.isChasing = true;
-                this.spawnChaser();
+                this.gameState.storyFlags.chasePhase = 'active';
+                this.chaseManager.start();
             }
 
             // Teleport chaser nearby
@@ -5426,6 +5541,7 @@ class GameScene extends Phaser.Scene {
         if (this.gameState.isHidden) {
             // Exit hiding
             this.gameState.isHidden = false;
+            this.chaseManager?.cancelHideEscape();
             this.player.sprite.setVisible(true);
             this.player.sprite.body.enable = true;
             this.interactText.setText('按 [空格] / [A] 调查');
@@ -5452,6 +5568,7 @@ class GameScene extends Phaser.Scene {
         } else {
             // Enter hiding
             this.gameState.isHidden = true;
+            this.chaseManager?.startHideEscape();
             this.player.sprite.setVisible(false);
             this.player.sprite.body.enable = false; // Disable physics immediately
             this.interactText.setVisible(true).setText('按 [空格] / [A] 离开');
@@ -6001,6 +6118,7 @@ class GameScene extends Phaser.Scene {
         window.updateInventory = function(item) {
             const slot = document.createElement('div');
             slot.className = 'inv-item';
+            slot.dataset.item = item;
 
             // Icon mapping
             let icon = item;
@@ -6037,6 +6155,12 @@ class GameScene extends Phaser.Scene {
             }
 
             invSlots.appendChild(slot);
+        };
+
+        window.replaceInventoryItem = function(oldItem, newItem) {
+            const slot = Array.from(invSlots.children).find(node => node.dataset.item === oldItem);
+            if (slot) slot.remove();
+            window.updateInventory(newItem);
         };
 
         // Game Config

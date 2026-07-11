@@ -1,4 +1,4 @@
-import { collectClue, ensureStoryFlags, getTruthLevel } from './StoryState.js';
+import { collectClue, ensureStoryFlags, getTruthLevel, reconcileFamilyPhoto } from './StoryState.js';
 import { syncStaticBody } from './PhysicsSync.js';
 import { Puzzles, canStartPuzzle } from '../data/Puzzles.js';
 
@@ -254,6 +254,17 @@ export class InteractionManager {
         const executeLogic = () => {
 
             if (type === 'story_object') {
+                if (obj.itemGrant === 'family_photo_corner') {
+                    const flags = this.ensureStoryFlags();
+                    if (!flags.familyPhotoCornerFound) {
+                        flags.familyPhotoCornerFound = true;
+                        window.updateInventory('全家福缺角');
+                        if (reconcileFamilyPhoto(this.gameState)) window.replaceInventoryItem('残缺全家福', '完整全家福');
+                        scene.refreshObjective();
+                    }
+                    return;
+                }
+
                 if (obj.puzzleId) {
                     const flags = this.ensureStoryFlags();
                     const puzzle = Puzzles[obj.puzzleId];
@@ -486,8 +497,8 @@ export class InteractionManager {
                 scene.playSound(600, 'triangle', 0.5);
                 window.showDialog('主角', '你捡起了那把【血红钥匙】...上面还沾着未干的血迹。', () => {
                     if (!this.gameState.isChasing) {
-                        this.gameState.isChasing = true;
-                        scene.spawnChaser();
+                        this.ensureStoryFlags().chasePhase = 'active';
+                        scene.chaseManager.start();
                         window.showDialog('主角', '（周围的温度突然降低了...有什么东西来了！）');
                     }
                 });
@@ -563,6 +574,11 @@ export class InteractionManager {
             }
 
             if (type === 'altar') {
+                const flags = this.ensureStoryFlags();
+                if (flags.chasePhase === 'active' && flags.familyPhotoAssembled) {
+                    scene.chaseManager.escape('photo');
+                    return;
+                }
                 if (this.gameState.hasRice && this.gameState.hasMatches && this.gameState.hasIncense && this.gameState.hasSpiritMoney) {
                     scene.leftCandle.setAlpha(1);
                     scene.rightCandle.setAlpha(1);
@@ -626,6 +642,10 @@ export class InteractionManager {
 
                     if (this.gameState.viewedPhotos.length >= 4 && !this.gameState.corridorSolved) {
                         this.gameState.corridorSolved = true;
+                        const flags = this.ensureStoryFlags();
+                        flags.photoSetCollected = true;
+                        window.updateInventory('残缺全家福');
+                        if (reconcileFamilyPhoto(this.gameState)) window.replaceInventoryItem('残缺全家福', '完整全家福');
                         scene.playSound(100, 'sawtooth', 2);
                         scene.cameras.main.flash(500, 255, 0, 0);
                         scene.time.delayedCall(500, () => {
@@ -737,8 +757,8 @@ export class InteractionManager {
 
                                                         scene.playSound(50, 'square', 4);
                                                         scene.cameras.main.flash(500, 255, 0, 0);
-                                                        this.gameState.isChasing = true;
-                                                        scene.spawnChaser();
+                                                        this.ensureStoryFlags().chasePhase = 'active';
+                                                        scene.chaseManager.start();
                                                         scene.chaseTimer = scene.time.addEvent({
                                                             delay: 2000,
                                                             callback: () => {

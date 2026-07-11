@@ -8,6 +8,7 @@ import { createDefaultGameState, getTruthLevel, normalizeGameState } from '../sy
 import { resolveSpawnCoordinate, updateBoundedResource } from '../systems/RuntimeState.js';
 import { DomListenerRegistry } from '../systems/DomListenerRegistry.js';
 import { ObjectiveManager } from '../systems/ObjectiveManager.js';
+import { ChaseManager } from '../systems/ChaseManager.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -113,7 +114,10 @@ export class GameScene extends Phaser.Scene {
         // Joystick Logic
         this.joystick = { x: 0, y: 0, active: false };
         this.initJoystick();
-        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyJoystick());
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            this.destroyJoystick();
+            this.chaseManager?.destroy();
+        });
 
         // Initialize Map Manager
         this.mapManager = new MapManager(this);
@@ -124,6 +128,7 @@ export class GameScene extends Phaser.Scene {
         const startX = resolveSpawnCoordinate(this.playerStartX, mapData.objects.playerStart.x);
         const startY = resolveSpawnCoordinate(this.playerStartY, mapData.objects.playerStart.y);
         this.player = new Player(this, startX, startY);
+        this.chaseManager = new ChaseManager(this);
 
         // Colliders
         this.physics.add.collider(this.player.sprite, this.walls);
@@ -136,8 +141,8 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Spawn Chaser if active (Persist chase across scenes)
-        if (this.gameState.isChasing) {
-            this.spawnChaser();
+        if (this.gameState.isChasing || this.gameState.storyFlags.chasePhase === 'active') {
+            this.chaseManager.start();
         }
 
         // Camera
@@ -289,7 +294,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Update Chaser AI per frame for smoother movement
-        this.updateChaser();
+        this.chaseManager.update();
 
         // Hiding Logic
         if (this.gameState.isHidden) {
@@ -730,8 +735,8 @@ export class GameScene extends Phaser.Scene {
 
         window.showDialog('主角', '糟糕！声音引来了它！', () => {
             if (!this.chaser) {
-                this.gameState.isChasing = true;
-                this.spawnChaser();
+                this.gameState.storyFlags.chasePhase = 'active';
+                this.chaseManager.start();
             }
 
             // Teleport chaser nearby
@@ -751,6 +756,7 @@ export class GameScene extends Phaser.Scene {
         if (this.gameState.isHidden) {
             // Exit hiding
             this.gameState.isHidden = false;
+            this.chaseManager?.cancelHideEscape();
             this.player.sprite.setVisible(true);
             this.player.sprite.body.enable = true;
             this.interactText.setText('按 [空格] / [A] 调查');
@@ -777,6 +783,7 @@ export class GameScene extends Phaser.Scene {
         } else {
             // Enter hiding
             this.gameState.isHidden = true;
+            this.chaseManager?.startHideEscape();
             this.player.sprite.setVisible(false);
             this.player.sprite.body.enable = false; // Disable physics immediately
             this.interactText.setVisible(true).setText('按 [空格] / [A] 离开');
