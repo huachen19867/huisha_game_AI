@@ -5836,11 +5836,10 @@ class GameScene extends Phaser.Scene {
             // UI removed per user request
             // Maintain function to prevent errors in GameScene
             const pct = Math.max(0, Math.min(100, (current / max) * 100));
-            if (pct < 30) {
-                 document.body.style.filter = `hue-rotate(${30-pct}deg) blur(1px)`;
-            } else {
-                 document.body.style.filter = 'none';
-            }
+            const pressure = pct < 30 ? (30 - pct) / 30 : 0;
+            document.body.style.filter = pressure > 0
+                ? `saturate(${1 - pressure * 0.22}) sepia(${pressure * 0.12})`
+                : 'none';
         };
 
         window.updateStaminaUI = function(current, max) {

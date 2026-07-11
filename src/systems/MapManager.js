@@ -93,16 +93,6 @@ export class MapManager {
                     if (mapId !== 'room_memory' && !this.scene.isMobile) {
                         wall.setPipeline('Light2D');
                     }
-                } else {
-                    // Random clutter on floor (5% chance)
-                    if (visual.debris !== false && Math.random() < 0.05 && mapId !== 'room_backyard' && mapId !== 'room_entrance' && mapId !== 'room_memory') {
-                        const debris = this.scene.add.image(x * 32 + 16 + Phaser.Math.Between(-8, 8), y * 32 + 16 + Phaser.Math.Between(-8, 8), 'trash_paper');
-                        debris.setRotation(Phaser.Math.FloatBetween(0, 6.28));
-                        debris.setAlpha(0.7);
-                        if (visual.paperTint !== undefined) debris.setTint(visual.paperTint);
-                        debris.setPipeline('Light2D');
-                        this.floorLayer.push(debris);
-                    }
                 }
             }
         }
@@ -246,6 +236,9 @@ export class MapManager {
             objs.trees.forEach(treeData => {
                 const tree = scene.trees.create(treeData.x, treeData.y, 'tree');
                 if (isHorror && !scene.isMobile) tree.setPipeline('Light2D');
+                tree.body.setSize(14, 28);
+                tree.body.setOffset(25, 34);
+                syncStaticBody(tree);
             });
         }
 

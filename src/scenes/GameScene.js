@@ -271,19 +271,6 @@ export class GameScene extends Phaser.Scene {
              });
         }
 
-        if (this.gameState.isChasing) {
-             this.chaseTimer = this.time.addEvent({
-                 delay: 2000,
-                 callback: () => {
-                     this.cameras.main.shake(200, 0.01);
-                     if (this.soundManager && this.chaser && this.chaser.active) {
-                        this.soundManager.playSpatialNoise(0.5, this.chaser.x, this.chaser.y);
-                     }
-                 },
-                 loop: true
-             });
-        }
-
         this.showPostMemoryDialog();
     }
 
@@ -405,10 +392,6 @@ export class GameScene extends Phaser.Scene {
             // Audio Hallucinations
             if (Math.random() < 0.01 && this.soundManager) {
                 this.soundManager.playSpatialNoise(0.5, this.player.sprite.x + Phaser.Math.Between(-100, 100), this.player.sprite.y + Phaser.Math.Between(-100, 100));
-            }
-            // Visual Shake
-            if (Math.random() < 0.05) {
-                this.cameras.main.shake(100, 0.005);
             }
         }
     }
