@@ -530,7 +530,7 @@ export class MapManager {
                 door.targetX = doorData.targetX;
                 door.targetY = doorData.targetY;
                 door.locked = doorData.locked;
-                if (door.targetMap === 'room_entrance' && scene.gameState.doorSlammed) {
+                if (door.targetMap === 'room_entrance' && scene.gameState.doorSlammed && !scene.gameState.candlesLit) {
                     door.locked = true;
                 }
                 door.key = doorData.key;

@@ -1,4 +1,4 @@
-import { collectClue, ensureStoryFlags, getTruthLevel, reconcileFamilyPhoto } from './StoryState.js';
+import { canChooseCrashEnding, collectClue, ensureStoryFlags, getExitRoute, getTruthLevel, reconcileFamilyPhoto } from './StoryState.js';
 import { syncStaticBody } from './PhysicsSync.js';
 import { Puzzles, canStartPuzzle } from '../data/Puzzles.js';
 
@@ -302,12 +302,20 @@ export class InteractionManager {
                     }
 
                     if (obj.endingChoice) {
+                        if (!canChooseCrashEnding(this.gameState)) {
+                            window.showDialog('主角', '车门和护栏之间还缺一段记忆。');
+                            return;
+                        }
                         this.handleEndingChoice(obj.endingChoice);
                     }
                 };
 
                 const collected = obj.clueId && obj.clueType ? this.collectClue(obj.clueId, obj.clueType) : false;
                 if (collected && scene.playSound) scene.playSound(400, 'triangle', 0.4);
+                if (obj.objId === 'crash_car_memory') this.ensureStoryFlags().crashEvidence.car = true;
+                if (obj.objId === 'crash_guardrail') this.ensureStoryFlags().crashEvidence.guardrail = true;
+                const evidence = this.ensureStoryFlags().crashEvidence;
+                if (evidence.car && evidence.guardrail) this.ensureStoryFlags().memories.crash = true;
 
                 if (obj.documentText) {
                     window.showDocument(obj.documentTitle || '线索', obj.documentText);
@@ -519,12 +527,12 @@ export class InteractionManager {
             }
 
             if (type === 'exit_door') {
-                 const truthLevel = this.getTruthLevel();
-                 if (truthLevel === 'complete') {
+                 const route = getExitRoute(this.gameState);
+                 if (route === 'memory_crash') {
                      window.showDialog('主角', '我已经想起来了。真正的出口不在这扇门外，而在那条雨夜公路上。', () => {
                          scene.switchScene('memory_crash', 120, 200);
                      });
-                 } else if (truthLevel === 'family') {
+                 } else if (route === 'ending_huisha') {
                      window.showDialog('主角', '我终于明白了这个家为什么会变成这样。可还有什么东西被压在棺材里，没有说完。', () => {
                          scene.cameras.main.fadeOut(3000, 120, 0, 0);
                          scene.time.delayedCall(3000, () => {
@@ -586,6 +594,10 @@ export class InteractionManager {
                     scene.lights.addLight(scene.rightCandle.x, scene.rightCandle.y, 100).setColor(0xffaa00).setIntensity(1.5);
                     scene.playSound(600, 'sine', 1);
                     this.gameState.candlesLit = true;
+                    scene.doors?.getChildren().forEach(door => {
+                        if (door.targetMap === 'room_entrance') door.locked = false;
+                    });
+                    scene.refreshObjective();
 
                     window.showDialog('主角', '（你摆上了倒头饭，点燃了香和蜡烛，烧了纸钱。火苗诡异地跳动了一下。）', () => {
                         scene.time.delayedCall(500, () => {
@@ -609,10 +621,17 @@ export class InteractionManager {
             if (type === 'coffin') {
                 if (this.gameState.hasRedKey) {
                     if (this.gameState.candlesLit) {
+                        const flags = this.ensureStoryFlags();
+                        flags.coffinOpened = true;
                         this.collectClue('coffin_truth', 'death');
                         window.showDialog('主角', '钥匙插进去了。这把锁...是我小时候藏玩具箱用的那把。真相就在里面。', () => {
                             scene.playSound(100, 'sawtooth', 2);
-                            scene.triggerRealEnding();
+                            scene.refreshObjective();
+                            if (getTruthLevel(this.gameState) === 'complete') {
+                                window.showDialog('主角', '棺材里没有父亲，只有十年前雨夜里没能回家的我。', () => scene.switchScene('memory_crash', 120, 200));
+                            } else {
+                                window.showDialog('主角', '我知道家里发生了什么，但还没拼出自己死亡的全部过程。大门已经能打开了。');
+                            }
                         });
                     } else {
                         window.showDialog('主角', '我有钥匙，但棺材周围的怨气太重了...上面的符咒还在闪烁。也许我应该先去供桌那边做点什么，平息亡魂的怨气。');
