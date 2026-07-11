@@ -98,6 +98,17 @@ export class MapManager {
         }
 
         this.createObjects(mapDef.objects, mapId);
+        this.scene.navigationBlockedRects = this.getNavigationBlockedRects();
+    }
+
+    getNavigationBlockedRects() {
+        const groups = [this.furniture, this.scene.trees].filter(Boolean);
+        return groups.flatMap(group => group.getChildren()).filter(obj => obj.active && obj.body?.enable).map(obj => ({
+            x: obj.body.x,
+            y: obj.body.y,
+            width: obj.body.width,
+            height: obj.body.height
+        }));
     }
 
     createObjects(objs, mapId) {

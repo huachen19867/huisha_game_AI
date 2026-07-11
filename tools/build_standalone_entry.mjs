@@ -12,6 +12,7 @@ const sourceFiles = [
     'src/systems/InteractionRules.js',
     'src/systems/DomListenerRegistry.js',
     'src/systems/ObjectiveManager.js',
+    'src/systems/GridNavigation.js',
     'src/systems/ChaseManager.js',
     'src/systems/StartRoute.js',
     'src/systems/SoundManager.js',
