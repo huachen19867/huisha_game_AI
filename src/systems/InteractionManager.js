@@ -508,8 +508,7 @@ export class InteractionManager {
                 window.showDialog('主角', '你捡起了那把【血红钥匙】...上面还沾着未干的血迹。', () => {
                     if (!this.gameState.isChasing) {
                         this.ensureStoryFlags().chasePhase = 'active';
-                        scene.chaseManager.start();
-                        window.showDialog('主角', '（周围的温度突然降低了...有什么东西来了！）');
+                        window.showDialog('主角', '（周围的温度突然降低了...有什么东西来了！）', () => scene.chaseManager.start());
                     }
                 });
                 return;
@@ -779,18 +778,7 @@ export class InteractionManager {
                                                         scene.playSound(50, 'square', 4);
                                                         scene.cameras.main.flash(500, 255, 0, 0);
                                                         this.ensureStoryFlags().chasePhase = 'active';
-                                                        scene.chaseManager.start();
-                                                        scene.chaseTimer = scene.time.addEvent({
-                                                            delay: 2000,
-                                                            callback: () => {
-                                                                scene.cameras.main.shake(200, 0.01);
-                                                                if (scene.soundManager && scene.chaser && scene.chaser.active) {
-                                                                    scene.soundManager.playSpatialNoise(0.5, scene.chaser.x, scene.chaser.y);
-                                                                }
-                                                            },
-                                                            loop: true
-                                                        });
-                                                        window.showDialog('恐怖的声音', '是他...那个把门窗都钉死的人！他不想让你打开棺材看到真相！快跑！！！');
+                                                        window.showDialog('恐怖的声音', '是他...那个把门窗都钉死的人！他不想让你打开棺材看到真相！快跑！！！', () => scene.chaseManager.start());
                                                     });
                                                 });
                                             });

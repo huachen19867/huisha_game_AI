@@ -8,9 +8,10 @@ for (const [mapId, map] of Object.entries(Maps)) {
 }
 
 const gameSceneSource = readFileSync(new URL('../src/scenes/GameScene.js', import.meta.url), 'utf8');
+const chaseSource = readFileSync(new URL('../src/systems/ChaseManager.js', import.meta.url), 'utf8');
 const soundSource = readFileSync(new URL('../src/systems/SoundManager.js', import.meta.url), 'utf8');
 assert.match(gameSceneSource, /this\.soundManager\.setScene\(this\)/);
-assert.match(gameSceneSource, /this\.physics\.resume\(\)/);
+assert.match(chaseSource, /this\.scene\.physics\.resume\(\)/);
 assert.doesNotMatch(gameSceneSource, /this\.scene\.restart\(\);/);
 assert.match(soundSource, /setScene\(scene\)/);
 
