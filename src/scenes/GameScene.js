@@ -9,6 +9,7 @@ import { resolveSpawnCoordinate, updateBoundedResource } from '../systems/Runtim
 import { DomListenerRegistry } from '../systems/DomListenerRegistry.js';
 import { ObjectiveManager } from '../systems/ObjectiveManager.js';
 import { ChaseManager } from '../systems/ChaseManager.js';
+import { getPendingNarrativeBeat, markNarrativeBeatSeen } from '../systems/NarrativeDirector.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -64,6 +65,8 @@ export class GameScene extends Phaser.Scene {
         this.photos = null; // Reset photos group
         this.floorLayer = [];
         this.currentTarget = null;
+        this.narrativeBeatPlaying = false;
+        this.narrativeBeatTimer = null;
         this.leftCandle = null;
         this.rightCandle = null;
         this.shownCorridorHint = false;
@@ -117,6 +120,8 @@ export class GameScene extends Phaser.Scene {
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             this.destroyJoystick();
             this.chaseManager?.destroy();
+            this.narrativeBeatTimer?.remove();
+            this.narrativeBeatTimer = null;
         });
 
         // Initialize Map Manager
@@ -374,6 +379,33 @@ export class GameScene extends Phaser.Scene {
 
     refreshObjective() {
         this.objectiveManager?.refresh(this.currentMapId);
+    }
+
+    queueNarrativeBeat() {
+        if (this.narrativeBeatPlaying || this.narrativeBeatTimer) return;
+        this.narrativeBeatTimer = this.time.delayedCall(250, () => this.flushNarrativeBeat());
+    }
+
+    flushNarrativeBeat() {
+        this.narrativeBeatTimer = null;
+        if (window.dialogActive || this.isSwitching) {
+            this.queueNarrativeBeat();
+            return;
+        }
+        const beat = getPendingNarrativeBeat(this.gameState);
+        if (!beat) return;
+        this.narrativeBeatPlaying = true;
+        const showLine = index => {
+            if (index >= beat.lines.length) {
+                markNarrativeBeatSeen(this.gameState, beat.id);
+                this.narrativeBeatPlaying = false;
+                this.refreshObjective();
+                return;
+            }
+            const line = beat.lines[index];
+            window.showDialog(line.speaker, line.text, () => showLine(index + 1));
+        };
+        showLine(0);
     }
 
     updateSanity(delta) {

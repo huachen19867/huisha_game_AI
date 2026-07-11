@@ -19,7 +19,9 @@ export class InteractionManager {
     }
 
     collectClue(clueId, clueType) {
-        return collectClue(this.gameState, clueId, clueType);
+        const collected = collectClue(this.gameState, clueId, clueType);
+        if (collected) this.scene.queueNarrativeBeat?.();
+        return collected;
     }
 
     getTruthLevel() {
