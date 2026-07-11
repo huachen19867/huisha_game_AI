@@ -40,6 +40,12 @@ export class MapManager {
             this.scene.lights.setAmbientColor(0x666666);
         }
 
+        for (const guide of visual.guideLights || []) {
+            this.scene.lights.addLight(guide.x, guide.y, guide.radius)
+                .setColor(guide.color)
+                .setIntensity(1.1);
+        }
+
         // Initialize groups
         // We use scene-level properties because GameScene/InteractionManager expects them
         if (!this.scene.walls) this.scene.walls = this.scene.physics.add.staticGroup();

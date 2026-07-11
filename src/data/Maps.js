@@ -2,6 +2,8 @@ export const Maps = {
     room_prologue: {
         id: 'room_prologue',
         name: '荒野公路',
+        purpose: '教会移动与调查并建立车祸循环',
+        rewards: ['movement_tutorial', 'old_house_direction'],
         visual: { rain: true },
         width: 30,
         height: 12,
@@ -35,6 +37,8 @@ export const Maps = {
     room_entrance: {
         id: 'room_entrance',
         name: '老宅大门',
+        purpose: '承载老宅入口与阶段性离开选择',
+        rewards: ['exit_choice'],
         visual: { rain: true },
         width: 24,
         height: 14,
@@ -66,6 +70,8 @@ export const Maps = {
     room_main: {
         id: 'room_main',
         name: '正厅',
+        purpose: '承载供品仪式、棺材和全家福反制',
+        rewards: ['ritual', 'coffin_truth', 'photo_counter'],
         visual: { rain: false },
         width: 24,
         height: 16,
@@ -103,13 +109,15 @@ export const Maps = {
                 { x: 11, y: 0, w: 2, h: 1, targetMap: 'room_corridor', targetX: 240, targetY: 580 },
                 { x: 11, y: 15, w: 2, h: 1, targetMap: 'room_entrance', targetX: 368, targetY: 64 },
                 { x: 23, y: 8, w: 1, h: 2, targetMap: 'room_kitchen', targetX: 64, targetY: 240 },
-                { x: 0, y: 8, w: 1, h: 2, targetMap: 'room_basement', targetX: 432, targetY: 100, locked: true, key: 'silver_key' }
+                { x: 0, y: 8, w: 1, h: 2, targetMap: 'room_basement', targetX: 304, targetY: 400, locked: true, key: 'silver_key' }
             ]
         }
     },
     room_kitchen: {
         id: 'room_kitchen',
         name: '厨房',
+        purpose: '取得倒头饭并触发纸人变化',
+        rewards: ['rice', 'paper_doll_event'],
         visual: { rain: false },
         width: 16,
         height: 14,
@@ -133,6 +141,7 @@ export const Maps = {
             playerStart: { x: 64, y: 240 },
             sink: { x: 250, y: 50, dialog: '水龙头生锈了，拧不紧，每隔几秒就滴落一滴浑浊的水珠。滴答...滴答...在这死寂的屋子里，听起来像是时间的倒计时。灶台上有一层油腻的黑垢，那是母亲生前最在意的地方。' },
             cabinet: { x: 400, y: 50, id: 'kitchen_cabinet' },
+            npc: { x: 360, y: 160 },
             doors: [
                 { x: 0, y: 7, w: 1, h: 2, targetMap: 'room_main', targetX: 700, targetY: 272 }
             ]
@@ -141,6 +150,8 @@ export const Maps = {
     room_corridor: {
         id: 'room_corridor',
         name: '走廊',
+        purpose: '连接房间并收集四张照片',
+        rewards: ['photo_set'],
         visual: { rain: false },
         width: 10,
         height: 20,
@@ -190,6 +201,8 @@ export const Maps = {
     room_bathroom: {
         id: 'room_bathroom',
         name: '卫生间',
+        purpose: '提供密码替代提示与母亲病情线索',
+        rewards: ['safe_code_hint', 'illness_clue'],
         visual: { rain: false },
         width: 16,
         height: 12,
@@ -211,7 +224,12 @@ export const Maps = {
             playerStart: { x: 448, y: 200 },
             toilet: { x: 80, y: 80, dialog: '狭窄逼仄的空间，只有一扇高高的小窗。墙角堆满了杂物。这里是我的"反省室"。每次考试没考好，或者说错了一句话，我就会被关在这里。' },
             mirror: { x: 250, y: 20, dialog: '镜面上布满了裂纹，把我的脸分割得支离破碎。我凑近看...镜子里的我脸色惨白，眼神空洞。等等...为什么镜子里的我，嘴角在微微上扬？' },
-            wet_paper: { x: 150, y: 300 },
+            wet_paper: {
+                x: 150, y: 300,
+                clueId: 'bathroom_self_harm', clueType: 'illness',
+                documentTitle: '1988 年急诊记录',
+                documentText: '母亲曾在 1988 年服药自伤，被及时救回。记录背面写着：保险柜还是那一年，他不许我忘。'
+            },
             doors: [
                 { x: 15, y: 6, w: 1, h: 2, targetMap: 'room_corridor', targetX: 80, targetY: 208 }
             ]
@@ -220,6 +238,8 @@ export const Maps = {
     room_bedroom_parents: {
         id: 'room_bedroom_parents',
         name: '父母卧室',
+        purpose: '取得家规、地下室钥匙并打开密室',
+        rewards: ['control_clue', 'basement_key', 'secret_room'],
         visual: { rain: false },
         width: 18,
         height: 14,
@@ -255,6 +275,8 @@ export const Maps = {
     room_secret: {
         id: 'room_secret',
         name: '密室',
+        purpose: '取得火柴并发现封宅证据',
+        rewards: ['matches', 'seal_note'],
         visual: { rain: false },
         width: 12,
         height: 12,
@@ -287,6 +309,8 @@ export const Maps = {
     room_study: {
         id: 'room_study',
         name: '旧书房',
+        purpose: '收集控制线索并进入学校记忆',
+        rewards: ['control_clues', 'school_memory'],
         visual: { rain: false },
         width: 16,
         height: 12,
@@ -348,6 +372,8 @@ export const Maps = {
     room_medicine: {
         id: 'room_medicine',
         name: '药柜小间',
+        purpose: '收集治疗线索并进入医院记忆',
+        rewards: ['illness_clues', 'hospital_memory'],
         visual: { rain: false },
         width: 16,
         height: 12,
@@ -409,6 +435,8 @@ export const Maps = {
     room_bedroom_me: {
         id: 'room_bedroom_me',
         name: '我的卧室',
+        purpose: '取得日记、纸飞机并提供躲藏点',
+        rewards: ['diary_clue', 'death_clue', 'hide_spot'],
         visual: { rain: false },
         width: 16,
         height: 14,
@@ -443,6 +471,8 @@ export const Maps = {
     room_backyard: {
         id: 'room_backyard',
         name: '后院',
+        purpose: '取得香和血红钥匙并启动追逐',
+        rewards: ['incense', 'red_key', 'chase_start'],
         visual: { rain: true },
         width: 20,
         height: 20,
@@ -486,63 +516,66 @@ export const Maps = {
     room_basement: {
         id: 'room_basement',
         name: '地下室',
-        visual: { rain: false },
-        width: 30,
-        height: 30,
+        purpose: '取得全家福缺角与锁门证据',
+        rewards: ['family_photo_corner', 'locked_chain_clue'],
+        visual: {
+            ambient: 0x554433,
+            floorTint: 0x776655,
+            wallTint: 0x554433,
+            rain: false,
+            guideLights: [
+                { x: 304, y: 400, radius: 110, color: 0xffcc88 },
+                { x: 304, y: 240, radius: 100, color: 0xffcc88 },
+                { x: 304, y: 80, radius: 110, color: 0xff8866 }
+            ]
+        },
+        width: 18,
+        height: 14,
         data: [
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,1,0,1],
-            [1,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,1],
-            [1,0,1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1,0,1],
-            [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,1],
-            [1,1,1,0,1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,0,1],
-            [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
-            [1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
-            [1,1,1,1,1,1,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1],
-            [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-            [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
+            [1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
+            [1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1],
+            [1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+            [1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1]
         ],
         objects: {
-            playerStart: { x: 880, y: 432 },
-            toys: [
-                { x: 200, y: 200, frame: 'toy_plane', dialog: '一只锈迹斑斑的铁皮青蛙。发条已经坏了，但我记得它跳起来时那咔哒咔哒的声音，像极了那个雨夜里的脚步声。' },
-                { x: 500, y: 500, frame: 'npc_paper', dialog: '这纸人做得太逼真了……它的嘴角挂着似有若无的笑，仿佛在嘲笑我至今仍被困在这里。' },
-                { x: 100, y: 800, frame: 'toy_plane', dialog: '一只破旧的拨浪鼓。鼓面上已经破了一个洞，摇晃时会掉出一些黑色的粉末...像是干涸的血渣。' }
-            ],
-            scratches: [
-                { x: 300, y: 300, dialog: '墙壁上布满了指甲抓挠的痕迹...深浅不一，有的甚至带血。这不是野兽抓的，是人。一个人在极度绝望的时候，试图用指甲挖穿这堵墙。' },
-                { x: 700, y: 700, dialog: '墙缝里塞着一张皱巴巴的纸条："我不明白，为什么爱会变成枷锁？他说这是为了我好，为了我不走弯路。可如果连路都不能自己选，活着还有什么意义？"' }
-            ],
-            notes: [
-                { x: 400, y: 600, dialog: '一张藏在砖缝里的纸条："爸爸又喝醉了。他说要把我关在这里，直到我承认看见了那些东西是幻觉。可是...我真的看见了。它就在天花板上看着我。"' }
+            playerStart: { x: 304, y: 400 },
+            interactables: [
+                {
+                    id: 'basement_photo_corner', x: 304, y: 80, texture: 'photo_frame',
+                    dialog: '照片缺角上是小时候的我。它正好能补上走廊里的全家福。',
+                    itemGrant: 'family_photo_corner'
+                },
+                {
+                    id: 'basement_chain', x: 112, y: 176, texture: 'trash_paper',
+                    clueId: 'basement_lock_chain', clueType: 'control',
+                    documentTitle: '锁门铁链', documentText: '铁链内侧有孩子指甲留下的抓痕。父亲不是在防外人，他是在防我逃走。'
+                },
+                {
+                    id: 'basement_scratches', x: 464, y: 176, texture: 'scratch',
+                    clueId: 'basement_last_night', clueType: 'death',
+                    dialog: '墙上反复刻着：雨停之前，我一定要出去。'
+                }
             ],
             doors: [
-                { x: 29, y: 13, w: 1, h: 2, targetMap: 'room_main', targetX: 64, targetY: 208 }
+                { x: 8, y: 13, w: 2, h: 1, targetMap: 'room_main', targetX: 64, targetY: 208 }
             ]
         }
     },
     room_attic: {
         id: 'room_attic',
         name: '阁楼',
+        purpose: '取得纸钱并提供方向提示',
+        rewards: ['spirit_money', 'house_overview_hint'],
         visual: { rain: false },
         width: 20,
         height: 14,
@@ -565,6 +598,12 @@ export const Maps = {
         objects: {
             playerStart: { x: 320, y: 384 },
             spirit_money: { x: 320, y: 100, dialog: '横梁上挂着一串串纸钱，随着气流轻轻晃动，发出沙沙的声音。就像是有无数个看不见的幽灵在窃窃私语。这些钱...是烧给谁的？' },
+            interactables: [
+                {
+                    id: 'attic_overview', x: 480, y: 160, texture: 'photo_frame',
+                    dialog: '从破窗能看见后院枯井、正厅烟气和走廊尽头，三条路最终都指向供桌。'
+                }
+            ],
             doors: [
                 { x: 9, y: 13, w: 2, h: 1, targetMap: 'room_corridor', targetX: 176, targetY: 64 }
             ]
@@ -573,6 +612,8 @@ export const Maps = {
     memory_school: {
         id: 'memory_school',
         name: '记忆：夜校',
+        purpose: '完成试卷顺序谜题',
+        rewards: ['school_puzzle'],
         visual: {
             rain: false,
             ambient: 0x4a3a2a,
@@ -642,6 +683,8 @@ export const Maps = {
     memory_hospital: {
         id: 'memory_hospital',
         name: '记忆：旧医院',
+        purpose: '完成治疗证据链谜题',
+        rewards: ['hospital_puzzle'],
         visual: {
             rain: false,
             ambient: 0x9fb8c8,
@@ -711,6 +754,8 @@ export const Maps = {
     memory_crash: {
         id: 'memory_crash',
         name: '记忆：雨夜车祸',
+        purpose: '调查死亡现场并作最终选择',
+        rewards: ['crash_evidence', 'final_choice'],
         visual: {
             rain: true,
             ambient: 0x26384a,
@@ -785,6 +830,8 @@ export const Maps = {
     room_memory: {
         id: 'room_memory',
         name: '记忆空间',
+        purpose: '确认回家选择并触发团聚结局',
+        rewards: ['return_confirmation', 'ending_together'],
         visual: { rain: false },
         width: 24,
         height: 18,
