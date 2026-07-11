@@ -477,6 +477,9 @@ export class GameScene extends Phaser.Scene {
         const flags = this.gameState.storyFlags;
         if (!flags || !flags.memories || !flags.postMemoryDialogShown) return;
 
+        if (flags.caseConclusions.includes('rewritten_night')) flags.postMemoryDialogShown.school = true;
+        if (flags.caseConclusions.includes('treatment_blocked')) flags.postMemoryDialogShown.hospital = true;
+
         if (flags.memories.school && !flags.postMemoryDialogShown.school) {
             flags.postMemoryDialogShown.school = true;
             this.time.delayedCall(700, () => {

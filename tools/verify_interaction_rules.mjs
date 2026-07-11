@@ -41,7 +41,7 @@ assert.match(mapManagerSource, /if \(objs\.incense && !scene\.gameState\.hasInce
 assert.match(mapManagerSource, /if \(objs\.spirit_money && !scene\.gameState\.hasSpiritMoney\)/);
 
 const incenseMeta = normalizeInteractionMeta(Maps.room_backyard.objects.incense, { textureKey: 'trash_paper' });
-assert.equal(incenseMeta.label, '一把香');
-assert.equal(incenseMeta.verb, '拾取');
+assert.equal(incenseMeta.label, '缠结的井绳');
+assert.equal(incenseMeta.verb, '解结');
 
 console.log('Interaction rule verification passed');

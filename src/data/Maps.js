@@ -139,7 +139,7 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 64, y: 240 },
-            sink: { x: 250, y: 50, dialog: '水龙头生锈了，拧不紧，每隔几秒就滴落一滴浑浊的水珠。滴答...滴答...在这死寂的屋子里，听起来像是时间的倒计时。灶台上有一层油腻的黑垢，那是母亲生前最在意的地方。' },
+            sink: { x: 250, y: 50, dialog: '水槽里并排放着三只旧碗，水滴只落在刻着纸飞机的那只上。' },
             cabinet: {
                 x: 400, y: 50, id: 'kitchen_cabinet',
                 puzzleId: 'kitchen_table',
