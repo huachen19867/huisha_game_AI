@@ -622,11 +622,13 @@ export class InteractionManager {
                         window.showDialog('主角', '钥匙插进去了。锁孔上的划痕和我的玩具箱一模一样。', () => {
                             scene.playSound(100, 'sawtooth', 2);
                             scene.refreshObjective();
-                            if (getTruthLevel(this.gameState) === 'complete') {
-                                window.showDialog('主角', '里面没有父亲，只有纸飞机、校服纽扣和一只凉透的饭碗。棺材里等的人是我。', () => scene.switchScene('memory_crash', 120, 200));
-                            } else {
-                                window.showDialog('主角', '我知道家里发生了什么，但还没拼出自己死亡的全部过程。大门已经能打开了。');
-                            }
+                            window.showDialog('主角', '里面没有父亲，只有纸飞机、校服纽扣和一只凉透的饭碗。棺材里等的人是我。', () => {
+                                if (getTruthLevel(this.gameState) === 'complete') {
+                                    scene.switchScene('memory_crash', 120, 200);
+                                } else {
+                                    window.showDialog('主角', '我终于承认自己死在雨夜，但车祸前后的记忆还缺了一段。大门已经能打开了。');
+                                }
+                            });
                         });
                     } else {
                         window.showDialog('主角', '我有钥匙，但棺材周围的怨气太重了...上面的符咒还在闪烁。也许我应该先去供桌那边做点什么，平息亡魂的怨气。');

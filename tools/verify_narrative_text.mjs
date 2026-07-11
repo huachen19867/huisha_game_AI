@@ -12,6 +12,7 @@ assert.match(mapsSource, /雨停前，我会回来吃饭/);
 assert.match(chaseSource, /明儿，别跑，外面下雨/);
 assert.match(interactionSource, /纸飞机、校服纽扣和一只凉透的饭碗/);
 assert.match(interactionSource, /棺材里等的人是我/);
+assert.match(interactionSource, /棺材里等的人是我。', \(\) => \{\s+if \(getTruthLevel/s);
 
 assert.match(interactionSource, /十年前同一路段的少年死亡事故/);
 assert.match(interactionSource, /黑影学会了我的站姿/);
