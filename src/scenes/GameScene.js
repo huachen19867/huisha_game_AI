@@ -7,6 +7,7 @@ import { SoundManager } from '../systems/SoundManager.js';
 import { createDefaultGameState, getTruthLevel, normalizeGameState } from '../systems/StoryState.js';
 import { resolveSpawnCoordinate, updateBoundedResource } from '../systems/RuntimeState.js';
 import { DomListenerRegistry } from '../systems/DomListenerRegistry.js';
+import { ObjectiveManager } from '../systems/ObjectiveManager.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -90,6 +91,8 @@ export class GameScene extends Phaser.Scene {
             window.globalGameState = createDefaultGameState();
         }
         this.gameState = normalizeGameState(window.globalGameState);
+        this.objectiveManager = new ObjectiveManager(this.gameState, document.getElementById('objective-panel'));
+        this.refreshObjective();
 
         // Reset UI Visibility (in case it was hidden)
         document.getElementById('inventory').style.display = '';
@@ -374,6 +377,11 @@ export class GameScene extends Phaser.Scene {
 
         // Sanity System Logic
         this.updateSanity(delta);
+        this.refreshObjective();
+    }
+
+    refreshObjective() {
+        this.objectiveManager?.refresh(this.currentMapId);
     }
 
     updateSanity(delta) {

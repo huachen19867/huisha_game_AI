@@ -23,6 +23,8 @@ export class TitleScene extends Phaser.Scene {
         document.getElementById('inventory').style.display = 'none';
         document.getElementById('joystick-zone').style.display = 'none';
         document.getElementById('action-btn').style.display = 'none';
+        const objectivePanel = document.getElementById('objective-panel');
+        if (objectivePanel) objectivePanel.style.display = 'none';
         window.dialogActive = false;
 
         // Init Sound

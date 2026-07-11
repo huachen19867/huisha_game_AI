@@ -9,6 +9,7 @@ const sourceFiles = [
     'src/systems/StoryState.js',
     'src/systems/RuntimeState.js',
     'src/systems/DomListenerRegistry.js',
+    'src/systems/ObjectiveManager.js',
     'src/systems/StartRoute.js',
     'src/systems/SoundManager.js',
     'src/entities/Player.js',
