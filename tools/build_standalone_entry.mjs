@@ -7,6 +7,7 @@ const sourceFiles = [
     'src/data/Maps.js',
     'src/systems/TextureGenerator.js',
     'src/systems/StoryState.js',
+    'src/systems/RuntimeState.js',
     'src/systems/StartRoute.js',
     'src/systems/SoundManager.js',
     'src/entities/Player.js',

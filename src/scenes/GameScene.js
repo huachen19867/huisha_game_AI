@@ -5,6 +5,7 @@ import { EventManager } from '../systems/EventManager.js';
 import { MapManager } from '../systems/MapManager.js';
 import { SoundManager } from '../systems/SoundManager.js';
 import { createDefaultGameState, getTruthLevel, normalizeGameState } from '../systems/StoryState.js';
+import { resolveSpawnCoordinate, updateBoundedResource } from '../systems/RuntimeState.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -13,8 +14,8 @@ export class GameScene extends Phaser.Scene {
 
     init(data) {
         this.currentMapId = data.mapId || 'room_prologue';
-        this.playerStartX = data.x || null;
-        this.playerStartY = data.y || null;
+        this.playerStartX = data.x ?? null;
+        this.playerStartY = data.y ?? null;
         this.previousMapId = data.previousMapId || null;
 
         // If restarting from Title (no data provided), ensure we start fresh
@@ -114,8 +115,8 @@ export class GameScene extends Phaser.Scene {
 
         // Create Player
         const mapData = Maps[this.currentMapId];
-        const startX = this.playerStartX || mapData.objects.playerStart.x;
-        const startY = this.playerStartY || mapData.objects.playerStart.y;
+        const startX = resolveSpawnCoordinate(this.playerStartX, mapData.objects.playerStart.x);
+        const startY = resolveSpawnCoordinate(this.playerStartY, mapData.objects.playerStart.y);
         this.player = new Player(this, startX, startY);
 
         // Colliders
@@ -278,7 +279,7 @@ export class GameScene extends Phaser.Scene {
         this.showPostMemoryDialog();
     }
 
-    update() {
+    update(time, delta) {
         if (window.dialogActive) {
             this.player.sprite.setVelocity(0);
             return;
@@ -327,7 +328,7 @@ export class GameScene extends Phaser.Scene {
 
         // Wait for sound manager to be ready
         if (this.soundManager) {
-            this.player.update(this.cursors, this.wasd, this.joystick, this.soundManager);
+            this.player.update(this.cursors, this.wasd, this.joystick, this.soundManager, delta);
         }
 
         if (this.interactionManager) this.interactionManager.update();
@@ -372,40 +373,19 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Sanity System Logic
-        this.updateSanity();
+        this.updateSanity(delta);
     }
 
-    updateSanity() {
-        if (!window.updateSanityUI) return;
-
-        let drainRate = 0;
-
-        // 1. Darkness Drain (if flashlight is off or flickering)
-        // Check ambient light + flashlight
-        // Simplified: If not in memory room and not near light source?
-        // Let's just say: If chaser is active OR in specific scary rooms
-
-        if (this.currentMapId === 'room_basement' || this.currentMapId === 'room_attic' || this.currentMapId === 'room_secret') {
-            drainRate += 0.05;
-        }
-
-        // 2. Chaser Proximity
-        if (this.chaser && this.chaser.active && this.gameState.isChasing) {
+    updateSanity(delta) {
+        let ratePerSecond = 0;
+        if (['room_basement', 'room_attic', 'room_secret'].includes(this.currentMapId)) ratePerSecond -= 3;
+        if (this.chaser?.active && this.gameState.isChasing) {
             const dist = Phaser.Math.Distance.Between(this.player.sprite.x, this.player.sprite.y, this.chaser.x, this.chaser.y);
-            if (dist < 300) {
-                drainRate += 0.2;
-            }
+            if (dist < 300) ratePerSecond -= 12;
         }
-
-        // 3. Recharge in safe areas
-        if (this.currentMapId === 'room_bedroom_me' || this.currentMapId === 'room_memory') {
-            drainRate = -0.1;
-        }
-
-        this.gameState.sanity -= drainRate;
-        this.gameState.sanity = Phaser.Math.Clamp(this.gameState.sanity, 0, 100);
-
-        window.updateSanityUI(this.gameState.sanity, 100);
+        if (['room_bedroom_me', 'room_memory'].includes(this.currentMapId)) ratePerSecond = 6;
+        this.gameState.sanity = updateBoundedResource(this.gameState.sanity, ratePerSecond, delta, 0, 100);
+        window.updateSanityUI?.(this.gameState.sanity, 100);
 
         // Sanity Effects
         if (this.gameState.sanity < 30) {

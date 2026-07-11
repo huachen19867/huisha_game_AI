@@ -1,3 +1,5 @@
+import { updateStaminaState } from '../systems/RuntimeState.js';
+
 export class Player {
     constructor(scene, x, y) {
         this.scene = scene;
@@ -22,8 +24,6 @@ export class Player {
         this.maxStamina = 100;
         this.stamina = 100;
         this.isRunning = false;
-        this.staminaRechargeRate = 0.5;
-        this.staminaDrainRate = 1;
         this.exhausted = false; // If true, cannot run until stamina > 20
 
         // Input
@@ -91,28 +91,36 @@ export class Player {
         this.flickerTimer = 0;
     }
 
-    update(cursors, wasd, joystick, soundManager) {
+    update(cursors, wasd, joystick, soundManager, delta) {
         this.sprite.setVelocity(0);
 
-        // Stamina Logic
-        if (this.keyShift.isDown && !this.exhausted && (this.sprite.body.velocity.x !== 0 || this.sprite.body.velocity.y !== 0)) {
-            this.isRunning = true;
-            this.stamina -= this.staminaDrainRate;
-            if (this.stamina <= 0) {
-                this.stamina = 0;
-                this.exhausted = true;
-                this.isRunning = false;
-            }
-        } else {
-            this.isRunning = false;
-            if (this.stamina < this.maxStamina) {
-                this.stamina += this.staminaRechargeRate;
-                if (this.stamina > this.maxStamina) this.stamina = this.maxStamina;
-            }
-            if (this.exhausted && this.stamina > 30) {
-                this.exhausted = false;
-            }
+        let moveX = 0;
+        let moveY = 0;
+
+        // Keyboard Input
+        if (cursors.left.isDown || wasd.left.isDown) moveX = -1;
+        else if (cursors.right.isDown || wasd.right.isDown) moveX = 1;
+
+        if (cursors.up.isDown || wasd.up.isDown) moveY = -1;
+        else if (cursors.down.isDown || wasd.down.isDown) moveY = 1;
+
+        // Joystick Input
+        if (joystick.active) {
+            if (Math.abs(joystick.x) > 0.1) moveX = joystick.x;
+            if (Math.abs(joystick.y) > 0.1) moveY = joystick.y;
         }
+
+        const staminaState = updateStaminaState({
+            stamina: this.stamina,
+            maxStamina: this.maxStamina,
+            exhausted: this.exhausted,
+            wantsRun: this.keyShift.isDown,
+            isMoving: moveX !== 0 || moveY !== 0,
+            deltaMs: delta
+        });
+        this.stamina = staminaState.stamina;
+        this.exhausted = staminaState.exhausted;
+        this.isRunning = staminaState.isRunning;
 
         // Update UI
         if (window.updateStaminaUI) {
@@ -148,22 +156,6 @@ export class Player {
             });
         }
         */
-
-        let moveX = 0;
-        let moveY = 0;
-
-        // Keyboard Input
-        if (cursors.left.isDown || wasd.left.isDown) moveX = -1;
-        else if (cursors.right.isDown || wasd.right.isDown) moveX = 1;
-
-        if (cursors.up.isDown || wasd.up.isDown) moveY = -1;
-        else if (cursors.down.isDown || wasd.down.isDown) moveY = 1;
-
-        // Joystick Input
-        if (joystick.active) {
-            if (Math.abs(joystick.x) > 0.1) moveX = joystick.x;
-            if (Math.abs(joystick.y) > 0.1) moveY = joystick.y;
-        }
 
         if (moveX !== 0 || moveY !== 0) {
             // Normalize
