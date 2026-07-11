@@ -120,6 +120,7 @@ export class GameScene extends Phaser.Scene {
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             this.destroyJoystick();
             this.chaseManager?.destroy();
+            window.closePuzzle?.();
             this.narrativeBeatTimer?.remove();
             this.narrativeBeatTimer = null;
         });

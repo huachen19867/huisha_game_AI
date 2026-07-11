@@ -3,6 +3,7 @@ import { syncStaticBody } from './PhysicsSync.js';
 import { Puzzles, canStartPuzzle } from '../data/Puzzles.js';
 import { formatInteractionPrompt, normalizeInteractionMeta, selectInteractionCandidate } from './InteractionRules.js';
 import { getObjectReflection } from './NarrativeDirector.js';
+import { createPuzzleProgress } from './PuzzleState.js';
 
 export class InteractionManager {
     constructor(scene) {
@@ -27,6 +28,46 @@ export class InteractionManager {
 
     getTruthLevel() {
         return getTruthLevel(this.gameState);
+    }
+
+    openConfiguredPuzzle(obj) {
+        const flags = this.ensureStoryFlags();
+        const puzzle = Puzzles[obj?.puzzleId];
+        if (!puzzle) {
+            window.showDialog('系统', '这件机关的配置缺失了。你可以先离开，不会丢失进度。');
+            return;
+        }
+
+        const evidenceIds = [...flags.collectedClues, ...flags.caseConclusions];
+        if (!canStartPuzzle(puzzle, evidenceIds)) {
+            const missingCount = puzzle.prerequisites.filter(id => !evidenceIds.includes(id)).length;
+            window.showDialog('主角', `还缺 ${missingCount} 条能支撑判断的现场证据。`);
+            return;
+        }
+
+        const progress = flags.puzzleProgress[puzzle.id] || createPuzzleProgress(puzzle);
+        window.showPuzzle({ ...puzzle, availableEvidence: evidenceIds }, progress, {
+            onChange: nextProgress => {
+                flags.puzzleProgress[puzzle.id] = nextProgress;
+            },
+            onMistake: result => {
+                this.scene.hauntingDirector?.onPuzzleMistake?.(puzzle.id, flags.puzzleProgress[puzzle.id]?.attempts || 0, result);
+            },
+            onSuccess: () => {
+                const collected = obj.clueId && obj.clueType ? this.collectClue(obj.clueId, obj.clueType) : false;
+                if (collected && this.scene.playSound) this.scene.playSound(400, 'triangle', 0.4);
+                if (puzzle.conclusion && !flags.caseConclusions.includes(puzzle.conclusion)) flags.caseConclusions.push(puzzle.conclusion);
+                if (puzzle.id === 'school' || puzzle.id === 'hospital') {
+                    flags.puzzles[puzzle.id] = true;
+                    flags.memories[puzzle.id] = true;
+                }
+                this.scene.refreshObjective();
+                window.showDialog('主角', puzzle.successText, () => {
+                    if (obj.memoryReturn) this.scene.switchScene(obj.memoryReturn.mapId, obj.memoryReturn.x, obj.memoryReturn.y);
+                });
+            },
+            onClose: () => this.scene.refreshObjective()
+        });
     }
 
     // Helper to get distance to object bounds
@@ -266,22 +307,7 @@ export class InteractionManager {
                 }
 
                 if (obj.puzzleId) {
-                    const flags = this.ensureStoryFlags();
-                    const puzzle = Puzzles[obj.puzzleId];
-                    if (!canStartPuzzle(puzzle, flags.collectedClues)) {
-                        window.showDialog('主角', '先调查这段记忆中的另外两件证据。');
-                        return;
-                    }
-                    window.showPuzzle(puzzle, () => {
-                        const collected = obj.clueId && obj.clueType ? this.collectClue(obj.clueId, obj.clueType) : false;
-                        if (collected && scene.playSound) scene.playSound(400, 'triangle', 0.4);
-                        flags.puzzles[obj.puzzleId] = true;
-                        flags.memories[obj.puzzleId] = true;
-                        scene.refreshObjective();
-                        window.showDialog('主角', puzzle.successText, () => {
-                            if (obj.memoryReturn) scene.switchScene(obj.memoryReturn.mapId, obj.memoryReturn.x, obj.memoryReturn.y);
-                        });
-                    });
+                    this.openConfiguredPuzzle(obj);
                     return;
                 }
 

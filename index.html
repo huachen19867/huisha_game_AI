@@ -481,16 +481,29 @@
             border: 2px solid #775c42;
             box-sizing: border-box;
         }
-        #puzzle-options { display: grid; gap: 10px; margin: 18px 0; }
-        #puzzle-options button, #puzzle-controls button {
+        #puzzle-clues { display: grid; gap: 7px; margin: 12px 0; color: #cdbb9c; }
+        #puzzle-board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+        #puzzle-slots, #puzzle-tokens { display: grid; gap: 9px; align-content: start; }
+        #puzzle-slots::before, #puzzle-tokens::before { color: #a88d6c; font-size: 13px; letter-spacing: 0.15em; }
+        #puzzle-slots::before { content: '结论槽'; }
+        #puzzle-tokens::before { content: '证据'; }
+        #puzzle-slots button, #puzzle-tokens button, #puzzle-controls button {
             padding: 12px;
             color: #eadfc9;
             background: #35291f;
             border: 1px solid #775c42;
             cursor: pointer;
+            text-align: left;
         }
+        #puzzle-slots button.selected, #puzzle-tokens button.selected { border-color: #d9a06d; background: #533827; }
+        #puzzle-slots button:focus-visible, #puzzle-tokens button:focus-visible, #puzzle-controls button:focus-visible { outline: 2px solid #f0c88e; outline-offset: 2px; }
         #puzzle-controls { display: flex; gap: 10px; justify-content: flex-end; }
         #puzzle-status { min-height: 24px; color: #d9a06d; }
+        @media (max-width: 520px) {
+            #puzzle-panel { padding: 16px; max-height: 92vh; }
+            #puzzle-board { grid-template-columns: 1fr; }
+            #puzzle-controls { position: sticky; bottom: 0; padding-top: 10px; background: #19140f; }
+        }
 
         /* Tooltip for inventory */
         #tooltip {
@@ -600,10 +613,15 @@
         <div id="puzzle-panel">
             <h2 id="puzzle-title"></h2>
             <div id="puzzle-order"></div>
-            <div id="puzzle-options"></div>
+            <div id="puzzle-clues"></div>
+            <div id="puzzle-board">
+                <div id="puzzle-slots"></div>
+                <div id="puzzle-tokens"></div>
+            </div>
             <div id="puzzle-status"></div>
             <div id="puzzle-controls">
                 <button id="puzzle-reset">重置</button>
+                <button id="puzzle-submit">确认推理</button>
                 <button id="puzzle-close">关闭</button>
             </div>
         </div>
@@ -1533,39 +1551,227 @@ const Maps = {
         // END bundled src/data/Maps.js
 
         // BEGIN bundled src/data/Puzzles.js
+const board = config => ({ kind: 'board', hintAfter: 2, strongHintAfter: 4, ...config });
+
 const Puzzles = {
-    school: {
-        id: 'school', title: '把试卷按年份排好',
-        prerequisites: ['school_blackboard', 'school_report'],
-        options: [
-            { id: 'exam_1988', label: '1988：离家前最后一次考试' },
-            { id: 'exam_1986', label: '1986：第一次被罚站' },
-            { id: 'exam_1987', label: '1987：奖状背面的红字' }
+    kitchen_table: board({
+        id: 'kitchen_table', title: '还原七月十四的饭桌座次',
+        prerequisites: ['kitchen_sink_bowls', 'kitchen_stove_marks', 'kitchen_ghost_gesture'],
+        clues: [
+            { id: 'kitchen_sink_bowls', label: '洗碗槽：酒味缺口碗、药渍白瓷碗、刻纸飞机的小碗' },
+            { id: 'kitchen_stove_marks', label: '灰痕：灶在北、侧门在东；父亲写着“我坐背门的位置”' },
+            { id: 'kitchen_ghost_gesture', label: '纸人手势：先指灶边，再指侧门，最后指向空位' }
         ],
-        answer: ['exam_1986', 'exam_1987', 'exam_1988'],
-        successText: '三张试卷连成了父亲控制逐年加深的轨迹。'
-    },
-    hospital: {
-        id: 'hospital', title: '拼出治疗被阻断的过程',
-        prerequisites: ['hospital_window', 'hospital_ward'],
-        options: [
-            { id: 'unpaid_bill', label: '未缴费单：家丑不可外扬' },
-            { id: 'diagnosis', label: '诊断：需要规律服药与住院观察' },
-            { id: 'prescription', label: '处方：医生开出的治疗方案' }
+        slots: [
+            { id: 'near_stove', label: '北位·靠灶' },
+            { id: 'back_to_door', label: '西位·背门' },
+            { id: 'side_door', label: '东位·挨侧门' },
+            { id: 'offering', label: '南位·空着的供位' }
         ],
-        answer: ['diagnosis', 'prescription', 'unpaid_bill'],
-        successText: '母亲不是不肯治疗，而是治疗被父亲亲手中断。'
-    }
+        tokens: [
+            { id: 'mother_bowl', label: '药渍白瓷碗' },
+            { id: 'father_bowl', label: '酒味缺口碗' },
+            { id: 'child_bowl', label: '纸飞机小碗' },
+            { id: 'cold_rice', label: '插筷的冷饭碗' }
+        ],
+        answer: { near_stove: 'mother_bowl', back_to_door: 'father_bowl', side_door: 'child_bowl', offering: 'cold_rice' },
+        conflicts: {
+            near_stove: 'seat_near_stove', back_to_door: 'father_back_to_door',
+            side_door: 'child_near_side_door', offering: 'offering_is_not_daily_bowl'
+        },
+        messages: {
+            seat_near_stove: '靠灶的位置属于每天守着药锅的人。',
+            father_back_to_door: '父亲亲手写过：他坐在背门的位置。',
+            child_near_side_door: '刻着纸飞机的小碗一直挨着能逃出去的侧门。',
+            offering_is_not_daily_bowl: '供位不是任何人的日常碗，它等的是没回来的人。'
+        },
+        hints: ['先用碗上的痕迹认出三个人。', '北位靠灶，西位背门，东位挨侧门；剩下的才是供位。'],
+        conclusion: 'empty_seat', successText: '饭桌终于摆回原样。南边那碗冷饭，从一开始就在等没有回来的我。'
+    }),
+    secret_seals: board({
+        id: 'secret_seals', title: '拆开封宅的四张纸扎封条',
+        prerequisites: ['father_seal_note', 'puppet_shadow_map'],
+        clues: [
+            { id: 'father_seal_note', label: '父亲笔记：门留归路，窗绝外念，井压水魂，棺锁亡名' },
+            { id: 'puppet_shadow_map', label: '木偶影子：东门、西窗、南井、北棺' }
+        ],
+        slots: [
+            { id: 'east', label: '东方封条' }, { id: 'west', label: '西方封条' },
+            { id: 'south', label: '南方封条' }, { id: 'north', label: '北方封条' }
+        ],
+        tokens: [
+            { id: 'door', label: '门纹' }, { id: 'window', label: '窗纹' },
+            { id: 'well', label: '井纹' }, { id: 'coffin', label: '棺纹' }
+        ],
+        answer: { east: 'door', west: 'window', south: 'well', north: 'coffin' },
+        conflicts: { east: 'seal_east', west: 'seal_west', south: 'seal_south', north: 'seal_north' },
+        messages: {
+            seal_east: '木偶投向东方的是门框影子。', seal_west: '西边影子有窗棂。',
+            seal_south: '南边圆口垂着井绳。', seal_north: '北边长方影子钉着七点。'
+        },
+        hints: ['先辨认四道影子的轮廓。', '按东门、西窗、南井、北棺放置。'],
+        conclusion: 'sealed_house', successText: '封条下面压着划火片和火柴。父亲封的不是鬼，是这栋不肯结束的家。'
+    }),
+    well_knots: board({
+        id: 'well_knots', title: '辨认井绳上的结',
+        prerequisites: ['well_charm_marks', 'kitchen_ghost_gesture'],
+        clues: [
+            { id: 'well_charm_marks', label: '湿符：圆结镇水，双结锁门，短结牵孩子' },
+            { id: 'kitchen_ghost_gesture', label: '纸人袖口：纸飞机旁缝着一道短结' }
+        ],
+        slots: [{ id: 'child_mark', label: '孩子的记号' }, { id: 'leave_tied', label: '必须保留的镇水结' }],
+        tokens: [
+            { id: 'short_knot', label: '短结' }, { id: 'round_knot', label: '圆结' }, { id: 'double_knot', label: '双结' }
+        ],
+        answer: { child_mark: 'short_knot', leave_tied: 'round_knot' },
+        conflicts: { child_mark: 'child_knot', leave_tied: 'water_knot' },
+        messages: { child_knot: '纸飞机旁缝着的是短结。', water_knot: '湿符写明圆结镇水，不能解开。' },
+        hints: ['纸人的袖口能认出孩子的结。', '解短结，保留圆结。'],
+        successText: '短结一松，井绳带出一把受潮的香。圆结还在，井下的水没有继续上涨。'
+    }),
+    attic_debt: board({
+        id: 'attic_debt', title: '找出没有牌位的债主',
+        prerequisites: ['attic_overview', 'father_debt_note'],
+        clues: [
+            { id: 'attic_overview', label: '破窗：父母都有坟位，孩子的方向只有一只空碗' },
+            { id: 'father_debt_note', label: '账页：无尸、无牌位、照片缺角者，纸钱十年未断' }
+        ],
+        slots: [{ id: 'debtor', label: '被祭奠的人' }, { id: 'proof', label: '能排除父母的证据' }],
+        tokens: [
+            { id: 'father_bundle', label: '写“父”的纸束' }, { id: 'mother_bundle', label: '写“母”的纸束' },
+            { id: 'child_bundle', label: '没有名字的短纸束' }, { id: 'grave_record', label: '父母坟位记录' }
+        ],
+        answer: { debtor: 'child_bundle', proof: 'grave_record' },
+        conflicts: { debtor: 'debt_has_no_name', proof: 'parents_have_graves' },
+        messages: { debt_has_no_name: '账页说债主没有牌位，也就不会写名字。', parents_have_graves: '坟位记录能证明父母不是那个无尸无牌位的人。' },
+        hints: ['先排除已有坟位的人。', '选择无名短纸束，并用父母坟位记录作证。'],
+        conclusion: 'unpaid_debt', successText: '无名纸束落下来。父亲烧了十年纸钱，却从没敢在上面写我的名字。'
+    }),
+    school: board({
+        id: 'school', title: '找出被改写的最后一夜',
+        prerequisites: ['school_detention_clock', 'school_bus_ticket', 'school_report', 'father_school_statement'],
+        clues: [
+            { id: 'school_detention_clock', label: '留堂钟停在 18:10' },
+            { id: 'school_bus_ticket', label: '末班车 18:20 发车，回村至少二十分钟' },
+            { id: 'school_report', label: '成绩单背面的红字被反复改写' },
+            { id: 'father_school_statement', label: '父亲声称 18:00 已在家中争吵' }
+        ],
+        slots: [
+            { id: 'leave_time', label: '能证明离校时间' },
+            { id: 'earliest_home', label: '能证明最早到家时间' },
+            { id: 'false_claim', label: '不可能成立的说法' }
+        ],
+        tokens: [
+            { id: 'clock', label: '留堂钟' }, { id: 'bus', label: '末班车票' },
+            { id: 'report', label: '涂改成绩单' }, { id: 'father_claim', label: '父亲给老师的说明' }
+        ],
+        answer: { leave_time: 'clock', earliest_home: 'bus', false_claim: 'father_claim' },
+        conflicts: { leave_time: 'clock_proves_departure', earliest_home: 'bus_proves_travel', false_claim: 'claim_breaks_timeline' },
+        messages: {
+            clock_proves_departure: '成绩单不能证明几点离校，停住的留堂钟可以。',
+            bus_proves_travel: '末班车票和车程共同限制了最早到家时间。',
+            claim_breaks_timeline: '18:10 仍在学校的人，不可能 18:00 已在家争吵。'
+        },
+        hints: ['先分别找“离开学校”和“回到村里”的时间证据。', '18:10 仍在学校，父亲声称的 18:00 争吵不可能发生。'],
+        conclusion: 'rewritten_night', successText: '时间线对上了。父亲后来改写了最后一夜，想把我的逃跑变成一次普通顶嘴。'
+    }),
+    hospital: board({
+        id: 'hospital', title: '找出治疗被中断的那一天',
+        prerequisites: ['hospital_prescription', 'hospital_pill_count', 'hospital_ward_log', 'hospital_bill'],
+        clues: [
+            { id: 'hospital_prescription', label: '七日处方：每天早晚各一片，共十四片' },
+            { id: 'hospital_pill_count', label: '第五天清晨药盒还剩八片' },
+            { id: 'hospital_ward_log', label: '第四日晚父亲取走药盒，母亲次日未服药' },
+            { id: 'hospital_bill', label: '缴费单在第四日晚被签字拒付' }
+        ],
+        slots: [{ id: 'stop_day', label: '实际停药日' }, { id: 'cause_evidence', label: '能证明人为阻断的证据' }],
+        tokens: [
+            { id: 'day_three', label: '第三日' }, { id: 'day_four', label: '第四日' }, { id: 'day_five', label: '第五日' },
+            { id: 'pill_count', label: '药盒余量' }, { id: 'ward_log', label: '病房记录' }, { id: 'bill', label: '拒付缴费单' }
+        ],
+        answer: { stop_day: 'day_four', cause_evidence: 'ward_log' },
+        conflicts: { stop_day: 'pill_count_math', cause_evidence: 'record_proves_action' },
+        messages: {
+            pill_count_math: '十四片每天用两片，第五天清晨剩八片，说明第四日之后没有再服。',
+            record_proves_action: '余量和账单只能证明中断，病房记录才写明父亲取走了药。'
+        },
+        hints: ['先用十四片和每天两片计算余量。', '停在第四日；病房记录直接写明谁取走了药盒。'],
+        conclusion: 'treatment_blocked', successText: '八片药把谎话堵死了：治疗在第四天被父亲拿走药盒后中断。'
+    }),
+    altar_ritual: board({
+        id: 'altar_ritual', title: '把最后一顿饭送到正确的位置',
+        prerequisites: [],
+        clues: [
+            { id: 'empty_seat', label: '空位：饭等的是没有回来的孩子' },
+            { id: 'sealed_house', label: '封宅：火只能在最后照出亡名' },
+            { id: 'unpaid_debt', label: '旧债：纸钱先替亡者买一条归路' }
+        ],
+        slots: [
+            { id: 'leave_seat', label: '留位' }, { id: 'guide_spirit', label: '引魂' },
+            { id: 'pay_debt', label: '偿债' }, { id: 'show_truth', label: '照真' }
+        ],
+        tokens: [
+            { id: 'rice', label: '倒头饭' }, { id: 'incense', label: '香' },
+            { id: 'spirit_money', label: '纸钱' }, { id: 'matches', label: '火柴' }
+        ],
+        answer: { leave_seat: 'rice', guide_spirit: 'incense', pay_debt: 'spirit_money', show_truth: 'matches' },
+        conflicts: { leave_seat: 'rice_waits', guide_spirit: 'incense_guides', pay_debt: 'money_pays', show_truth: 'fire_reveals' },
+        messages: {
+            rice_waits: '留位上该放等待未归者的饭。', incense_guides: '香负责把散去的魂引到桌前。',
+            money_pays: '纸钱偿还旧债，不负责照明。', fire_reveals: '火最后点亮遗像，让亡者看见自己的名字。'
+        },
+        hints: ['四个位置的动词已经说明供品用途。', '饭留位、香引魂、纸钱偿债、火柴照真。'],
+        successText: '火光照过遗像，父亲的脸褪成了少年时的我。供桌一直在等我入席。'
+    })
 };
 
 function canStartPuzzle(puzzle, collectedClues) {
-    return puzzle.prerequisites.every(id => collectedClues.includes(id));
+    return (puzzle?.prerequisites || []).every(id => collectedClues.includes(id));
 }
 
 function isPuzzleAnswerCorrect(puzzle, answer) {
-    return answer.length === puzzle.answer.length && answer.every((id, index) => id === puzzle.answer[index]);
+    if (Array.isArray(puzzle?.answer)) {
+        return Array.isArray(answer) && answer.length === puzzle.answer.length && answer.every((id, index) => id === puzzle.answer[index]);
+    }
+    return (puzzle?.slots || []).every(slot => answer?.[slot.id] === puzzle.answer?.[slot.id]);
 }
         // END bundled src/data/Puzzles.js
+
+        // BEGIN bundled src/systems/PuzzleState.js
+function createPuzzleProgress() {
+    return { assignments: {}, attempts: 0 };
+}
+
+function assignPuzzleToken(progress, slotId, tokenId) {
+    const assignments = { ...(progress?.assignments || {}) };
+    Object.keys(assignments).forEach(key => {
+        if (assignments[key] === tokenId) delete assignments[key];
+    });
+    if (tokenId) assignments[slotId] = tokenId;
+    else delete assignments[slotId];
+    return { assignments, attempts: progress?.attempts || 0 };
+}
+
+function evaluatePuzzle(puzzle, assignments = {}, collectedClues = []) {
+    const missing = (puzzle?.prerequisites || []).filter(id => !collectedClues.includes(id));
+    if (missing.length) return { status: 'blocked', missing };
+
+    const emptySlots = (puzzle?.slots || [])
+        .map(slot => slot.id)
+        .filter(slotId => !assignments[slotId]);
+    if (emptySlots.length) return { status: 'incomplete', emptySlots };
+
+    const wrongSlot = (puzzle?.slots || []).find(slot => assignments[slot.id] !== puzzle.answer?.[slot.id]);
+    if (wrongSlot) {
+        return {
+            status: 'incorrect',
+            conflictKey: puzzle.conflicts?.[wrongSlot.id] || 'evidence_conflict',
+            conflictSlots: [wrongSlot.id]
+        };
+    }
+    return { status: 'correct' };
+}
+        // END bundled src/systems/PuzzleState.js
 
         // BEGIN bundled src/systems/TextureGenerator.js
 class TextureGenerator {
@@ -2097,6 +2303,10 @@ function createDefaultStoryFlags() {
         coffinOpened: false,
         endingChoice: null,
         narrativeBeatsSeen: [],
+        puzzleProgress: {},
+        caseConclusions: [],
+        ritualSolved: false,
+        hauntingSeen: [],
         postMemoryDialogShown: {
             school: false,
             hospital: false
@@ -2159,6 +2369,10 @@ function ensureStoryFlags(gameState) {
 
     if (flags.endingChoice === undefined) flags.endingChoice = null;
     if (!Array.isArray(flags.narrativeBeatsSeen)) flags.narrativeBeatsSeen = [];
+    if (!flags.puzzleProgress || typeof flags.puzzleProgress !== 'object' || Array.isArray(flags.puzzleProgress)) flags.puzzleProgress = {};
+    if (!Array.isArray(flags.caseConclusions)) flags.caseConclusions = [];
+    flags.ritualSolved = !!flags.ritualSolved;
+    if (!Array.isArray(flags.hauntingSeen)) flags.hauntingSeen = [];
     if (!flags.postMemoryDialogShown) {
         flags.postMemoryDialogShown = { school: false, hospital: false };
     }
@@ -4078,6 +4292,46 @@ class InteractionManager {
         return getTruthLevel(this.gameState);
     }
 
+    openConfiguredPuzzle(obj) {
+        const flags = this.ensureStoryFlags();
+        const puzzle = Puzzles[obj?.puzzleId];
+        if (!puzzle) {
+            window.showDialog('系统', '这件机关的配置缺失了。你可以先离开，不会丢失进度。');
+            return;
+        }
+
+        const evidenceIds = [...flags.collectedClues, ...flags.caseConclusions];
+        if (!canStartPuzzle(puzzle, evidenceIds)) {
+            const missingCount = puzzle.prerequisites.filter(id => !evidenceIds.includes(id)).length;
+            window.showDialog('主角', `还缺 ${missingCount} 条能支撑判断的现场证据。`);
+            return;
+        }
+
+        const progress = flags.puzzleProgress[puzzle.id] || createPuzzleProgress(puzzle);
+        window.showPuzzle({ ...puzzle, availableEvidence: evidenceIds }, progress, {
+            onChange: nextProgress => {
+                flags.puzzleProgress[puzzle.id] = nextProgress;
+            },
+            onMistake: result => {
+                this.scene.hauntingDirector?.onPuzzleMistake?.(puzzle.id, flags.puzzleProgress[puzzle.id]?.attempts || 0, result);
+            },
+            onSuccess: () => {
+                const collected = obj.clueId && obj.clueType ? this.collectClue(obj.clueId, obj.clueType) : false;
+                if (collected && this.scene.playSound) this.scene.playSound(400, 'triangle', 0.4);
+                if (puzzle.conclusion && !flags.caseConclusions.includes(puzzle.conclusion)) flags.caseConclusions.push(puzzle.conclusion);
+                if (puzzle.id === 'school' || puzzle.id === 'hospital') {
+                    flags.puzzles[puzzle.id] = true;
+                    flags.memories[puzzle.id] = true;
+                }
+                this.scene.refreshObjective();
+                window.showDialog('主角', puzzle.successText, () => {
+                    if (obj.memoryReturn) this.scene.switchScene(obj.memoryReturn.mapId, obj.memoryReturn.x, obj.memoryReturn.y);
+                });
+            },
+            onClose: () => this.scene.refreshObjective()
+        });
+    }
+
     // Helper to get distance to object bounds
     getDistanceToObj(px, py, obj) {
         if (!obj || !obj.active) return Infinity;
@@ -4315,22 +4569,7 @@ class InteractionManager {
                 }
 
                 if (obj.puzzleId) {
-                    const flags = this.ensureStoryFlags();
-                    const puzzle = Puzzles[obj.puzzleId];
-                    if (!canStartPuzzle(puzzle, flags.collectedClues)) {
-                        window.showDialog('主角', '先调查这段记忆中的另外两件证据。');
-                        return;
-                    }
-                    window.showPuzzle(puzzle, () => {
-                        const collected = obj.clueId && obj.clueType ? this.collectClue(obj.clueId, obj.clueType) : false;
-                        if (collected && scene.playSound) scene.playSound(400, 'triangle', 0.4);
-                        flags.puzzles[obj.puzzleId] = true;
-                        flags.memories[obj.puzzleId] = true;
-                        scene.refreshObjective();
-                        window.showDialog('主角', puzzle.successText, () => {
-                            if (obj.memoryReturn) scene.switchScene(obj.memoryReturn.mapId, obj.memoryReturn.x, obj.memoryReturn.y);
-                        });
-                    });
+                    this.openConfiguredPuzzle(obj);
                     return;
                 }
 
@@ -5364,6 +5603,7 @@ class GameScene extends Phaser.Scene {
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             this.destroyJoystick();
             this.chaseManager?.destroy();
+            window.closePuzzle?.();
             this.narrativeBeatTimer?.remove();
             this.narrativeBeatTimer = null;
         });
@@ -6031,7 +6271,9 @@ class GameScene extends Phaser.Scene {
         const puzzleOverlay = document.getElementById('puzzle-overlay');
         const puzzleTitle = document.getElementById('puzzle-title');
         const puzzleOrder = document.getElementById('puzzle-order');
-        const puzzleOptions = document.getElementById('puzzle-options');
+        const puzzleClues = document.getElementById('puzzle-clues');
+        const puzzleSlots = document.getElementById('puzzle-slots');
+        const puzzleTokens = document.getElementById('puzzle-tokens');
         const puzzleStatus = document.getElementById('puzzle-status');
         const staminaContainer = document.getElementById('stamina-container');
         const staminaBar = document.getElementById('stamina-bar');
@@ -6116,38 +6358,94 @@ class GameScene extends Phaser.Scene {
             window.dialogActive = false; // Resume game
         });
 
-        window.showPuzzle = function(config, onSuccess) {
-            let selected = [];
+        window.showPuzzle = function(config, initialProgress, callbacks) {
+            callbacks ||= {};
+            let progress = {
+                assignments: { ...(initialProgress?.assignments || {}) },
+                attempts: initialProgress?.attempts || 0
+            };
+            let selectedToken = null;
+
+            const close = (notify = true) => {
+                puzzleOverlay.style.display = 'none';
+                window.dialogActive = false;
+                selectedToken = null;
+                if (notify) callbacks.onClose?.();
+            };
+
+            window.closePuzzle = () => close(false);
+
             const render = () => {
-                puzzleOrder.textContent = selected.length ? `顺序：${selected.map(id => config.options.find(option => option.id === id).label).join(' → ')}` : '顺序：尚未选择';
-                puzzleOptions.innerHTML = '';
-                config.options.filter(option => !selected.includes(option.id)).forEach(option => {
+                const assignedCount = Object.keys(progress.assignments).length;
+                puzzleOrder.textContent = `已建立 ${assignedCount}/${config.slots.length} 条对应关系`;
+                puzzleClues.innerHTML = '';
+                config.clues.forEach(clue => {
+                    const row = document.createElement('div');
+                    row.textContent = `· ${clue.label}`;
+                    puzzleClues.appendChild(row);
+                });
+
+                puzzleSlots.innerHTML = '';
+                config.slots.forEach(slot => {
                     const button = document.createElement('button');
-                    button.textContent = option.label;
+                    const token = config.tokens.find(item => item.id === progress.assignments[slot.id]);
+                    button.textContent = `${slot.label}：${token?.label || '尚未放入证据'}`;
                     button.onclick = () => {
-                        selected.push(option.id);
-                        if (selected.length === config.answer.length) {
-                            if (isPuzzleAnswerCorrect(config, selected)) {
-                                puzzleOverlay.style.display = 'none';
-                                window.dialogActive = false;
-                                onSuccess();
-                                return;
-                            }
-                            puzzleStatus.textContent = '顺序不对，再看一眼证据。';
-                            selected = [];
-                        }
+                        progress = assignPuzzleToken(progress, slot.id, selectedToken);
+                        selectedToken = null;
+                        callbacks.onChange?.(progress);
                         render();
                     };
-                    puzzleOptions.appendChild(button);
+                    puzzleSlots.appendChild(button);
+                });
+
+                puzzleTokens.innerHTML = '';
+                config.tokens.forEach(token => {
+                    const button = document.createElement('button');
+                    const assignedSlot = Object.keys(progress.assignments).find(slotId => progress.assignments[slotId] === token.id);
+                    button.textContent = assignedSlot ? `${token.label}（已放置）` : token.label;
+                    button.classList.toggle('selected', selectedToken === token.id);
+                    button.onclick = () => {
+                        selectedToken = selectedToken === token.id ? null : token.id;
+                        render();
+                    };
+                    puzzleTokens.appendChild(button);
                 });
             };
+
             puzzleTitle.textContent = config.title;
             puzzleStatus.textContent = '';
             puzzleOverlay.style.display = 'flex';
             window.dialogActive = true;
             render();
-            document.getElementById('puzzle-reset').onclick = () => { selected = []; puzzleStatus.textContent = ''; render(); };
-            document.getElementById('puzzle-close').onclick = () => { puzzleOverlay.style.display = 'none'; window.dialogActive = false; };
+            document.getElementById('puzzle-reset').onclick = () => {
+                progress = createPuzzleProgress(config);
+                selectedToken = null;
+                puzzleStatus.textContent = '';
+                callbacks.onChange?.(progress);
+                render();
+            };
+            document.getElementById('puzzle-submit').onclick = () => {
+                const result = evaluatePuzzle(config, progress.assignments, config.availableEvidence || []);
+                if (result.status === 'correct') {
+                    close(false);
+                    callbacks.onSuccess?.(result);
+                    return;
+                }
+                if (result.status === 'blocked') puzzleStatus.textContent = `还缺 ${result.missing.length} 条现场证据。`;
+                else if (result.status === 'incomplete') puzzleStatus.textContent = `还有 ${result.emptySlots.length} 个结论槽没有证据。`;
+                else {
+                    progress = { ...progress, attempts: progress.attempts + 1 };
+                    callbacks.onChange?.(progress);
+                    const attempts = progress.attempts;
+                    let message = config.messages?.[result.conflictKey] || '这组证据互相冲突。';
+                    if (attempts >= config.strongHintAfter) message += ` 提示：${config.hints?.[1] || ''}`;
+                    else if (attempts >= config.hintAfter) message += ` 提示：${config.hints?.[0] || ''}`;
+                    puzzleStatus.textContent = message;
+                    callbacks.onMistake?.(result);
+                }
+            };
+            document.getElementById('puzzle-close').onclick = () => close(true);
         };
 
         // Ending Logic
