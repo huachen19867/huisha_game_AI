@@ -6,6 +6,7 @@ import { MapManager } from '../systems/MapManager.js';
 import { SoundManager } from '../systems/SoundManager.js';
 import { createDefaultGameState, getTruthLevel, normalizeGameState } from '../systems/StoryState.js';
 import { resolveSpawnCoordinate, updateBoundedResource } from '../systems/RuntimeState.js';
+import { DomListenerRegistry } from '../systems/DomListenerRegistry.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -108,6 +109,7 @@ export class GameScene extends Phaser.Scene {
         // Joystick Logic
         this.joystick = { x: 0, y: 0, active: false };
         this.initJoystick();
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyJoystick());
 
         // Initialize Map Manager
         this.mapManager = new MapManager(this);
@@ -815,23 +817,26 @@ export class GameScene extends Phaser.Scene {
     }
 
     initJoystick() {
+        this.destroyJoystick();
+        this.domListeners = new DomListenerRegistry();
+
         const zone = document.getElementById('joystick-zone');
         const knob = document.getElementById('joystick-knob');
         const actionBtn = document.getElementById('action-btn');
 
         let startX, startY;
         const maxDist = 35;
-        let uiTimer = null;
 
         const showUI = () => {
             zone.classList.remove('ui-faded');
             actionBtn.classList.remove('ui-faded');
-            if (uiTimer) clearTimeout(uiTimer);
+            if (this.mobileUiTimer) clearTimeout(this.mobileUiTimer);
+            this.mobileUiTimer = null;
         };
 
         const scheduleHideUI = () => {
-            if (uiTimer) clearTimeout(uiTimer);
-            uiTimer = setTimeout(() => {
+            if (this.mobileUiTimer) clearTimeout(this.mobileUiTimer);
+            this.mobileUiTimer = setTimeout(() => {
                 zone.classList.add('ui-faded');
                 actionBtn.classList.add('ui-faded');
             }, 2000);
@@ -839,7 +844,7 @@ export class GameScene extends Phaser.Scene {
 
         scheduleHideUI();
 
-        zone.addEventListener('touchstart', (e) => {
+        function onTouchStart(e) {
             showUI();
             e.preventDefault();
             const touch = e.touches[0];
@@ -848,56 +853,63 @@ export class GameScene extends Phaser.Scene {
             startY = rect.top + rect.height / 2;
             this.joystick.active = true;
             this.updateJoystick(touch.clientX, touch.clientY, startX, startY, knob, maxDist);
-        }, { passive: false });
+        }
 
-        zone.addEventListener('touchmove', (e) => {
+        function onTouchMove(e) {
             showUI();
             e.preventDefault();
             if (!this.joystick.active) return;
             const touch = e.touches[0];
             this.updateJoystick(touch.clientX, touch.clientY, startX, startY, knob, maxDist);
-        }, { passive: false });
+        }
 
-        const endHandler = (e) => {
+        function onTouchEnd() {
             scheduleHideUI();
             this.joystick.active = false;
             this.joystick.x = 0;
             this.joystick.y = 0;
             knob.style.transform = `translate(-50%, -50%)`;
+        }
+
+        const handleAction = (e) => {
+            showUI();
+            scheduleHideUI();
+            e.preventDefault();
+            if (window.dialogActive) {
+                if (window.currentDialogNextHandler) window.currentDialogNextHandler();
+                return;
+            }
+            if (this.gameState.isHidden) {
+                this.toggleHide();
+                return;
+            }
+            if (this.interactText.visible && this.interactionManager) this.interactionManager.handleInteraction();
         };
 
-        zone.addEventListener('touchend', endHandler);
-        zone.addEventListener('touchcancel', endHandler);
+        function onActionTouchStart(e) {
+            handleAction(e);
+        }
 
-        actionBtn.addEventListener('touchstart', (e) => {
-            showUI();
-            scheduleHideUI();
-            e.preventDefault();
-            if (window.dialogActive) {
-                if (window.currentDialogNextHandler) window.currentDialogNextHandler();
-                return;
-            }
-            if (this.gameState.isHidden) {
-                this.toggleHide();
-                return;
-            }
-            if (this.interactText.visible && this.interactionManager) this.interactionManager.handleInteraction();
-        }, { passive: false });
+        function onActionMouseDown(e) {
+            handleAction(e);
+        }
 
-        actionBtn.addEventListener('mousedown', (e) => {
-            showUI();
-            scheduleHideUI();
-            e.preventDefault();
-            if (window.dialogActive) {
-                if (window.currentDialogNextHandler) window.currentDialogNextHandler();
-                return;
-            }
-            if (this.gameState.isHidden) {
-                this.toggleHide();
-                return;
-            }
-            if (this.interactText.visible && this.interactionManager) this.interactionManager.handleInteraction();
-        });
+        const passiveFalse = { passive: false };
+        this.domListeners.add(zone, 'touchstart', onTouchStart.bind(this), passiveFalse);
+        this.domListeners.add(zone, 'touchmove', onTouchMove.bind(this), passiveFalse);
+        this.domListeners.add(zone, 'touchend', onTouchEnd.bind(this));
+        this.domListeners.add(zone, 'touchcancel', onTouchEnd.bind(this));
+        this.domListeners.add(actionBtn, 'touchstart', onActionTouchStart, passiveFalse);
+        this.domListeners.add(actionBtn, 'mousedown', onActionMouseDown);
+    }
+
+    destroyJoystick() {
+        this.domListeners?.clear();
+        this.domListeners = null;
+        if (this.mobileUiTimer) clearTimeout(this.mobileUiTimer);
+        this.mobileUiTimer = null;
+        if (this.exitHideListener) document.removeEventListener('touchstart', this.exitHideListener);
+        this.exitHideListener = null;
     }
 
     updateJoystick(clientX, clientY, centerX, centerY, knob, maxDist) {
