@@ -1,13 +1,18 @@
 import assert from 'node:assert/strict';
 import { createDefaultGameState } from '../src/systems/StoryState.js';
-import { getCurrentObjective } from '../src/systems/ObjectiveManager.js';
+import { getCurrentObjective, getObjectiveView } from '../src/systems/ObjectiveManager.js';
 
 const state = createDefaultGameState();
 assert.equal(getCurrentObjective(state, 'room_prologue'), '沿公路寻找避雨处');
 state.doorSlammed = true;
-assert.equal(getCurrentObjective(state, 'room_main'), '找齐供品：倒头饭、火柴、香、纸钱');
+assert.equal(getCurrentObjective(state, 'room_main'), '完成供桌仪式：寻找倒头饭（厨房）、火柴（密室）、香（后院）、纸钱（阁楼）');
+let view = getObjectiveView(state, 'room_kitchen');
+assert.equal(view.local, '取得倒头饭并触发纸人变化');
+assert.equal(view.completed, false);
 state.hasRice = state.hasMatches = state.hasIncense = state.hasSpiritMoney = true;
-assert.equal(getCurrentObjective(state, 'room_main'), '调查旧书房与药柜小间');
+assert.equal(getCurrentObjective(state, 'room_main'), '还原两段记忆：从旧书房进入学校，从药柜小间进入医院');
+view = getObjectiveView(state, 'room_kitchen');
+assert.equal(view.completed, true);
 state.storyFlags.puzzles.school = true;
 state.storyFlags.puzzles.hospital = true;
 assert.equal(getCurrentObjective(state, 'room_corridor'), '调查走廊里的四张旧照片');
