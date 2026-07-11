@@ -16,6 +16,7 @@ const sourceFiles = [
     'src/systems/ObjectiveManager.js',
     'src/systems/GridNavigation.js',
     'src/systems/ChaseManager.js',
+    'src/systems/HauntingDirector.js',
     'src/systems/StartRoute.js',
     'src/systems/SoundManager.js',
     'src/entities/Player.js',

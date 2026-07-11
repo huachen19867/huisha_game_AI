@@ -10,6 +10,7 @@ import { DomListenerRegistry } from '../systems/DomListenerRegistry.js';
 import { ObjectiveManager } from '../systems/ObjectiveManager.js';
 import { ChaseManager } from '../systems/ChaseManager.js';
 import { getPendingNarrativeBeat, markNarrativeBeatSeen } from '../systems/NarrativeDirector.js';
+import { HauntingDirector } from '../systems/HauntingDirector.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -120,6 +121,7 @@ export class GameScene extends Phaser.Scene {
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             this.destroyJoystick();
             this.chaseManager?.destroy();
+            this.hauntingDirector?.destroy();
             window.closePuzzle?.();
             this.narrativeBeatTimer?.remove();
             this.narrativeBeatTimer = null;
@@ -135,6 +137,7 @@ export class GameScene extends Phaser.Scene {
         const startY = resolveSpawnCoordinate(this.playerStartY, mapData.objects.playerStart.y);
         this.player = new Player(this, startX, startY);
         this.chaseManager = new ChaseManager(this);
+        this.hauntingDirector = new HauntingDirector(this);
 
         // Colliders
         this.physics.add.collider(this.player.sprite, this.walls);
@@ -281,6 +284,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     update(time, delta) {
+        this.hauntingDirector?.update(time, delta);
         if (window.dialogActive) {
             this.player.sprite.setVelocity(0);
             return;
