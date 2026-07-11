@@ -492,7 +492,9 @@ export class InteractionManager {
             }
 
             if (type === 'wet_paper') {
-                window.showDocument('湿纸条', '...1988年...那是我噩梦开始的一年...（后面的字迹模糊不清）');
+                this.collectClue(obj.clueId, obj.clueType);
+                window.showDocument(obj.documentTitle || '湿纸条', obj.documentText || '1988 年，那是噩梦开始的一年。');
+                scene.refreshObjective();
                 return;
             }
 

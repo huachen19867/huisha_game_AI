@@ -375,6 +375,10 @@ export class MapManager {
             if (isHorror) scene.wet_paper.setPipeline('Light2D');
             scene.wet_paper.setTint(0x00aaff);
             scene.wet_paper.objId = 'wet_paper';
+            scene.wet_paper.clueId = objs.wet_paper.clueId;
+            scene.wet_paper.clueType = objs.wet_paper.clueType;
+            scene.wet_paper.documentTitle = objs.wet_paper.documentTitle;
+            scene.wet_paper.documentText = objs.wet_paper.documentText;
             this.scene.interactables.add(scene.wet_paper);
             addToInteractables(scene.wet_paper, objs.wet_paper);
         }
