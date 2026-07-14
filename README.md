@@ -97,6 +97,7 @@
 - [游戏流程梳理](docs/GAME_FLOW.md)
 - [扩展设计文档](docs/superpowers/specs/2026-04-29-huisha-multi-ending-expansion-design.md)
 - [2D 稳定性与流程重构设计](docs/superpowers/specs/2026-07-11-huisha-2d-rework-design.md)
+- [实体解谜 Vertical Slice 激进重做设计](docs/superpowers/specs/2026-07-15-huisha-vertical-slice-redesign-design.md)
 
 ## 📄 许可证
 
