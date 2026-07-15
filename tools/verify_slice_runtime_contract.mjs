@@ -188,8 +188,16 @@ for (const mapId of Object.keys(SliceMaps)) {
     assert.equal(manager.applyRoomRevision(structuredClone(revisionState)), false, 'same revision must be idempotent');
     assert.deepEqual(scene.sliceRoomRevision, firstRevision);
     assert.equal(scene.effectCreations.length, effectsBeforeRevision, 'revision must not replay room initialization');
+    if (mapId === 'room_main') {
+        assert.ok(manager.roomEffects.length > 0, 'main-room ambience must survive room revision application');
+        assert.ok(
+            manager.roomEffects.every(effect => effect.removed !== true && effect.destroyed !== true),
+            'applying a revision must not clear ambient room effects'
+        );
+    }
     const roomEffects = [...manager.roomEffects];
     manager.destroy();
+    assert.doesNotThrow(() => manager.destroy(), `${mapId} repeated destroy must be safe`);
     assert.ok(
         roomEffects.every(effect => effect.removed === true || effect.destroyed === true),
         `${mapId} must clean up authored room effects`
@@ -197,7 +205,13 @@ for (const mapId of Object.keys(SliceMaps)) {
 }
 assert.deepEqual(SliceMaps, authoredSnapshot, 'rendering all rooms must not mutate frozen map definitions');
 
-const kitchenState = createDefaultSliceState();
+const kitchenState = {
+    ...createDefaultSliceState(),
+    slicePhase: 'rule',
+    tableSolved: true,
+    houseRuleDemonstrated: true,
+    bowlPlacements: { nail: 'wine', stove: 'medicine', side: 'child' }
+};
 const kitchenScene = createScene(kitchenState);
 const kitchenManager = new SliceMapManager(kitchenScene);
 kitchenManager.createMap('room_kitchen');
@@ -213,10 +227,62 @@ assert.notEqual(kitchenScene.sliceSafeZones.under_table, SliceMaps.room_kitchen.
 
 const sideDoor = kitchenScene.doors.getChildren().find(door => door.doorId === 'kitchen_side_door');
 assert.ok(sideDoor && sideDoor.texture?.key, 'every authored door must be a sprite');
-assert.equal(sideDoor.locked, true);
-kitchenState.tableSolved = true;
-kitchenManager.refreshDoorAccess(kitchenState);
-assert.equal(sideDoor.locked, false, 'door locks must refresh without restarting the room');
+assert.equal(sideDoor.locked, false, 'solving the table must open the route to the bedroom');
+
+function activeRevisionEffects(manager) {
+    return manager.revisionEffects.filter(effect => effect.active !== false && !effect.destroyed && !effect.removed);
+}
+
+function assertKitchenProtection(manager, scene, expected) {
+    assert.equal(scene.sliceSafeZones, manager.safeZones, 'scene must point at the current runtime safe-zone registry');
+    assert.notEqual(scene.sliceSafeZones, SliceMaps.room_kitchen.objects.table.safeZones);
+    assert.equal(Object.hasOwn(scene.sliceSafeZones, 'under_table'), expected);
+    const effects = activeRevisionEffects(manager);
+    assert.equal(effects.length, expected ? 2 : 0);
+    assert.deepEqual(
+        effects.map(effect => effect.sliceEffectId).sort(),
+        expected ? ['kitchen_offering_steam', 'kitchen_table_warmth'] : []
+    );
+    assert.ok(effects.every(effect => effect.visible !== false), 'revision protection effects must be visible');
+}
+
+assertKitchenProtection(kitchenManager, kitchenScene, true);
+const preBedroomEffects = [...kitchenManager.revisionEffects];
+
+const takeState = { ...kitchenState, slicePhase: 'return', planeChoice: 'take' };
+assert.equal(kitchenManager.applyRoomRevision(takeState), true);
+assert.equal(sideDoor.locked, false, 'taking the plane keeps the short side-door return open');
+assertKitchenProtection(kitchenManager, kitchenScene, false);
+assert.ok(preBedroomEffects.every(effect => effect.destroyed === true || effect.removed === true));
+assert.equal(kitchenManager.applyRoomRevision(structuredClone(takeState)), false);
+kitchenManager.refreshDoorAccess(takeState);
+assert.equal(sideDoor.locked, false);
+
+const leaveState = { ...kitchenState, slicePhase: 'return', planeChoice: 'leave' };
+assert.equal(kitchenManager.applyRoomRevision(leaveState), true);
+assert.equal(sideDoor.locked, true, 'leaving the plane must lock the short side-door return');
+assertKitchenProtection(kitchenManager, kitchenScene, true);
+const leaveEffects = [...kitchenManager.revisionEffects];
+assert.equal(kitchenManager.applyRoomRevision(structuredClone(leaveState)), false);
+assert.deepEqual(kitchenManager.revisionEffects, leaveEffects, 'idempotent revision must not duplicate effects');
+kitchenManager.refreshDoorAccess(leaveState);
+assert.equal(sideDoor.locked, true, 'door refresh must retain the leave-choice overlay');
+
+const beforeChoiceAgain = { ...kitchenState, planeChoice: null };
+assert.equal(kitchenManager.applyRoomRevision(beforeChoiceAgain), true);
+assert.equal(sideDoor.locked, false);
+assertKitchenProtection(kitchenManager, kitchenScene, true);
+assert.ok(leaveEffects.every(effect => effect.destroyed === true || effect.removed === true));
+assert.notEqual(kitchenScene.sliceSafeZones.under_table, SliceMaps.room_kitchen.objects.table.safeZones.under_table);
+const beforeChoiceEffects = [...kitchenManager.revisionEffects];
+assert.equal(kitchenManager.applyRoomRevision(structuredClone(beforeChoiceAgain)), false);
+assert.deepEqual(kitchenManager.revisionEffects, beforeChoiceEffects);
+assert.deepEqual(SliceMaps, authoredSnapshot, 'kitchen return overlays must not mutate authored maps');
+
+const finalRevisionEffects = [...kitchenManager.revisionEffects];
+assert.doesNotThrow(() => kitchenManager.destroy());
+assert.doesNotThrow(() => kitchenManager.destroy(), 'map-manager destroy must be idempotent');
+assert.ok(finalRevisionEffects.every(effect => effect.destroyed === true || effect.removed === true));
 
 const bedroomState = createDefaultSliceState();
 const bedroomScene = createScene(bedroomState);
@@ -307,6 +373,31 @@ function runTransitions(sliceMode) {
 
 assert.deepEqual(runTransitions(true).map(payload => payload.sliceMode), [true, true]);
 assert.deepEqual(runTransitions(false).map(payload => payload.sliceMode), [false, false]);
+
+globalThis.window ??= {};
+let shutdownHandler = null;
+let sliceMapDestroyCalls = 0;
+const shutdownScene = new GameScene();
+shutdownScene.events = {
+    once(eventName, callback) {
+        assert.equal(eventName, Phaser.Scenes.Events.SHUTDOWN);
+        shutdownHandler = callback;
+    },
+    emit(eventName) {
+        if (eventName !== Phaser.Scenes.Events.SHUTDOWN || !shutdownHandler) return;
+        const callback = shutdownHandler;
+        shutdownHandler = null;
+        callback();
+    }
+};
+shutdownScene.destroyJoystick = () => {};
+shutdownScene.sliceMapManager = { destroy() { sliceMapDestroyCalls += 1; } };
+shutdownScene.chaseManager = { destroy() {} };
+shutdownScene.hauntingDirector = { destroy() {} };
+shutdownScene.registerShutdownCleanup();
+shutdownScene.events.emit(Phaser.Scenes.Events.SHUTDOWN);
+shutdownScene.events.emit(Phaser.Scenes.Events.SHUTDOWN);
+assert.equal(sliceMapDestroyCalls, 1, 'registered shutdown cleanup must destroy the slice map once');
 
 const builder = readFileSync(new URL('./build_standalone_entry.mjs', import.meta.url), 'utf8');
 const sliceMapsIndex = builder.indexOf("'src/data/SliceMaps.js'");

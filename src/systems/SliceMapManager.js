@@ -29,7 +29,9 @@ export class SliceMapManager {
         this.floorLayer = [];
         this.navigationBlockedRects = [];
         this.safeZones = {};
+        this.baseSafeZones = {};
         this.roomEffects = [];
+        this.revisionEffects = [];
         this._revisionKey = null;
     }
 
@@ -41,6 +43,7 @@ export class SliceMapManager {
         }
 
         this.destroyRoomEffects();
+        this.clearRevisionEffects();
         this.currentMapId = mapId;
         this.mapDef = cloneAuthoredValue(authoredMap);
         this._revisionKey = null;
@@ -61,6 +64,7 @@ export class SliceMapManager {
         this.floorLayer = [];
         this.navigationBlockedRects = [];
         this.safeZones = {};
+        this.baseSafeZones = {};
 
         this.scene.walls = this.walls;
         this.scene.doors = this.doors;
@@ -124,7 +128,8 @@ export class SliceMapManager {
         this.scene.tableCollision = blocker;
 
         this.navigationBlockedRects.push(bounds);
-        this.safeZones = cloneAuthoredValue(tableData.safeZones || {});
+        this.baseSafeZones = cloneAuthoredValue(tableData.safeZones || {});
+        this.safeZones = cloneAuthoredValue(this.baseSafeZones);
         this.scene.navigationBlockedRects = this.navigationBlockedRects;
         this.scene.sliceSafeZones = this.safeZones;
     }
@@ -223,6 +228,13 @@ export class SliceMapManager {
     refreshDoorAccess(sliceState = getSliceState(this.scene)) {
         for (const door of this.doors?.getChildren?.() || []) {
             door.locked = !getSliceDoorAccess(door.doorId, sliceState);
+            if (
+                this.currentMapId === 'room_kitchen' &&
+                door.doorId === 'kitchen_side_door' &&
+                sliceState?.planeChoice === 'leave'
+            ) {
+                door.locked = true;
+            }
             door.setTint?.(door.locked ? 0x4a2727 : 0x796754);
             door.setAlpha?.(door.locked ? 0.82 : 0.32);
         }
@@ -243,6 +255,14 @@ export class SliceMapManager {
         const revisionKey = JSON.stringify(revision);
         if (revisionKey === this._revisionKey) return false;
         this._revisionKey = revisionKey;
+
+        this.clearRevisionEffects();
+        if (this.currentMapId === 'room_kitchen') {
+            const keepsTableProtection = revision.planeChoice !== 'take';
+            this.safeZones = keepsTableProtection ? cloneAuthoredValue(this.baseSafeZones) : {};
+            this.scene.sliceSafeZones = this.safeZones;
+            if (revision.tableSolved && keepsTableProtection) this.createKitchenProtectionEffects();
+        }
 
         this.refreshDoorAccess(sliceState);
         this.scene.sliceRoomRevision = cloneAuthoredValue(revision);
@@ -278,6 +298,32 @@ export class SliceMapManager {
         return true;
     }
 
+    createKitchenProtectionEffects() {
+        const table = this.mapDef?.objects?.table;
+        if (!table) return;
+
+        const warmth = this.scene.add.rectangle(table.x, table.y, 104, 84, 0xb37845, 0.09);
+        warmth.objId = 'kitchen_table_warmth';
+        warmth.sliceEffectId = 'kitchen_table_warmth';
+        warmth.setDepth?.(19);
+        if (!this.scene.isMobile) warmth.setPipeline?.('Light2D');
+
+        const steam = this.scene.add.particles(table.offering.x, table.offering.y - 5, 'rain', {
+            speedY: { min: -16, max: -7 },
+            speedX: { min: -3, max: 3 },
+            scale: { start: 0.3, end: 0 },
+            alpha: { start: 0.2, end: 0 },
+            lifespan: 1600,
+            quantity: 1,
+            frequency: 520,
+            tint: 0xe1d5bb
+        });
+        steam.objId = 'kitchen_offering_steam';
+        steam.sliceEffectId = 'kitchen_offering_steam';
+        steam.setDepth?.(22);
+        this.revisionEffects.push(warmth, steam);
+    }
+
     findProp(objId) {
         return (this.interactables?.getChildren?.() || []).find(object => object.objId === objId) || null;
     }
@@ -290,8 +336,17 @@ export class SliceMapManager {
         this.roomEffects = [];
     }
 
+    clearRevisionEffects() {
+        for (const effect of this.revisionEffects) {
+            if (typeof effect?.remove === 'function') effect.remove();
+            else effect?.destroy?.();
+        }
+        this.revisionEffects = [];
+    }
+
     destroy() {
         this.destroyRoomEffects();
+        this.clearRevisionEffects();
         this._revisionKey = null;
     }
 }

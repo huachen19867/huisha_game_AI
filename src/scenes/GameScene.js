@@ -123,14 +123,7 @@ export class GameScene extends Phaser.Scene {
         // Joystick Logic
         this.joystick = { x: 0, y: 0, active: false };
         this.initJoystick();
-        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-            this.destroyJoystick();
-            this.chaseManager?.destroy();
-            this.hauntingDirector?.destroy();
-            window.closePuzzle?.();
-            this.narrativeBeatTimer?.remove();
-            this.narrativeBeatTimer = null;
-        });
+        this.registerShutdownCleanup();
 
         // Initialize Map Manager
         this.mapManager = this.sliceMode ? new SliceMapManager(this) : new MapManager(this);
@@ -777,6 +770,18 @@ export class GameScene extends Phaser.Scene {
         this.mobileUiTimer = null;
         if (this.exitHideListener) document.removeEventListener('touchstart', this.exitHideListener);
         this.exitHideListener = null;
+    }
+
+    registerShutdownCleanup() {
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            this.destroyJoystick();
+            this.sliceMapManager?.destroy();
+            this.chaseManager?.destroy();
+            this.hauntingDirector?.destroy();
+            window.closePuzzle?.();
+            this.narrativeBeatTimer?.remove();
+            this.narrativeBeatTimer = null;
+        });
     }
 
     updateJoystick(clientX, clientY, centerX, centerY, knob, maxDist) {
