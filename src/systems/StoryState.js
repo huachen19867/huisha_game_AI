@@ -1,3 +1,5 @@
+import { ensureSliceState } from './SliceState.js';
+
 export function createDefaultStoryFlags() {
     return {
         clues: { control: 0, illness: 0, death: 0 },
@@ -43,6 +45,7 @@ export function createDefaultGameState() {
         isChasing: false,
         cabinetMoved: false,
         sanity: 100,
+        slice: null,
         storyFlags: createDefaultStoryFlags()
     };
 }
@@ -101,6 +104,7 @@ export function normalizeGameState(gameState) {
     if (!gameState.clues) gameState.clues = [];
     if (gameState.candlesLit === undefined) gameState.candlesLit = 0;
     ensureStoryFlags(gameState);
+    if (gameState.slice?.enabled === true) ensureSliceState(gameState);
     return gameState;
 }
 
