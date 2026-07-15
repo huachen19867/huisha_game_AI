@@ -5,6 +5,7 @@ const indexUrl = new URL('index.html', rootUrl);
 
 const sourceFiles = [
     'src/data/Maps.js',
+    'src/data/SliceMaps.js',
     'src/data/Puzzles.js',
     'src/systems/PuzzleState.js',
     'src/systems/TextureGenerator.js',
