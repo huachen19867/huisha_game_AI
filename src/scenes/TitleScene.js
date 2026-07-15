@@ -41,10 +41,16 @@ export class TitleScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        const authorText = this.add.text(400, 280, '作者WeChat：baidai_baidai', {
+        const previewText = this.add.text(400, 290, '实体解谜重做预览', {
             fontFamily: '"SimSun", serif',
-            fontSize: '24px',
-            color: '#aaaaaa'
+            fontSize: '20px',
+            color: '#777777'
+        }).setOrigin(0.5);
+
+        const authorText = this.add.text(400, 550, '作者WeChat：baidai_baidai', {
+            fontFamily: '"SimSun", serif',
+            fontSize: '14px',
+            color: '#777777'
         }).setOrigin(0.5);
 
         this.tweens.add({
