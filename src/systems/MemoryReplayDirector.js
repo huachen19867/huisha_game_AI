@@ -90,6 +90,7 @@ export class MemoryReplayDirector {
             callbackCalled: false,
             objects: [],
             tweens: [],
+            worldSnapshots: [],
             timer: null
         };
         this.session = session;
@@ -139,9 +140,27 @@ export class MemoryReplayDirector {
     }
 
     ownTween(session, config) {
+        const targets = Array.isArray(config.targets) ? config.targets : [config.targets];
+        for (const target of targets) {
+            if (!target || session.objects.includes(target)) continue;
+            this.snapshotWorldTarget(session, target, config);
+        }
         const tween = this.scene.tweens?.add?.(config);
         if (tween) session.tweens.push(tween);
         return tween;
+    }
+
+    snapshotWorldTarget(session, target, config) {
+        let snapshot = session.worldSnapshots.find(entry => entry.target === target);
+        if (!snapshot) {
+            snapshot = { target, properties: {} };
+            session.worldSnapshots.push(snapshot);
+        }
+        for (const property of ['x', 'y', 'alpha', 'angle', 'scale']) {
+            if (Object.hasOwn(config, property) && !Object.hasOwn(snapshot.properties, property)) {
+                snapshot.properties[property] = target[property];
+            }
+        }
     }
 
     createActor(session, actorId, position) {
@@ -201,9 +220,10 @@ export class MemoryReplayDirector {
         const table = this.tableData();
         const actor = this.createActor(session, 'child', table.seats.side);
         const shard = this.findProp('door_shard');
+        const door = this.findDoor('kitchen_side_door');
         const shadow = this.ownObject(
             session,
-            setReplayObjectDepth(this.scene.add?.image?.(table.seats.side.x, table.seats.side.y - 14, 'blue_shard'), 31),
+            setReplayObjectDepth(this.scene.add?.image?.(table.seats.side.x, table.seats.side.y - 14, 'toy_plane'), 31),
             'child_plane_shadow'
         );
         shadow?.setAlpha?.(0.34);
@@ -213,8 +233,26 @@ export class MemoryReplayDirector {
             'child_shard_answer'
         );
         shardAnswer?.setStrokeStyle?.(1, 0xa6c2d4, 0.6);
-        if (actor) this.ownTween(session, { targets: actor, x: shard?.x ?? 560, y: shard?.y ?? 272, duration: 1800, ease: 'Sine.easeIn' });
-        if (shadow) this.ownTween(session, { targets: shadow, x: shard?.x ?? 560, y: shard?.y ?? 272, angle: 28, duration: 1100 });
+        const mismatch = this.ownObject(
+            session,
+            setReplayObjectDepth(
+                this.scene.add?.image?.((shard?.x ?? 560) + 16, (shard?.y ?? 272) - 10, 'blue_shard'),
+                31
+            ),
+            'child_shard_mismatch'
+        );
+        mismatch?.setAlpha?.(0.38);
+        if (actor) this.ownTween(session, { targets: actor, x: door?.x ?? 624, y: door?.y ?? 272, duration: 1800, ease: 'Sine.easeIn' });
+        if (shadow) this.ownTween(session, {
+            targets: shadow,
+            x: door?.x ?? 624,
+            y: door?.y ?? 272,
+            angle: 28,
+            duration: 920,
+            ease: 'Sine.easeIn',
+            yoyo: true
+        });
+        if (mismatch) this.ownTween(session, { targets: mismatch, alpha: 0.68, duration: 140, yoyo: true, repeat: 2 });
         if (shard) this.ownTween(session, { targets: shard, alpha: 1, duration: 90, yoyo: true, repeat: 3 });
         this.scene.playSound?.(180, 'triangle', 0.12);
         this.scene.playSound?.(84, 'square', 0.08);
@@ -294,8 +332,15 @@ export class MemoryReplayDirector {
             if (typeof tween?.remove === 'function') tween.remove();
             else tween?.destroy?.();
         }
+        for (const snapshot of session.worldSnapshots) {
+            for (const [property, value] of Object.entries(snapshot.properties)) {
+                snapshot.target[property] = value;
+            }
+        }
         for (const object of session.objects) object?.destroy?.();
+        this.scene.sliceMapManager?.refreshDoorAccess?.(this.state);
         session.tweens = [];
+        session.worldSnapshots = [];
         session.objects = [];
         if (this.session === session) this.session = null;
         this.active = false;

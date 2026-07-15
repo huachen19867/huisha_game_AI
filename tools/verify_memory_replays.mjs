@@ -152,9 +152,13 @@ function createReplayScene(state = createDefaultSliceState(), { preservePhase = 
         stove_stain: makeDisplayObject('prop', 480, 112, 'stove'),
         door_shard: makeDisplayObject('prop', 560, 272, 'blue_shard')
     };
+    props.stove_stain.alpha = 0.63;
+    props.door_shard.alpha = 0.71;
     const sideDoor = makeDisplayObject('door', 624, 272, 'tile_wall');
     sideDoor.doorId = 'kitchen_side_door';
     sideDoor.locked = true;
+    sideDoor.alpha = 0.82;
+    sideDoor.tint = 0x4a2727;
     const events = makeEvents();
     const scene = {
         sliceState: state,
@@ -194,6 +198,14 @@ function createReplayScene(state = createDefaultSliceState(), { preservePhase = 
                     config,
                     stopped: false,
                     destroyed: false,
+                    applyEnd() {
+                        const targets = Array.isArray(config.targets) ? config.targets : [config.targets];
+                        for (const target of targets) {
+                            for (const property of ['x', 'y', 'alpha', 'angle', 'scale']) {
+                                if (Object.hasOwn(config, property)) target[property] = config[property];
+                            }
+                        }
+                    },
                     stop() { this.stopped = true; },
                     remove() { this.destroyed = true; },
                     destroy() { this.destroyed = true; }
@@ -217,6 +229,8 @@ function createReplayScene(state = createDefaultSliceState(), { preservePhase = 
         refreshDoorAccess(nextState) {
             this.refreshCalls += 1;
             sideDoor.locked = nextState.tableSolved !== true;
+            sideDoor.setTint(sideDoor.locked ? 0x4a2727 : 0x796754);
+            sideDoor.setAlpha(sideDoor.locked ? 0.82 : 0.32);
         },
         applyRoomRevision() { this.revisionCalls += 1; return true; }
     };
@@ -225,6 +239,11 @@ function createReplayScene(state = createDefaultSliceState(), { preservePhase = 
 }
 
 const ACTION_EXPECTATIONS = {
+    child_shard: {
+        actors: ['child'],
+        effects: ['child_plane_shadow', 'child_shard_answer', 'child_shard_mismatch'],
+        prop: 'door_shard'
+    },
     father_lock: {
         actors: ['father'],
         effects: ['father_chair_pull', 'father_door_latch'],
@@ -234,11 +253,6 @@ const ACTION_EXPECTATIONS = {
         actors: ['mother'],
         effects: ['mother_bowl_break', 'mother_stain_return'],
         prop: 'stove_stain'
-    },
-    child_shard: {
-        actors: ['child'],
-        effects: ['child_plane_shadow', 'child_shard_answer'],
-        prop: 'door_shard'
     },
     correct_meal: {
         actors: ['father', 'mother', 'child'],
@@ -266,6 +280,22 @@ for (const [id, expected] of Object.entries(ACTION_EXPECTATIONS)) {
     assert.ok(created.filter(object => object.sliceReplayActor).every(object => object.texture.key === 'npc_paper'));
     for (const effectId of expected.effects) {
         assert.ok(created.some(object => object.sliceReplayEffectId === effectId), `${id} missing effect ${effectId}`);
+    }
+    if (id === 'child_shard') {
+        const plane = created.find(object => object.sliceReplayEffectId === 'child_plane_shadow');
+        const planeTween = tweens.find(tween => tween.config.targets === plane);
+        const mismatch = created.find(object => object.sliceReplayEffectId === 'child_shard_mismatch');
+        assert.equal(plane.texture.key, 'toy_plane', 'the door impact must visibly use the authored paper plane');
+        assert.equal(planeTween.config.x, sideDoor.x);
+        assert.equal(planeTween.config.y, sideDoor.y);
+        assert.equal(planeTween.config.yoyo, true, 'paper plane impact needs a visible rebound');
+        assert.ok(planeTween.config.duration <= 1200, 'paper plane impact must stay short and percussive');
+        assert.equal(mismatch.texture.key, 'blue_shard');
+        assert.notDeepEqual(
+            [mismatch.x, mismatch.y],
+            [props.door_shard.x, props.door_shard.y],
+            'the mismatch outline must be visibly offset from the real threshold shard'
+        );
     }
     if (expected.prop) {
         assert.ok(
@@ -295,14 +325,41 @@ for (const [id, expected] of Object.entries(ACTION_EXPECTATIONS)) {
         assert.equal(state.houseRuleDemonstrated, false);
         assert.equal(sideDoor.locked, false);
         assert.equal(scene.kitchenTableController.syncCalls, 1);
-        assert.equal(scene.sliceMapManager.refreshCalls, 1);
+        assert.equal(scene.sliceMapManager.refreshCalls, 2, 'cleanup restores the door before the solved commit opens it');
         assert.equal(scene.sliceMapManager.revisionCalls, 1);
     } else {
         assert.equal(state.tableSolved, false);
         assert.equal(state.slicePhase, 'table');
         assert.equal(sideDoor.locked, true);
-        assert.equal(scene.sliceMapManager.refreshCalls, 0);
+        assert.equal(scene.sliceMapManager.refreshCalls, 1, 'cleanup must restore authored door visuals after every replay');
     }
+}
+
+for (const [id, worldProperties] of Object.entries({
+    father_lock: [['nailed_chair', 'x'], ['sideDoor', 'alpha']],
+    mother_break: [['stove_stain', 'alpha']],
+    child_shard: [['door_shard', 'alpha']]
+})) {
+    const context = createReplayScene();
+    const { scene, state, clock, tweens, props, sideDoor } = context;
+    const worldTargets = { ...props, sideDoor };
+    const originals = worldProperties.map(([targetId, property]) => [targetId, property, worldTargets[targetId][property]]);
+    const director = new MemoryReplayDirector(scene, state);
+    director.play(id);
+    for (const tween of tweens) tween.applyEnd();
+    for (const [targetId, property, original] of originals) {
+        assert.notEqual(worldTargets[targetId][property], original, `${id} test must actually advance ${targetId}.${property}`);
+    }
+    director.destroy();
+    clock.advance(10000);
+    for (const [targetId, property, original] of originals) {
+        const expected = targetId === 'sideDoor' && property === 'alpha' ? 0.82 : original;
+        assert.equal(worldTargets[targetId][property], expected, `${id} must restore ${targetId}.${property}`);
+    }
+    assert.equal(sideDoor.locked, true);
+    assert.equal(sideDoor.tint, 0x4a2727);
+    assert.equal(scene.sliceMapManager.refreshCalls, 1);
+    assert.equal(state.tableSolved, false);
 }
 
 for (const id of MEAL_CONTRADICTION_IDS) {
