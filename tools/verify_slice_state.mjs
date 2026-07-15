@@ -14,6 +14,7 @@ import { SLICE_DOOR_IDS } from '../src/data/SliceMaps.js';
 import { createDefaultGameState, normalizeGameState } from '../src/systems/StoryState.js';
 
 const initial = createDefaultSliceState();
+const canonicalSliceKeys = Object.keys(initial);
 assert.deepEqual(initial, {
     enabled: true,
     slicePhase: 'arrival',
@@ -60,6 +61,28 @@ assert.deepEqual(partialSliceState.slice.mealReplaySeen, ['first_meal', 'second_
 
 const invalidReplayState = { slice: { mealReplaySeen: 'first_meal' } };
 assert.deepEqual(ensureSliceState(invalidReplayState).mealReplaySeen, []);
+
+const injectedSlice = {
+    enabled: 'yes',
+    mealReplaySeen: ['first_meal'],
+    contradictionsSeen: ['father_lock'],
+    injectedUnknownField: { unsafe: true }
+};
+const injectedSliceSnapshot = structuredClone(injectedSlice);
+const injectedState = { slice: injectedSlice };
+const canonicalInjectedSlice = ensureSliceState(injectedState);
+assert.deepEqual(Object.keys(canonicalInjectedSlice), canonicalSliceKeys);
+assert.equal(Object.hasOwn(canonicalInjectedSlice, 'contradictionsSeen'), false);
+assert.equal(Object.hasOwn(canonicalInjectedSlice, 'injectedUnknownField'), false);
+assert.deepEqual(canonicalInjectedSlice.mealReplaySeen, ['first_meal']);
+assert.equal(canonicalInjectedSlice.enabled, true);
+assert.notEqual(canonicalInjectedSlice, injectedSlice);
+assert.deepEqual(injectedSlice, injectedSliceSnapshot);
+
+assert.deepEqual(
+    [false, 'yes'].map(enabled => ensureSliceState({ slice: { enabled } }).enabled),
+    [true, true]
+);
 
 const corruptPlacements = { nail: 'wine', stove: 'wine', side: 'unknown', extra: 'child' };
 const corruptReplay = [7, '', 'first_meal', 'first_meal', null, 'second_meal'];
@@ -266,6 +289,17 @@ const disabledSliceState = { slice: disabledSlice };
 normalizeGameState(disabledSliceState);
 assert.equal(disabledSliceState.slice, disabledSlice);
 assert.deepEqual(disabledSliceState.slice, disabledSliceSnapshot);
+
+const nonBooleanEnabledSlice = {
+    enabled: 'yes',
+    contradictionsSeen: ['legacy_value'],
+    injectedUnknownField: true
+};
+const nonBooleanEnabledSnapshot = structuredClone(nonBooleanEnabledSlice);
+const nonBooleanEnabledState = { slice: nonBooleanEnabledSlice };
+normalizeGameState(nonBooleanEnabledState);
+assert.equal(nonBooleanEnabledState.slice, nonBooleanEnabledSlice);
+assert.deepEqual(nonBooleanEnabledState.slice, nonBooleanEnabledSnapshot);
 
 const unmarkedSlice = {
     slicePhase: 'complete',

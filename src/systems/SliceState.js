@@ -52,8 +52,7 @@ export function ensureSliceState(gameState) {
         ? [...new Set(source.mealReplaySeen.filter(replayId => typeof replayId === 'string' && replayId.length > 0))]
         : [];
     gameState.slice = {
-        ...defaults,
-        ...source,
+        enabled: true,
         slicePhase,
         bowlPlacements,
         heldBowl,
