@@ -11,6 +11,7 @@ const sourceFiles = [
     'src/systems/TextureGenerator.js',
     'src/systems/StoryState.js',
     'src/systems/SliceState.js',
+    'src/systems/KitchenTableRules.js',
     'src/systems/NarrativeDirector.js',
     'src/systems/RuntimeState.js',
     'src/systems/InteractionRules.js',
