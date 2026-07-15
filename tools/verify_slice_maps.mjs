@@ -1,12 +1,39 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SliceMaps, getSliceDoorAccess } from '../src/data/SliceMaps.js';
+import {
+    SLICE_DOOR_IDS,
+    SliceMaps,
+    getSliceDoorAccess,
+    isSliceDoorId
+} from '../src/data/SliceMaps.js';
 import { createDefaultSliceState } from '../src/systems/SliceState.js';
 
 const TILE_SIZE = 32;
 const mapIds = ['room_main', 'room_kitchen', 'room_bedroom_me'];
 
 assert.deepEqual(Object.keys(SliceMaps), mapIds);
+assert.deepEqual(SLICE_DOOR_IDS, [
+    'main_kitchen_door',
+    'kitchen_main_door',
+    'kitchen_side_door',
+    'bedroom_side_door',
+    'bedroom_main_door'
+]);
+assert.equal(Object.isFrozen(SLICE_DOOR_IDS), true);
+for (const doorId of SLICE_DOOR_IDS) assert.equal(isSliceDoorId(doorId), true);
+for (const unknownDoorId of [
+    undefined,
+    null,
+    '',
+    1,
+    '__proto__',
+    'constructor',
+    'toString',
+    'main_to_kitchen',
+    'missing_slice_door'
+]) {
+    assert.equal(isSliceDoorId(unknownDoorId), false);
+}
 
 const expectedMapMetadata = {
     room_main: {
@@ -95,6 +122,41 @@ function assertPixelAnchorInside(map, anchor, description) {
     assert.ok(tileX >= 0 && tileX < map.width, `${description} x is outside ${map.id}`);
     assert.ok(tileY >= 0 && tileY < map.height, `${description} y is outside ${map.id}`);
     assert.equal(map.data[tileY][tileX], 0, `${description} lands on a wall in ${map.id}`);
+}
+
+function assertPixelRectInside(map, rect, description) {
+    assert.ok(rect && typeof rect === 'object', `${description} must be an object`);
+    for (const key of ['x', 'y', 'width', 'height']) {
+        assert.equal(typeof rect[key], 'number', `${description} ${key} must be a number`);
+    }
+    assert.ok(rect.width > 0, `${description} width must be positive`);
+    assert.ok(rect.height > 0, `${description} height must be positive`);
+    assert.ok(rect.x >= 0 && rect.x + rect.width <= map.width * TILE_SIZE, `${description} x bounds escape ${map.id}`);
+    assert.ok(rect.y >= 0 && rect.y + rect.height <= map.height * TILE_SIZE, `${description} y bounds escape ${map.id}`);
+
+    const minTileX = Math.floor(rect.x / TILE_SIZE);
+    const maxTileX = Math.ceil((rect.x + rect.width) / TILE_SIZE) - 1;
+    const minTileY = Math.floor(rect.y / TILE_SIZE);
+    const maxTileY = Math.ceil((rect.y + rect.height) / TILE_SIZE) - 1;
+    for (let tileY = minTileY; tileY <= maxTileY; tileY += 1) {
+        for (let tileX = minTileX; tileX <= maxTileX; tileX += 1) {
+            assert.ok(
+                tileX > 0 && tileX < map.width - 1 && tileY > 0 && tileY < map.height - 1,
+                `${description} overlaps a boundary tile at ${tileX},${tileY}`
+            );
+            assert.equal(map.data[tileY][tileX], 0, `${description} overlaps a wall at ${tileX},${tileY}`);
+        }
+    }
+}
+
+function rectContainsPoint(rect, point) {
+    return point.x >= rect.x && point.x < rect.x + rect.width &&
+        point.y >= rect.y && point.y < rect.y + rect.height;
+}
+
+function rectsOverlap(left, right) {
+    return left.x < right.x + right.width && left.x + left.width > right.x &&
+        left.y < right.y + right.height && left.y + left.height > right.y;
 }
 
 for (const [mapId, map] of Object.entries(SliceMaps)) {
@@ -261,6 +323,42 @@ for (const map of Object.values(SliceMaps)) {
 
 const kitchen = SliceMaps.room_kitchen;
 const table = kitchen.objects.table;
+assert.deepEqual(table.collisionBounds, { x: 280, y: 208, width: 80, height: 64 });
+assert.deepEqual(table.safeZones, {
+    under_table: { x: 296, y: 272, width: 48, height: 24 }
+});
+assertPixelRectInside(kitchen, table.collisionBounds, 'kitchen table collision');
+assertPixelRectInside(kitchen, table.safeZones.under_table, 'kitchen under-table safe zone');
+
+for (const [anchorName, anchor] of Object.entries({
+    ...table.seats,
+    offering: table.offering,
+    playerStart: kitchen.objects.playerStart,
+    ...Object.fromEntries(
+        Object.values(SliceMaps)
+            .flatMap(map => map.objects.doors)
+            .filter(door => door.targetMap === kitchen.id)
+            .map(door => [`${door.id}Target`, { x: door.targetX, y: door.targetY }])
+    )
+})) {
+    assert.equal(
+        rectContainsPoint(table.collisionBounds, anchor),
+        false,
+        `kitchen table collision must not cover ${anchorName}`
+    );
+}
+
+const underTable = table.safeZones.under_table;
+assert.equal(rectsOverlap(table.collisionBounds, underTable), false);
+for (const [anchorName, anchor] of Object.entries({ ...table.seats, offering: table.offering })) {
+    assert.equal(rectContainsPoint(underTable, anchor), false, `under-table safe zone must not contain ${anchorName}`);
+}
+assert.equal(Object.hasOwn(table, 'navigationBlockedBounds'), false);
+assert.equal(Object.hasOwn(underTable, 'collisionBounds'), false);
+const furnitureBlockers = [table.collisionBounds];
+assert.deepEqual(furnitureBlockers, [{ x: 280, y: 208, width: 80, height: 64 }]);
+assert.equal(furnitureBlockers.includes(underTable), false);
+
 assert.deepEqual(table, {
     x: 320,
     y: 240,
@@ -274,6 +372,10 @@ assert.deepEqual(table, {
         wine: { x: 176, y: 120 },
         medicine: { x: 224, y: 120 },
         child: { x: 272, y: 120 }
+    },
+    collisionBounds: { x: 280, y: 208, width: 80, height: 64 },
+    safeZones: {
+        under_table: { x: 296, y: 272, width: 48, height: 24 }
     }
 });
 assert.deepEqual(Object.keys(table.seats), ['nail', 'stove', 'side']);
@@ -424,6 +526,37 @@ assert.deepEqual(
         }
     ]
 );
+
+assert.equal(Object.isFrozen(SliceMaps), true, 'SliceMaps root must be frozen');
+for (const map of Object.values(SliceMaps)) {
+    assert.equal(Object.isFrozen(map), true, `${map.id} map must be frozen`);
+    assert.equal(Object.isFrozen(map.data), true, `${map.id} data array must be frozen`);
+    for (const row of map.data) assert.equal(Object.isFrozen(row), true, `${map.id} data row must be frozen`);
+    assert.equal(Object.isFrozen(map.objects), true, `${map.id} objects must be frozen`);
+    assert.equal(Object.isFrozen(map.objects.doors), true, `${map.id} doors array must be frozen`);
+    for (const door of map.objects.doors) assert.equal(Object.isFrozen(door), true, `${door.id} door must be frozen`);
+    assert.equal(Object.isFrozen(map.objects.props), true, `${map.id} props array must be frozen`);
+    for (const prop of map.objects.props) assert.equal(Object.isFrozen(prop), true, `${prop.id} prop must be frozen`);
+}
+assert.equal(Object.isFrozen(table), true, 'kitchen table must be frozen');
+assert.equal(Object.isFrozen(table.collisionBounds), true, 'kitchen table collision must be frozen');
+assert.equal(Object.isFrozen(table.safeZones), true, 'kitchen safe-zone registry must be frozen');
+assert.equal(Object.isFrozen(table.safeZones.under_table), true, 'under-table safe zone must be frozen');
+
+assert.throws(() => { kitchen.data[1][1] = 1; }, TypeError);
+assert.throws(() => { kitchen.objects.doors[0].id = 'mutated'; }, TypeError);
+assert.throws(() => { kitchen.objects.props[0].id = 'mutated'; }, TypeError);
+assert.throws(() => { table.x = 0; }, TypeError);
+
+function assertDeepFrozen(value, path = 'SliceMaps', seen = new Set()) {
+    if (value === null || typeof value !== 'object' || seen.has(value)) return;
+    seen.add(value);
+    assert.equal(Object.isFrozen(value), true, `${path} must be frozen`);
+    for (const [key, nestedValue] of Object.entries(value)) {
+        assertDeepFrozen(nestedValue, `${path}.${key}`, seen);
+    }
+}
+assertDeepFrozen(SliceMaps);
 
 const builderSource = readFileSync(new URL('./build_standalone_entry.mjs', import.meta.url), 'utf8');
 const mapsEntry = "    'src/data/Maps.js',";

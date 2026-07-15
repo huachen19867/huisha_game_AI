@@ -16,7 +16,14 @@ function boxedRoom(width, height, openings) {
     return data;
 }
 
-export const SliceMaps = {
+function deepFreeze(value) {
+    if (value === null || typeof value !== 'object' || Object.isFrozen(value)) return value;
+    Object.freeze(value);
+    for (const nestedValue of Object.values(value)) deepFreeze(nestedValue);
+    return value;
+}
+
+export const SliceMaps = deepFreeze({
     room_main: {
         id: 'room_main',
         name: '正厅',
@@ -124,6 +131,10 @@ export const SliceMaps = {
                     wine: { x: 176, y: 120 },
                     medicine: { x: 224, y: 120 },
                     child: { x: 272, y: 120 }
+                },
+                collisionBounds: { x: 280, y: 208, width: 80, height: 64 },
+                safeZones: {
+                    under_table: { x: 296, y: 272, width: 48, height: 24 }
                 }
             },
             props: [
@@ -258,9 +269,25 @@ export const SliceMaps = {
             ]
         }
     }
-};
+});
+
+export const SLICE_DOOR_IDS = Object.freeze(
+    Object.values(SliceMaps).flatMap(map => map.objects.doors.map(door => door.id))
+);
+
+const SLICE_DOOR_REGISTRY = Object.freeze(
+    Object.fromEntries(SLICE_DOOR_IDS.map(doorId => [doorId, true]))
+);
+
+export function isSliceDoorId(id) {
+    return typeof id === 'string' && Object.hasOwn(SLICE_DOOR_REGISTRY, id);
+}
 
 export function getSliceDoorAccess(doorId, state) {
+    if (!isSliceDoorId(doorId)) {
+        throw new Error(`Unknown slice door: ${doorId}`);
+    }
+
     switch (doorId) {
         case 'main_kitchen_door':
         case 'kitchen_main_door':
@@ -271,7 +298,7 @@ export function getSliceDoorAccess(doorId, state) {
             return state?.planeChoice === 'take';
         case 'bedroom_main_door':
             return state?.planeChoice === 'take' || state?.planeChoice === 'leave';
-        default:
-            throw new Error(`Unknown slice door: ${doorId}`);
     }
+
+    throw new Error(`Unhandled slice door: ${doorId}`);
 }
