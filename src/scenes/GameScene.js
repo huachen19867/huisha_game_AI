@@ -5,6 +5,8 @@ import { InteractionManager } from '../systems/InteractionManager.js';
 import { EventManager } from '../systems/EventManager.js';
 import { MapManager } from '../systems/MapManager.js';
 import { SliceMapManager } from '../systems/SliceMapManager.js';
+import { SliceInteractionManager } from '../systems/SliceInteractionManager.js';
+import { KitchenTableController } from '../systems/KitchenTableController.js';
 import { SoundManager } from '../systems/SoundManager.js';
 import { createDefaultGameState, getTruthLevel, normalizeGameState } from '../systems/StoryState.js';
 import { ensureSliceState } from '../systems/SliceState.js';
@@ -76,6 +78,7 @@ export class GameScene extends Phaser.Scene {
         this.rightCandle = null;
         this.shownCorridorHint = false;
         this.chaser = null; // Reset chaser ref
+        this.kitchenTableController = null;
 
         this.safe = null; // New Safe Object
         this.wet_paper = null; // New Clue Object
@@ -234,9 +237,16 @@ export class GameScene extends Phaser.Scene {
             loop: true
         });
 
+        // Interaction UI must exist before either interaction system captures the scene surface.
+        this.interactText = this.add.text(0, 0, '按 [空格] / [A] 调查', {
+            fontSize: '16px',
+            color: '#fff',
+            backgroundColor: '#000'
+        }).setOrigin(0.5).setVisible(false).setDepth(400);
+
         // Initialize Systems
         this.eventManager = new EventManager(this);
-        this.interactionManager = new InteractionManager(this);
+        this.initializeInteractionSystems();
 
         // Random Horror Events (Poltergeist)
         this.time.addEvent({
@@ -249,13 +259,6 @@ export class GameScene extends Phaser.Scene {
             },
             loop: true
         });
-
-        // UI Text
-        this.interactText = this.add.text(0, 0, '按 [空格] / [A] 调查', {
-            fontSize: '16px',
-            color: '#fff',
-            backgroundColor: '#000'
-        }).setOrigin(0.5).setVisible(false).setDepth(400);
 
         // Intro Dialog (Prologue)
         if (this.currentMapId === 'room_prologue' && !this.gameState.viewedIntro) {
@@ -280,6 +283,15 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.showPostMemoryDialog();
+    }
+
+    initializeInteractionSystems() {
+        this.kitchenTableController = this.sliceMode && this.currentMapId === 'room_kitchen'
+            ? new KitchenTableController(this)
+            : null;
+        this.interactionManager = this.sliceMode
+            ? new SliceInteractionManager(this)
+            : new InteractionManager(this);
     }
 
     update(time, delta) {
@@ -335,6 +347,7 @@ export class GameScene extends Phaser.Scene {
             this.player.update(this.cursors, this.wasd, this.joystick, this.soundManager, delta);
         }
 
+        this.kitchenTableController?.update();
         if (this.interactionManager) this.interactionManager.update();
 
         this.physics.overlap(this.player.sprite, this.doors, (player, door) => {
@@ -804,6 +817,8 @@ export class GameScene extends Phaser.Scene {
     registerShutdownCleanup() {
         this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
             this.destroyJoystick();
+            this.interactionManager?.destroy?.();
+            this.kitchenTableController?.destroy?.();
             this.sliceMapManager?.destroy();
             this.chaseManager?.destroy();
             this.hauntingDirector?.destroy();

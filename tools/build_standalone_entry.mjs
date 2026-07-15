@@ -27,6 +27,8 @@ const sourceFiles = [
     'src/systems/EventManager.js',
     'src/systems/MapManager.js',
     'src/systems/SliceMapManager.js',
+    'src/systems/SliceInteractionManager.js',
+    'src/systems/KitchenTableController.js',
     'src/systems/InteractionManager.js',
     'src/scenes/BootScene.js',
     'src/scenes/TitleScene.js',
