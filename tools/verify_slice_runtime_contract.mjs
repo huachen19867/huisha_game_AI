@@ -375,6 +375,86 @@ assert.deepEqual(runTransitions(true).map(payload => payload.sliceMode), [true, 
 assert.deepEqual(runTransitions(false).map(payload => payload.sliceMode), [false, false]);
 
 globalThis.window ??= {};
+const dialogCalls = [];
+window.showDialog = (...args) => dialogCalls.push(args);
+
+let sliceKeyChecks = 0;
+let sliceSwitchCalls = 0;
+let sliceCameraShakes = 0;
+const sliceDoorSounds = [];
+const sliceDoorTweens = [];
+const sliceLockedScene = new GameScene();
+sliceLockedScene.init({ mapId: 'room_kitchen', sliceMode: true });
+sliceLockedScene.gameState = {
+    inventory: { includes() { sliceKeyChecks += 1; return true; } },
+    lastLockedMsg: null
+};
+sliceLockedScene.time = { now: 1000 };
+sliceLockedScene.playSound = (...args) => sliceDoorSounds.push(args);
+sliceLockedScene.switchScene = () => { sliceSwitchCalls += 1; };
+sliceLockedScene.tweens = { add(config) { sliceDoorTweens.push(config); return config; } };
+sliceLockedScene.cameras = { main: { shake() { sliceCameraShakes += 1; } } };
+const lockedSliceDoor = {
+    locked: true,
+    key: 'silver_key',
+    x: 100,
+    targetMap: 'room_bedroom_me',
+    targetX: 64,
+    targetY: 256
+};
+assert.equal(sliceLockedScene.handleLockedDoor(lockedSliceDoor), false);
+assert.equal(sliceLockedScene.handleLockedDoor(lockedSliceDoor), false, 'slice feedback must be throttled');
+assert.equal(sliceKeyChecks, 0, 'slice locks must never inspect legacy silver-key inventory');
+assert.equal(sliceSwitchCalls, 0);
+assert.equal(dialogCalls.length, 0, 'slice lock feedback must remain diegetic');
+assert.equal(lockedSliceDoor.locked, true);
+assert.equal(sliceCameraShakes, 0, 'slice lock feedback must not shake or blur the camera');
+assert.equal(sliceDoorSounds.length, 1);
+assert.equal(sliceDoorTweens.length, 1);
+assert.equal(sliceDoorTweens[0].targets, lockedSliceDoor);
+assert.equal(sliceDoorTweens[0].yoyo, true);
+assert.ok(sliceDoorTweens[0].duration <= 100);
+assert.ok(Math.abs(sliceDoorTweens[0].x - lockedSliceDoor.x) <= 4);
+sliceLockedScene.time.now += 901;
+assert.equal(sliceLockedScene.handleLockedDoor(lockedSliceDoor), false);
+assert.equal(sliceDoorSounds.length, 2);
+assert.equal(sliceDoorTweens.length, 2);
+
+const legacyKeyScene = new GameScene();
+legacyKeyScene.init({ mapId: 'room_main', sliceMode: false });
+legacyKeyScene.gameState = { inventory: ['地下室钥匙'], lastLockedMsg: null };
+legacyKeyScene.time = { now: 2000 };
+const legacyKeySwitches = [];
+const legacyKeySounds = [];
+legacyKeyScene.switchScene = (...args) => legacyKeySwitches.push(args);
+legacyKeyScene.playSound = (...args) => legacyKeySounds.push(args);
+const keyedDoor = {
+    locked: true,
+    key: 'silver_key',
+    targetMap: 'room_basement',
+    targetX: 320,
+    targetY: 128
+};
+assert.equal(legacyKeyScene.handleLockedDoor(keyedDoor), true);
+assert.equal(keyedDoor.locked, false);
+assert.deepEqual(legacyKeySwitches, [['room_basement', 320, 128, undefined]]);
+assert.deepEqual(legacyKeySounds, [[400, 'sine', 1]]);
+assert.equal(dialogCalls.length, 0);
+
+const legacyNoKeyScene = new GameScene();
+legacyNoKeyScene.init({ mapId: 'room_main', sliceMode: false });
+legacyNoKeyScene.gameState = { inventory: [], lastLockedMsg: null };
+legacyNoKeyScene.time = { now: 3000 };
+let legacyNoKeySwitches = 0;
+legacyNoKeyScene.switchScene = () => { legacyNoKeySwitches += 1; };
+assert.equal(legacyNoKeyScene.handleLockedDoor({ ...keyedDoor, locked: true }), false);
+assert.equal(legacyNoKeyScene.handleLockedDoor({ ...keyedDoor, locked: true }), false);
+assert.equal(legacyNoKeySwitches, 0);
+assert.deepEqual(dialogCalls, [['主角', '门锁住了。需要一把银色的钥匙。']]);
+legacyNoKeyScene.time.now += 2001;
+assert.equal(legacyNoKeyScene.handleLockedDoor({ ...keyedDoor, locked: true }), false);
+assert.equal(dialogCalls.length, 2, 'legacy no-key dialog must keep its existing cooldown');
+
 let shutdownHandler = null;
 let sliceMapDestroyCalls = 0;
 const shutdownScene = new GameScene();

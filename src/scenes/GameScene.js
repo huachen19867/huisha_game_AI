@@ -339,21 +339,7 @@ export class GameScene extends Phaser.Scene {
 
         this.physics.overlap(this.player.sprite, this.doors, (player, door) => {
             if (door.locked) {
-                // Check for key
-                let hasKey = false;
-                if (door.key === 'silver_key' && this.gameState.inventory.includes('地下室钥匙')) hasKey = true;
-
-                if (hasKey) {
-                    // Unlock
-                    door.locked = false; // Permanently unlock in this session (though map reload resets it, we should check inventory on create map actually. But for now, simple is fine)
-                    this.switchScene(door.targetMap, door.targetX, door.targetY, door.doorId || door.objId);
-                    this.playSound(400, 'sine', 1);
-                } else {
-                    if (!this.gameState.lastLockedMsg || this.time.now - this.gameState.lastLockedMsg > 2000) {
-                        this.gameState.lastLockedMsg = this.time.now;
-                        window.showDialog('主角', '门锁住了。需要一把银色的钥匙。');
-                    }
-                }
+                this.handleLockedDoor(door);
                 return;
             }
 
@@ -379,6 +365,49 @@ export class GameScene extends Phaser.Scene {
         // Sanity System Logic
         this.updateSanity(delta);
         this.refreshObjective();
+    }
+
+    handleLockedDoor(door) {
+        if (this.sliceMode) {
+            const now = this.time.now;
+            if (
+                this.lastSliceLockedDoorFeedbackAt !== undefined &&
+                now - this.lastSliceLockedDoorFeedbackAt < 900
+            ) {
+                return false;
+            }
+
+            this.lastSliceLockedDoorFeedbackAt = now;
+            const restingX = door.x;
+            this.playSound(115, 'square', 0.08);
+            this.tweens.add({
+                targets: door,
+                x: restingX + 3,
+                duration: 60,
+                yoyo: true,
+                ease: 'Sine.easeInOut',
+                onUpdate: () => door.body?.updateFromGameObject?.(),
+                onComplete: () => {
+                    door.x = restingX;
+                    door.body?.updateFromGameObject?.();
+                }
+            });
+            return false;
+        }
+
+        const hasKey = door.key === 'silver_key' && this.gameState.inventory.includes('地下室钥匙');
+        if (hasKey) {
+            door.locked = false;
+            this.switchScene(door.targetMap, door.targetX, door.targetY, door.doorId || door.objId);
+            this.playSound(400, 'sine', 1);
+            return true;
+        }
+
+        if (!this.gameState.lastLockedMsg || this.time.now - this.gameState.lastLockedMsg > 2000) {
+            this.gameState.lastLockedMsg = this.time.now;
+            window.showDialog('主角', '门锁住了。需要一把银色的钥匙。');
+        }
+        return false;
     }
 
     refreshObjective() {
