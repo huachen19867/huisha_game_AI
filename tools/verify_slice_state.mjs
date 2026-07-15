@@ -52,19 +52,19 @@ assert.deepEqual(gameState.slice, initial);
 const partialSliceState = {
     slice: {
         bowlPlacements: { nail: 'left' },
-        mealReplaySeen: ['first_meal', 'first_meal', 'second_meal']
+        mealReplaySeen: ['father_lock', 'father_lock', 'unknown', 'correct_meal', 'mother_break']
     }
 };
 ensureSliceState(partialSliceState);
 assert.deepEqual(partialSliceState.slice.bowlPlacements, { nail: null, stove: null, side: null });
-assert.deepEqual(partialSliceState.slice.mealReplaySeen, ['first_meal', 'second_meal']);
+assert.deepEqual(partialSliceState.slice.mealReplaySeen, ['father_lock', 'mother_break']);
 
-const invalidReplayState = { slice: { mealReplaySeen: 'first_meal' } };
+const invalidReplayState = { slice: { mealReplaySeen: 'father_lock' } };
 assert.deepEqual(ensureSliceState(invalidReplayState).mealReplaySeen, []);
 
 const injectedSlice = {
     enabled: 'yes',
-    mealReplaySeen: ['first_meal'],
+    mealReplaySeen: ['father_lock', 'correct_meal', 'unknown'],
     contradictionsSeen: ['father_lock'],
     injectedUnknownField: { unsafe: true }
 };
@@ -74,7 +74,7 @@ const canonicalInjectedSlice = ensureSliceState(injectedState);
 assert.deepEqual(Object.keys(canonicalInjectedSlice), canonicalSliceKeys);
 assert.equal(Object.hasOwn(canonicalInjectedSlice, 'contradictionsSeen'), false);
 assert.equal(Object.hasOwn(canonicalInjectedSlice, 'injectedUnknownField'), false);
-assert.deepEqual(canonicalInjectedSlice.mealReplaySeen, ['first_meal']);
+assert.deepEqual(canonicalInjectedSlice.mealReplaySeen, ['father_lock']);
 assert.equal(canonicalInjectedSlice.enabled, true);
 assert.notEqual(canonicalInjectedSlice, injectedSlice);
 assert.deepEqual(injectedSlice, injectedSliceSnapshot);
@@ -85,7 +85,7 @@ assert.deepEqual(
 );
 
 const corruptPlacements = { nail: 'wine', stove: 'wine', side: 'unknown', extra: 'child' };
-const corruptReplay = [7, '', 'first_meal', 'first_meal', null, 'second_meal'];
+const corruptReplay = [7, '', 'father_lock', 'father_lock', null, 'mother_break', 'correct_meal', 'unknown'];
 const corruptSlice = {
     enabled: true,
     slicePhase: 'unknown',
@@ -114,7 +114,7 @@ assert.deepEqual(canonicalSlice, {
     slicePhase: 'arrival',
     bowlPlacements: { nail: 'wine', stove: null, side: null },
     heldBowl: null,
-    mealReplaySeen: ['first_meal', 'second_meal'],
+    mealReplaySeen: ['father_lock', 'mother_break'],
     tableSolved: false,
     houseRuleDemonstrated: false,
     fatherAttention: 'quiet',
@@ -316,13 +316,13 @@ const enabledSliceState = {
     slice: {
         enabled: true,
         bowlPlacements: { side: 'right' },
-        mealReplaySeen: ['meal', 'meal']
+        mealReplaySeen: ['father_lock', 'father_lock', 'correct_meal', 'unknown']
     }
 };
 normalizeGameState(enabledSliceState);
 assert.equal(enabledSliceState.slice.slicePhase, 'arrival');
 assert.deepEqual(enabledSliceState.slice.bowlPlacements, { nail: null, stove: null, side: null });
-assert.deepEqual(enabledSliceState.slice.mealReplaySeen, ['meal']);
+assert.deepEqual(enabledSliceState.slice.mealReplaySeen, ['father_lock']);
 
 const tempRoot = await mkdtemp(join(tmpdir(), 'huisha-slice-state-'));
 try {
@@ -350,26 +350,28 @@ try {
     const sliceBeginMarker = '// BEGIN bundled src/systems/SliceState.js';
     const kitchenRulesBeginMarker = '// BEGIN bundled src/systems/KitchenTableRules.js';
     const kitchenRulesEndMarker = '// END bundled src/systems/KitchenTableRules.js';
+    const replayBeginMarker = '// BEGIN bundled src/systems/MemoryReplayDirector.js';
+    const replayEndMarker = '// END bundled src/systems/MemoryReplayDirector.js';
+    const controllerBeginMarker = '// BEGIN bundled src/systems/KitchenTableController.js';
     const storyEndIndex = generatedIndex.indexOf(storyEndMarker);
     const sliceBeginIndex = generatedIndex.indexOf(sliceBeginMarker);
     const kitchenRulesBeginIndex = generatedIndex.indexOf(kitchenRulesBeginMarker);
     const kitchenRulesEndIndex = generatedIndex.indexOf(kitchenRulesEndMarker);
+    const replayBeginIndex = generatedIndex.indexOf(replayBeginMarker);
+    const replayEndIndex = generatedIndex.indexOf(replayEndMarker);
+    const controllerBeginIndex = generatedIndex.indexOf(controllerBeginMarker);
     assert.notEqual(storyEndIndex, -1, 'generated index must contain the StoryState bundle block');
     assert.notEqual(sliceBeginIndex, -1, 'generated index must contain the SliceState bundle block');
     assert.notEqual(kitchenRulesBeginIndex, -1, 'generated index must contain the KitchenTableRules bundle block');
     assert.notEqual(kitchenRulesEndIndex, -1, 'generated index must contain the KitchenTableRules bundle end marker');
+    assert.notEqual(replayBeginIndex, -1, 'generated index must contain the MemoryReplayDirector bundle block');
+    assert.notEqual(replayEndIndex, -1, 'generated index must contain the MemoryReplayDirector bundle end marker');
+    assert.notEqual(controllerBeginIndex, -1, 'generated index must contain the KitchenTableController bundle block');
     assert.ok(kitchenRulesBeginIndex > storyEndIndex, 'KitchenTableRules bundle block must follow StoryState');
-    assert.equal(
-        generatedIndex.slice(storyEndIndex + storyEndMarker.length, kitchenRulesBeginIndex).trim(),
-        '',
-        'KitchenTableRules bundle block must be immediately after StoryState'
-    );
-    assert.ok(sliceBeginIndex > kitchenRulesEndIndex, 'SliceState bundle block must follow KitchenTableRules');
-    assert.equal(
-        generatedIndex.slice(kitchenRulesEndIndex + kitchenRulesEndMarker.length, sliceBeginIndex).trim(),
-        '',
-        'SliceState bundle block must be immediately after KitchenTableRules'
-    );
+    assert.ok(replayBeginIndex > kitchenRulesEndIndex, 'MemoryReplayDirector must follow KitchenTableRules');
+    assert.ok(sliceBeginIndex > replayEndIndex, 'SliceState must follow its replay registry dependency');
+    assert.ok(controllerBeginIndex > replayEndIndex, 'KitchenTableController must follow MemoryReplayDirector');
+    assert.ok(controllerBeginIndex > sliceBeginIndex, 'KitchenTableController must follow SliceState');
 
     const moduleScripts = [...generatedIndex.matchAll(/<script\b[^>]*type=["']module["'][^>]*>([\s\S]*?)<\/script>/gi)];
     assert.equal(moduleScripts.length, 1, 'generated index must contain one inline module');

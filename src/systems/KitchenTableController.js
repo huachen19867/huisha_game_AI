@@ -3,8 +3,16 @@ import {
     KITCHEN_SEATS,
     evaluateSeating,
     normalizeBowlPlacements,
-    placeBowl
+    placeBowl,
+    selectContradiction
 } from './KitchenTableRules.js';
+import {
+    MemoryReplayDirector,
+    markReplaySeen,
+    normalizeMealReplaySeen,
+    shouldUseShortReplay
+} from './MemoryReplayDirector.js';
+import { transitionSlicePhase } from './SliceState.js';
 
 const HELD_BOWL_OFFSET = Object.freeze({ x: 18, y: -28 });
 
@@ -47,6 +55,10 @@ function syncBody(object) {
     object?.body?.updateFromGameObject?.();
 }
 
+function withReplayObservation(result, replayId, short) {
+    return { ...result, replayId, short };
+}
+
 export class KitchenTableController {
     constructor(scene, tableData = scene.sliceMapDef?.objects?.table, state = scene.sliceState || scene.gameState?.slice) {
         this.scene = scene;
@@ -62,9 +74,25 @@ export class KitchenTableController {
             throw new Error('Kitchen table controller requires authored table data and slice state');
         }
 
+        this.advancePhase('investigation', 'arrival');
         this.normalizePersistedState();
         this.createEntities();
         this.syncSprites();
+        const existingDirector = this.scene.memoryReplayDirector;
+        this.memoryReplayDirector = existingDirector && existingDirector.destroyed !== true
+            ? existingDirector
+            : new MemoryReplayDirector(this.scene, this.state);
+        this.scene.memoryReplayDirector = this.memoryReplayDirector;
+    }
+
+    advancePhase(nextPhase, requiredCurrentPhase) {
+        if (this.state.slicePhase !== requiredCurrentPhase) return false;
+        Object.assign(this.state, transitionSlicePhase(this.state, nextPhase));
+        return true;
+    }
+
+    replayIsActive() {
+        return this.memoryReplayDirector?.active === true;
     }
 
     normalizePersistedState() {
@@ -225,6 +253,7 @@ export class KitchenTableController {
     }
 
     pickBowl(bowlId) {
+        if (this.replayIsActive()) return { status: 'replay_active' };
         if (this.state.tableSolved === true) return { status: 'locked' };
         if (!KITCHEN_BOWLS.includes(bowlId)) return { status: 'unknown_bowl' };
         if (this.state.heldBowl) {
@@ -232,6 +261,7 @@ export class KitchenTableController {
             return { status: 'hands_full', heldBowl: this.state.heldBowl };
         }
 
+        this.advancePhase('table', 'investigation');
         for (const seatId of KITCHEN_SEATS) {
             if (this.state.bowlPlacements[seatId] === bowlId) this.state.bowlPlacements[seatId] = null;
         }
@@ -241,6 +271,7 @@ export class KitchenTableController {
     }
 
     placeHeldBowl(seatId) {
+        if (this.replayIsActive()) return { status: 'replay_active' };
         if (this.state.tableSolved === true) return { status: 'locked' };
         if (!this.state.heldBowl) return { status: 'empty_hands' };
         if (!KITCHEN_SEATS.includes(seatId)) return { status: 'unknown_seat' };
@@ -249,10 +280,35 @@ export class KitchenTableController {
         this.state.bowlPlacements = placeBowl(this.state.bowlPlacements, seatId, bowlId);
         this.state.heldBowl = null;
         this.syncSprites();
-        return evaluateSeating(this.state.bowlPlacements);
+        const evaluation = evaluateSeating(this.state.bowlPlacements);
+        if (evaluation.status === 'incomplete') return evaluation;
+
+        if (evaluation.status === 'incorrect') {
+            const seen = normalizeMealReplaySeen(this.state.mealReplaySeen);
+            this.state.mealReplaySeen = seen;
+            const replayId = selectContradiction(this.state.bowlPlacements, seen);
+            const short = shouldUseShortReplay(seen, replayId);
+            const replay = this.memoryReplayDirector.play(replayId, {
+                short,
+                onComplete: () => {
+                    if (this.destroyed) return;
+                    this.state.mealReplaySeen = markReplaySeen(this.state.mealReplaySeen, replayId);
+                    this.scene.sliceMapManager?.applyRoomRevision?.(this.state);
+                }
+            });
+            return replay.status === 'playing'
+                ? withReplayObservation(evaluation, replayId, short)
+                : evaluation;
+        }
+
+        const replay = this.memoryReplayDirector.play('correct_meal', { short: false });
+        return replay.status === 'playing'
+            ? withReplayObservation(evaluation, 'correct_meal', false)
+            : evaluation;
     }
 
     handleAction(object) {
+        if (this.replayIsActive()) return { status: 'replay_active' };
         if (!object) return { status: 'ignored' };
         if (object === this.offeringBowl || object.sliceAction === 'offering') {
             return { status: 'fixed_offering' };
@@ -265,6 +321,10 @@ export class KitchenTableController {
     destroy() {
         if (this.destroyed) return;
         this.destroyed = true;
+        this.memoryReplayDirector?.destroy?.();
+        if (this.scene.memoryReplayDirector === this.memoryReplayDirector) {
+            this.scene.memoryReplayDirector = null;
+        }
         for (const object of this.ownedObjects) {
             this.scene.interactables?.remove?.(object);
             object.destroy?.();

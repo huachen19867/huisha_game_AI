@@ -4,6 +4,7 @@ import {
     evaluateSeating,
     normalizeBowlPlacements
 } from './KitchenTableRules.js';
+import { normalizeMealReplaySeen } from './MemoryReplayDirector.js';
 
 export const SLICE_PHASES = Object.freeze(['arrival', 'investigation', 'table', 'rule', 'bedroom', 'return', 'complete']);
 
@@ -48,9 +49,7 @@ export function ensureSliceState(gameState) {
             if (bowlPlacements[seat] === heldBowl) bowlPlacements[seat] = null;
         }
     }
-    const mealReplaySeen = Array.isArray(source.mealReplaySeen)
-        ? [...new Set(source.mealReplaySeen.filter(replayId => typeof replayId === 'string' && replayId.length > 0))]
-        : [];
+    const mealReplaySeen = normalizeMealReplaySeen(source.mealReplaySeen);
     gameState.slice = {
         enabled: true,
         slicePhase,
