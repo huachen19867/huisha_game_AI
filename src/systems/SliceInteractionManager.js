@@ -114,6 +114,22 @@ export class SliceInteractionManager {
     }
 
     checkInteraction() {
+        const keyboard = globalThis.Phaser?.Input?.Keyboard;
+        const readPressed = key => (
+            key && typeof keyboard?.JustDown === 'function'
+                ? keyboard.JustDown(key) === true
+                : false
+        );
+        // Read both edges every frame. A short-circuit here leaves the second edge pending.
+        const pressedE = readPressed(this.scene.keyE);
+        const pressedSpace = readPressed(this.scene.keySpace);
+        const lastDialogCloseTime = Number(globalThis.window?.lastDialogCloseTime) || 0;
+        if (lastDialogCloseTime > 0 && Date.now() - lastDialogCloseTime < 500) {
+            this.scene.interactText?.setVisible?.(false);
+            this.scene.currentTarget = null;
+            return null;
+        }
+
         const selected = this.findInteractionTarget();
         const prompt = this.scene.interactText;
         const sprite = this.scene.player?.sprite;
@@ -134,8 +150,7 @@ export class SliceInteractionManager {
             .setPosition(sprite.x, sprite.y - 40)
             .setVisible(true);
 
-        const keyboard = globalThis.Phaser?.Input?.Keyboard;
-        if (keyboard?.JustDown?.(this.scene.keyE) || keyboard?.JustDown?.(this.scene.keySpace)) {
+        if (pressedE || pressedSpace) {
             return this.handleInteraction();
         }
         return this.scene.currentTarget;

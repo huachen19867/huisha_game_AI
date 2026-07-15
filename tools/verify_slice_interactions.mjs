@@ -100,6 +100,7 @@ globalThis.Phaser = {
         Keyboard: {
             KeyCodes: {},
             JustDown(key) {
+                if (key) key.justDownChecks = (key.justDownChecks || 0) + 1;
                 const result = key?.justDown === true;
                 if (key) key.justDown = false;
                 return result;
@@ -239,6 +240,55 @@ focusScene.keySpace.justDown = true;
 focusManager.update();
 assert.equal(keyboardEntryCalls, 2, 'keyboard Space must use the same interaction entry point');
 assert.equal(window.dialogCalls.length, 1, 'observe must show exactly one authored factual line');
+
+const originalDateNow = Date.now;
+let fakeNow = 5000;
+Date.now = () => fakeNow;
+window.lastDialogCloseTime = fakeNow;
+window.dialogCalls.length = 0;
+focusScene.keySpace.justDown = true;
+focusManager.update();
+assert.equal(focusScene.keySpace.justDown, false, 'dialog-close cooldown must still consume pending Space');
+assert.equal(focusScene.interactText.visible, false, 'cooldown must hide a prompt that cannot be used');
+assert.equal(focusScene.currentTarget, null);
+assert.equal(window.dialogCalls.length, 0, 'closing observe with Space must not immediately reopen it');
+focusManager.update();
+assert.equal(window.dialogCalls.length, 0, 'repeated updates inside cooldown must remain inert');
+fakeNow += 501;
+focusManager.update();
+assert.equal(window.dialogCalls.length, 0, 'cooldown expiry must not replay an already-consumed key');
+focusScene.keySpace.justDown = true;
+focusManager.update();
+assert.equal(window.dialogCalls.length, 1, 'a new press after cooldown may interact');
+
+window.lastDialogCloseTime = 0;
+window.dialogCalls.length = 0;
+const tableInputObject = interactionObject({ id: 'input_bowl', action: 'bowl', x: 24, y: 0 });
+const tableActions = [];
+const tableInputScene = {
+    player: { sprite: { x: 0, y: 0 }, facingX: 1, facingY: 0 },
+    interactables: makeGroup(),
+    interactText: makeText(),
+    keyE: { justDown: true, justDownChecks: 0 },
+    keySpace: { justDown: true, justDownChecks: 0 },
+    kitchenTableController: {
+        handleAction(object) {
+            tableActions.push(object.sliceAction);
+            object.sliceAction = 'seat';
+            object.sliceData.kind = 'seat';
+            return { status: tableActions.length === 1 ? 'holding' : 'placed' };
+        }
+    }
+};
+tableInputScene.interactables.add(tableInputObject);
+const tableInputManager = new SliceInteractionManager(tableInputScene);
+tableInputManager.update();
+assert.equal(tableInputScene.keyE.justDownChecks, 1);
+assert.equal(tableInputScene.keySpace.justDownChecks, 1, 'E must not short-circuit Space consumption in the same frame');
+assert.deepEqual(tableActions, ['bowl'], 'the first frame may pick exactly once');
+tableInputManager.update();
+assert.deepEqual(tableActions, ['bowl'], 'the second frame must not auto-place from a stale Space edge');
+Date.now = originalDateNow;
 
 const plane = interactionObject({ id: 'plane', action: 'plane_choice', x: 20, y: 0 });
 focusScene.currentTarget = { obj: plane, route: 'plane', type: 'plane' };
