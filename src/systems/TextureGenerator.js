@@ -9,6 +9,7 @@ export class TextureGenerator {
         this.createRain();
         this.createToyPlane(); // Added
         this.createScratch(); // Added
+        this.createSliceProps();
     }
 
     static createScratch() {
@@ -39,6 +40,130 @@ export class TextureGenerator {
         planeG.strokePath();
         
         planeG.generateTexture('toy_plane', 32, 32);
+    }
+
+    static createSliceProps() {
+        const makeBowlTexture = (key, baseColor, accentColor, mark) => {
+            const bowl = this.scene.make.graphics({ x: 0, y: 0, add: false });
+            bowl.fillStyle(0x000000, 0.25);
+            bowl.fillEllipse(14, 15, 26, 9);
+            bowl.fillStyle(baseColor);
+            bowl.fillEllipse(14, 11, 28, 17);
+            bowl.fillStyle(0x2b2722);
+            bowl.fillEllipse(14, 8, 22, 9);
+            bowl.lineStyle(2, accentColor, 1);
+            bowl.strokeEllipse(14, 8, 23, 10);
+
+            if (mark === 'chip') {
+                bowl.fillStyle(0x16130f);
+                bowl.fillTriangle(22, 2, 28, 5, 24, 10);
+            } else if (mark === 'stain') {
+                bowl.fillStyle(accentColor, 0.9);
+                bowl.fillCircle(10, 8, 3);
+                bowl.fillCircle(15, 6, 2);
+            } else if (mark === 'plane') {
+                bowl.lineStyle(2, accentColor, 1);
+                bowl.beginPath();
+                bowl.moveTo(8, 10);
+                bowl.lineTo(15, 4);
+                bowl.lineTo(20, 10);
+                bowl.lineTo(15, 8);
+                bowl.closePath();
+                bowl.strokePath();
+            } else if (mark === 'rice') {
+                bowl.fillStyle(0xd8d0c2, 0.85);
+                bowl.fillEllipse(10, 7, 4, 2);
+                bowl.fillEllipse(15, 6, 5, 2);
+                bowl.fillEllipse(19, 8, 4, 2);
+            }
+
+            bowl.generateTexture(key, 28, 20);
+        };
+
+        makeBowlTexture('bowl_wine', 0xb7a27e, 0x5b2e1f, 'chip');
+        makeBowlTexture('bowl_medicine', 0xe8e3d7, 0x7b8e52, 'stain');
+        makeBowlTexture('bowl_child', 0xd9e6ef, 0x3f6f9d, 'plane');
+        makeBowlTexture('bowl_offering', 0x8a8175, 0x4b4038, 'rice');
+
+        const chair = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        chair.fillStyle(0x3f2b20);
+        chair.fillRect(8, 4, 32, 30);
+        chair.fillRect(5, 30, 7, 24);
+        chair.fillRect(36, 30, 7, 24);
+        chair.lineStyle(3, 0x241812);
+        chair.strokeRect(8, 4, 32, 30);
+        chair.fillStyle(0xd6d6c8);
+        chair.fillCircle(8, 49, 3);
+        chair.fillCircle(40, 49, 3);
+        chair.generateTexture('chair_nailed', 48, 56);
+
+        const shard = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        shard.fillStyle(0xd7d0bd);
+        shard.fillTriangle(1, 11, 7, 1, 17, 9);
+        shard.lineStyle(2, 0x315f89);
+        shard.beginPath();
+        shard.moveTo(1, 11);
+        shard.lineTo(7, 1);
+        shard.lineTo(17, 9);
+        shard.strokePath();
+        shard.generateTexture('blue_shard', 18, 12);
+
+        const mirror = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        mirror.fillStyle(0x49382c);
+        mirror.fillRoundedRect(0, 0, 48, 72, 4);
+        mirror.fillStyle(0x1d2931);
+        mirror.fillRoundedRect(5, 5, 38, 62, 3);
+        mirror.lineStyle(2, 0x71808a, 0.5);
+        mirror.beginPath();
+        mirror.moveTo(9, 58);
+        mirror.lineTo(36, 12);
+        mirror.strokePath();
+        mirror.generateTexture('slice_mirror', 48, 72);
+
+        const uniform = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        uniform.fillStyle(0x202936);
+        uniform.fillRoundedRect(2, 8, 44, 30, 3);
+        uniform.fillStyle(0x141a23);
+        uniform.fillRect(8, 2, 32, 10);
+        uniform.lineStyle(2, 0x33465a);
+        uniform.strokeRect(2, 8, 44, 30);
+        uniform.fillStyle(0x4d7da5);
+        uniform.fillRect(34, 27, 9, 6);
+        uniform.generateTexture('slice_uniform', 48, 40);
+
+        const ticket = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        ticket.fillStyle(0xc8b996);
+        ticket.fillRect(1, 1, 46, 20);
+        ticket.fillStyle(0x2b2925);
+        ticket.fillCircle(43, 4, 3);
+        ticket.lineStyle(1, 0x716750);
+        ticket.beginPath();
+        ticket.moveTo(23, 2);
+        ticket.lineTo(22, 20);
+        ticket.moveTo(7, 8);
+        ticket.lineTo(18, 8);
+        ticket.moveTo(7, 13);
+        ticket.lineTo(16, 13);
+        ticket.strokePath();
+        ticket.generateTexture('train_ticket', 48, 22);
+
+        const comics = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        comics.fillStyle(0x25344a);
+        comics.fillRect(5, 8, 39, 25);
+        comics.fillStyle(0x6f4938);
+        comics.fillRect(2, 5, 39, 25);
+        comics.fillStyle(0x8b7b59);
+        comics.fillRect(0, 2, 39, 25);
+        comics.lineStyle(2, 0x26211c);
+        comics.strokeRect(0, 2, 39, 25);
+        comics.lineStyle(1, 0xd0c59f);
+        comics.beginPath();
+        comics.moveTo(8, 8);
+        comics.lineTo(31, 22);
+        comics.moveTo(31, 8);
+        comics.lineTo(8, 22);
+        comics.strokePath();
+        comics.generateTexture('comic_stack', 48, 36);
     }
 
     static createPlayerSheet() {

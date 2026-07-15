@@ -1,10 +1,13 @@
 import { Player } from '../entities/Player.js';
 import { Maps } from '../data/Maps.js';
+import { SliceMaps } from '../data/SliceMaps.js';
 import { InteractionManager } from '../systems/InteractionManager.js';
 import { EventManager } from '../systems/EventManager.js';
 import { MapManager } from '../systems/MapManager.js';
+import { SliceMapManager } from '../systems/SliceMapManager.js';
 import { SoundManager } from '../systems/SoundManager.js';
 import { createDefaultGameState, getTruthLevel, normalizeGameState } from '../systems/StoryState.js';
+import { ensureSliceState } from '../systems/SliceState.js';
 import { resolveSpawnCoordinate, updateBoundedResource } from '../systems/RuntimeState.js';
 import { DomListenerRegistry } from '../systems/DomListenerRegistry.js';
 import { ObjectiveManager } from '../systems/ObjectiveManager.js';
@@ -17,15 +20,16 @@ export class GameScene extends Phaser.Scene {
         super('GameScene');
     }
 
-    init(data) {
-        this.currentMapId = data.mapId || 'room_prologue';
+    init(data = {}) {
+        this.sliceMode = data.sliceMode === true;
+        this.currentMapId = data.mapId || (this.sliceMode ? 'room_main' : 'room_prologue');
         this.playerStartX = data.x ?? null;
         this.playerStartY = data.y ?? null;
         this.previousMapId = data.previousMapId || null;
 
         // If restarting from Title (no data provided), ensure we start fresh
         if (!data.mapId) {
-             this.currentMapId = 'room_prologue';
+             this.currentMapId = this.sliceMode ? 'room_main' : 'room_prologue';
              // Force reset if not already handled (though TitleScene handles it now)
         }
     }
@@ -96,6 +100,7 @@ export class GameScene extends Phaser.Scene {
             window.globalGameState = createDefaultGameState();
         }
         this.gameState = normalizeGameState(window.globalGameState);
+        this.sliceState = this.sliceMode ? ensureSliceState(this.gameState) : null;
         this.objectiveManager = new ObjectiveManager(this.gameState, document.getElementById('objective-panel'));
         this.refreshObjective();
 
@@ -128,11 +133,12 @@ export class GameScene extends Phaser.Scene {
         });
 
         // Initialize Map Manager
-        this.mapManager = new MapManager(this);
+        this.mapManager = this.sliceMode ? new SliceMapManager(this) : new MapManager(this);
+        this.sliceMapManager = this.sliceMode ? this.mapManager : null;
         this.mapManager.createMap(this.currentMapId);
 
         // Create Player
-        const mapData = Maps[this.currentMapId];
+        const mapData = this.sliceMode ? SliceMaps[this.currentMapId] : Maps[this.currentMapId];
         const startX = resolveSpawnCoordinate(this.playerStartX, mapData.objects.playerStart.x);
         const startY = resolveSpawnCoordinate(this.playerStartY, mapData.objects.playerStart.y);
         this.player = new Player(this, startX, startY);
@@ -347,7 +353,7 @@ export class GameScene extends Phaser.Scene {
                 if (hasKey) {
                     // Unlock
                     door.locked = false; // Permanently unlock in this session (though map reload resets it, we should check inventory on create map actually. But for now, simple is fine)
-                    this.switchScene(door.targetMap, door.targetX, door.targetY);
+                    this.switchScene(door.targetMap, door.targetX, door.targetY, door.doorId || door.objId);
                     this.playSound(400, 'sine', 1);
                 } else {
                     if (!this.gameState.lastLockedMsg || this.time.now - this.gameState.lastLockedMsg > 2000) {
@@ -360,14 +366,14 @@ export class GameScene extends Phaser.Scene {
 
             if (door.isLoop && !this.gameState.corridorSolved) {
                 // Loop back to start of corridor
-                this.switchScene(door.targetMap, door.targetX, door.targetY);
+                this.switchScene(door.targetMap, door.targetX, door.targetY, door.doorId || door.objId);
                 // Play a loop sound or effect?
                 this.cameras.main.flash(200, 0, 0, 0);
             } else if (door.isLoop && this.gameState.corridorSolved) {
                 // Break the loop -> go to backyard
-                this.switchScene('room_backyard', 320, 100);
+                this.switchScene('room_backyard', 320, 100, door.doorId || door.objId);
             } else {
-                this.switchScene(door.targetMap, door.targetX, door.targetY);
+                this.switchScene(door.targetMap, door.targetX, door.targetY, door.doorId || door.objId);
             }
         });
 
@@ -433,9 +439,12 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    switchScene(mapId, targetX, targetY) {
+    switchScene(mapId, targetX, targetY, doorId = null) {
         if (this.isSwitching) return;
         this.isSwitching = true;
+        if (this.sliceMode && doorId && this.sliceState) {
+            this.sliceState.lastTraversedDoor = doorId;
+        }
 
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
@@ -444,7 +453,13 @@ export class GameScene extends Phaser.Scene {
                 // Keep chasing state
             }
 
-            this.scene.restart({ mapId: mapId, x: targetX, y: targetY, previousMapId: this.currentMapId });
+            this.scene.restart({
+                mapId,
+                x: targetX,
+                y: targetY,
+                previousMapId: this.currentMapId,
+                sliceMode: this.sliceMode
+            });
             this.isSwitching = false;
         });
     }
@@ -464,7 +479,7 @@ export class GameScene extends Phaser.Scene {
                  const targetMap = getTruthLevel(this.gameState) === 'complete' ? 'memory_crash' : 'room_memory';
                  const targetX = targetMap === 'memory_crash' ? 120 : 320;
                  const targetY = targetMap === 'memory_crash' ? 200 : 400;
-                 this.scene.restart({ mapId: targetMap, x: targetX, y: targetY });
+                 this.scene.restart({ mapId: targetMap, x: targetX, y: targetY, sliceMode: this.sliceMode });
 
                  // Reset UI for memory room (clean state)
                  // We don't reset globalGameState fully yet, as we might want to check flags
