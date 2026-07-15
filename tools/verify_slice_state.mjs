@@ -348,27 +348,27 @@ try {
     const generatedIndex = await readFile(join(tempRoot, 'index.html'), 'utf8');
     const storyEndMarker = '// END bundled src/systems/StoryState.js';
     const sliceBeginMarker = '// BEGIN bundled src/systems/SliceState.js';
-    const sliceEndMarker = '// END bundled src/systems/SliceState.js';
     const kitchenRulesBeginMarker = '// BEGIN bundled src/systems/KitchenTableRules.js';
+    const kitchenRulesEndMarker = '// END bundled src/systems/KitchenTableRules.js';
     const storyEndIndex = generatedIndex.indexOf(storyEndMarker);
     const sliceBeginIndex = generatedIndex.indexOf(sliceBeginMarker);
-    const sliceEndIndex = generatedIndex.indexOf(sliceEndMarker);
     const kitchenRulesBeginIndex = generatedIndex.indexOf(kitchenRulesBeginMarker);
+    const kitchenRulesEndIndex = generatedIndex.indexOf(kitchenRulesEndMarker);
     assert.notEqual(storyEndIndex, -1, 'generated index must contain the StoryState bundle block');
     assert.notEqual(sliceBeginIndex, -1, 'generated index must contain the SliceState bundle block');
-    assert.notEqual(sliceEndIndex, -1, 'generated index must contain the SliceState bundle end marker');
     assert.notEqual(kitchenRulesBeginIndex, -1, 'generated index must contain the KitchenTableRules bundle block');
-    assert.ok(sliceBeginIndex > storyEndIndex, 'SliceState bundle block must follow StoryState');
+    assert.notEqual(kitchenRulesEndIndex, -1, 'generated index must contain the KitchenTableRules bundle end marker');
+    assert.ok(kitchenRulesBeginIndex > storyEndIndex, 'KitchenTableRules bundle block must follow StoryState');
     assert.equal(
-        generatedIndex.slice(storyEndIndex + storyEndMarker.length, sliceBeginIndex).trim(),
+        generatedIndex.slice(storyEndIndex + storyEndMarker.length, kitchenRulesBeginIndex).trim(),
         '',
-        'SliceState bundle block must be immediately after StoryState'
+        'KitchenTableRules bundle block must be immediately after StoryState'
     );
-    assert.ok(kitchenRulesBeginIndex > sliceEndIndex, 'KitchenTableRules bundle block must follow SliceState');
+    assert.ok(sliceBeginIndex > kitchenRulesEndIndex, 'SliceState bundle block must follow KitchenTableRules');
     assert.equal(
-        generatedIndex.slice(sliceEndIndex + sliceEndMarker.length, kitchenRulesBeginIndex).trim(),
+        generatedIndex.slice(kitchenRulesEndIndex + kitchenRulesEndMarker.length, sliceBeginIndex).trim(),
         '',
-        'KitchenTableRules bundle block must be immediately after SliceState'
+        'SliceState bundle block must be immediately after KitchenTableRules'
     );
 
     const moduleScripts = [...generatedIndex.matchAll(/<script\b[^>]*type=["']module["'][^>]*>([\s\S]*?)<\/script>/gi)];

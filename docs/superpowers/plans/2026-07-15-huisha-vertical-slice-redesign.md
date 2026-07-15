@@ -125,7 +125,7 @@ export function createDefaultSliceState() {
         tableSolved: false,
         houseRuleDemonstrated: false,
         fatherAttention: 'quiet',
-        lastTraversedDoor: 'main_to_kitchen',
+        lastTraversedDoor: 'main_kitchen_door',
         planeChoice: null,
         paperDollIndex: 0,
         sliceCompleted: false
@@ -163,6 +163,8 @@ export function choosePlane(state, choice) {
 ```
 
 Add `slice: null` to `createDefaultGameState()` and call `ensureSliceState(gameState)` only when `gameState.slice?.enabled` is true or the scene explicitly starts slice mode. Add `src/systems/SliceState.js` after `StoryState.js` in the standalone build list.
+
+Checkpoint A tightened this sketch into a canonical persistence boundary: build the result from the declared keys instead of spreading persisted input; normalize bowl placement before deriving `tableSolved`; validate held bowls, door IDs, attention, phase, choice, paper-doll index, and replay IDs; and derive completion flags rather than trusting them. `KitchenTableRules.js` must precede `SliceState.js` in the stripped standalone bundle because `SliceState` imports its normalization helpers.
 
 - [ ] **Step 4: Run focused and legacy state checks**
 
@@ -331,7 +333,9 @@ export const SliceMaps = {
                 x: 320, y: 240,
                 seats: { nail: { x: 320, y: 176 }, stove: { x: 384, y: 240 }, side: { x: 320, y: 304 } },
                 offering: { x: 256, y: 240 },
-                bowlOrigins: { wine: { x: 176, y: 120 }, medicine: { x: 224, y: 120 }, child: { x: 272, y: 120 } }
+                bowlOrigins: { wine: { x: 176, y: 120 }, medicine: { x: 224, y: 120 }, child: { x: 272, y: 120 } },
+                collisionBounds: { x: 280, y: 208, width: 80, height: 64 },
+                safeZones: { under_table: { x: 296, y: 272, width: 48, height: 24 } }
             },
             props: [
                 { id: 'nailed_chair', kind: 'observe', texture: 'chair_nailed', x: 320, y: 160, label: '钉死的椅子', text: '椅脚钉进地板，坐在这里能看住两扇门。' },
@@ -373,6 +377,8 @@ export function getSliceDoorAccess(doorId, state) {
 ```
 
 Add the file immediately after `Maps.js` in the standalone bundle list.
+
+Treat `SliceMaps` as an authored read-only definition tree: recursively freeze it, derive the frozen `SLICE_DOOR_IDS` registry from declared doors, and use that registry for persisted door validation. Only `table.collisionBounds` becomes navigation blocking geometry; `safeZones.under_table` remains walkable metadata for the dinner-bell rule.
 
 - [ ] **Step 4: Run topology and legacy map checks**
 
@@ -509,6 +515,8 @@ assert.match(builder, /src\/systems\/SliceMapManager\.js/);
 console.log('Slice runtime contract verification passed');
 ```
 
+The runtime verifier must also execute two consecutive slice door transitions and assert that both restart payloads retain `sliceMode: true`; a source-text match alone is insufficient because the three slice map IDs intentionally overlap legacy IDs.
+
 - [ ] **Step 2: Run and confirm the missing manager failure**
 
 Run: `node tools\verify_slice_runtime_contract.mjs`
@@ -531,6 +539,8 @@ Also generate `chair_nailed` (48×56 with two bright nail heads), `blue_shard` (
 - [ ] **Step 4: Implement `SliceMapManager` with the legacy-compatible scene surface**
 
 The class must expose `createMap(mapId)` and assign `scene.walls`, `scene.doors`, `scene.furniture`, `scene.interactables`, `scene.floorLayer`, and `scene.navigationBlockedRects`, matching the surface used by `GameScene`, `Player`, and `ChaseManager`.
+
+Consume frozen map definitions without mutating or aliasing runtime state. Add `table.collisionBounds` to `navigationBlockedRects`, but expose `table.safeZones` separately and never treat `under_table` as a blocker.
 
 Use this exact interaction attachment shape:
 
@@ -569,6 +579,8 @@ this.currentMapId = data.mapId || (this.sliceMode ? 'room_main' : 'room_prologue
 ```
 
 In `create()`, normalize slice state when enabled, select `SliceMapManager` vs `MapManager`, and select map data from `SliceMaps` vs `Maps`. Do not yet disable legacy systems; Task 10 handles the complete lifecycle split.
+
+From this first integrated slice task onward, every `switchScene()`/`scene.restart()` payload must carry `sliceMode: this.sliceMode`. Do not defer namespace preservation to the chase task: otherwise the first door silently returns duplicate map IDs to legacy rendering.
 
 - [ ] **Step 6: Run render, map, texture, and syntax checks**
 
@@ -643,6 +655,8 @@ The runtime manager must reuse `selectInteractionCandidate()` and the 28px focus
 - [ ] **Step 4: Implement `KitchenTableController` entity ownership**
 
 Create bowl sprites at `bowlOrigins`, seat hotspots at `seats`, and the fixed offering bowl at `offering`. Attach `sliceAction='bowl'` or `sliceAction='seat'` and readable labels. Provide:
+
+Before the constructor's first `syncSprites()`, normalize persisted placements with `normalizeBowlPlacements()` and reconcile `heldBowl` against those placements. Never render directly from untrusted or aliased save data.
 
 ```js
 pickBowl(bowlId) {
@@ -776,6 +790,8 @@ git commit -m "feat: replay contradictory family memories"
 - Create: `src/systems/HouseRuleDirector.js`
 - Create: `tools/verify_house_rule_state.mjs`
 - Modify: `src/scenes/GameScene.js`
+- Modify: `src/systems/ChaseManager.js`
+- Modify: `tools/verify_chase_contract.mjs`
 - Modify: `tools/build_standalone_entry.mjs`
 
 - [ ] **Step 1: Write the failing pure transition test**
@@ -863,6 +879,8 @@ const WARNING_STAGES = [
 ```
 
 First bell after `correct_meal` is a no-fail demonstration: family ghosts freeze, footsteps pass, and `houseRuleDemonstrated` becomes true. The second bell begins when the player approaches the kitchen exit. Obedience lowers attention and retreats the shadow. Violation advances attention; `checking` spawns the father silhouette at `lastTraversedDoor`, and `chasing` delegates an 8–12 second pursuit to the existing `ChaseManager` using its safe-door spawn and BFS pathing. A stationary player inside the authored `under_table` zone remains hidden during inspection; moving there exposes them. The side door is a second valid escape only while its current authored state is open.
+
+Add a slice-specific chase entry point that receives the selected `SliceMaps` definition, explicit arrival door ID, duration, and caught callback. It must build navigation from the supplied slice dimensions and authored blockers, retain the four-second corresponding-door arrival simulation, and restart with `sliceMode` plus preserved slice progress on failure. Keep legacy `start()` behavior and contracts unchanged. Slice-facing warnings must come from `HouseRuleDirector`; never reuse the legacy early-reveal line containing the protagonist's name.
 
 The director must pause during dialogue, memory replay, scene switching, and bowl carrying placement animation. It must destroy timers, warning sprites, and door shadows on shutdown. No slice-facing text may contain `别动`, `它在听`, or a countdown.
 
