@@ -4,6 +4,8 @@ import {
 } from './InteractionRules.js';
 
 const DEFAULT_INTERACTION_RADIUS = 72;
+const SLICE_MIN_FACING_DOT = 0;
+const SLICE_DIRECTION_EPSILON = 0.000001;
 
 export function getSlicePrompt(meta) {
     return `${meta.verb}：${meta.label}  [空格/E]`;
@@ -75,6 +77,12 @@ export class SliceInteractionManager {
         const sprite = player?.sprite;
         if (!sprite) return null;
 
+        const rawFacingX = Number.isFinite(player.facingX) ? player.facingX : 0;
+        const rawFacingY = Number.isFinite(player.facingY) ? player.facingY : 0;
+        const facingLength = Math.hypot(rawFacingX, rawFacingY);
+        const hasFacing = facingLength > SLICE_DIRECTION_EPSILON;
+        const facingX = hasFacing ? rawFacingX / facingLength : 0;
+        const facingY = hasFacing ? rawFacingY / facingLength : 0;
         const candidates = [];
         for (const object of this.scene.interactables?.getChildren?.() || []) {
             if (!isAvailableInteraction(object)) continue;
@@ -87,9 +95,12 @@ export class SliceInteractionManager {
 
             const dx = object.x - sprite.x;
             const dy = object.y - sprite.y;
-            const length = Math.hypot(dx, dy) || 1;
-            const facingDot = (dx / length) * (player.facingX || 0)
-                + (dy / length) * (player.facingY || 0);
+            const centerDistance = Math.hypot(dx, dy);
+            const centersOverlap = centerDistance <= SLICE_DIRECTION_EPSILON;
+            const facingDot = centersOverlap || !hasFacing
+                ? 0
+                : (dx / centerDistance) * facingX + (dy / centerDistance) * facingY;
+            if (hasFacing && !centersOverlap && facingDot <= SLICE_MIN_FACING_DOT) continue;
             candidates.push({
                 obj: object,
                 distance,

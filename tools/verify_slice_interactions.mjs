@@ -174,6 +174,38 @@ assert.equal(focusScene.currentTarget.obj, frontEvidence);
 assert.equal(focusScene.interactText.text, '观察：front_evidence  [空格/E]');
 assert.equal(focusScene.interactText.visible, true);
 
+focusScene.interactables = makeGroup();
+focusScene.interactables.add(closerBehind);
+assert.equal(focusManager.findInteractionTarget(), null, 'a sole object strictly behind the player must not be targetable');
+focusManager.update();
+assert.equal(focusScene.interactText.visible, false, 'a behind-only object must not leak a prompt');
+assert.equal(focusScene.currentTarget, null);
+assert.deepEqual(focusManager.handleInteraction(), { status: 'ignored' }, 'a hidden behind-only target must not trigger');
+
+focusScene.interactables = makeGroup();
+focusScene.interactables.add(frontEvidence);
+assert.equal(focusManager.findInteractionTarget().obj, frontEvidence, 'a directly forward object remains targetable');
+const diagonalFront = interactionObject({ id: 'diagonal_front', x: 40, y: 20 });
+focusScene.interactables = makeGroup();
+focusScene.interactables.add(diagonalFront);
+assert.equal(focusManager.findInteractionTarget().obj, diagonalFront, 'an object in the diagonal forward half-plane remains targetable');
+
+const overlapping = interactionObject({ id: 'overlapping', x: 0, y: 0, bodyX: -5, bodyY: -5 });
+focusScene.interactables = makeGroup();
+focusScene.interactables.add(overlapping);
+assert.equal(focusManager.findInteractionTarget().obj, overlapping, 'overlapping centers must remain targetable regardless of facing');
+
+focusScene.player.facingX = 0;
+focusScene.player.facingY = 0;
+focusScene.interactables = makeGroup();
+focusScene.interactables.add(closerBehind);
+assert.equal(focusManager.findInteractionTarget().obj, closerBehind, 'zero facing must fall back to near-field selection');
+delete focusScene.player.facingX;
+delete focusScene.player.facingY;
+assert.equal(focusManager.findInteractionTarget().obj, closerBehind, 'missing facing must fall back to near-field selection');
+focusScene.player.facingX = 1;
+focusScene.player.facingY = 0;
+
 const boundary = interactionObject({
     id: 'boundary',
     x: 82,
