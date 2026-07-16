@@ -15,12 +15,24 @@ export const ARRIVAL_DELAY_MS = 4000;
 export const MATERIALIZE_MS = 600;
 export const REPATH_MS = 350;
 export const SPAWN_RETRY_MS = 500;
+export const SLICE_CHASE_DURATION_MS = 10000;
 
 export function getArrivalStage(elapsedMs) {
     if (elapsedMs >= ARRIVAL_DELAY_MS) return 'arriving';
     if (elapsedMs >= WARNING_MS) return 'warning';
     if (elapsedMs >= DOOR_BANG_MS) return 'door_bang';
     return 'approaching';
+}
+
+export function getSliceArrivalStage(elapsedMs) {
+    return getArrivalStage(elapsedMs);
+}
+
+function hasNavigationData(mapDef) {
+    return Array.isArray(mapDef?.data) &&
+        mapDef.data.length > 0 &&
+        mapDef.data.every(row => Array.isArray(row) && row.length > 0) &&
+        new Set(mapDef.data.map(row => row.length)).size === 1;
 }
 
 export class ChaseManager {
@@ -37,6 +49,13 @@ export class ChaseManager {
         this.path = [];
         this.nextRepathAt = 0;
         this.lastTargetKey = '';
+        this.sliceConfig = null;
+        this.pendingSliceDoor = null;
+        this.sliceArrivalTimers = [];
+        this.sliceSpawnRetryTimer = null;
+        this.sliceEndTimer = null;
+        this.sliceDoorGlow = null;
+        this.sliceFootsteps = null;
     }
 
     getArrivalDoor() {
@@ -66,6 +85,94 @@ export class ChaseManager {
             this.scene.time.delayedCall(ARRIVAL_DELAY_MS, () => this.attemptSpawn())
         );
         this.scene.refreshObjective();
+    }
+
+    startSlice({ mapDef, arrivalDoorId, durationMs = SLICE_CHASE_DURATION_MS, onCaught } = {}) {
+        const door = mapDef?.objects?.doors?.find(candidate => candidate.id === arrivalDoorId);
+        if (!hasNavigationData(mapDef) || !door || this.sliceConfig || this.chaser?.active) return false;
+
+        this.sliceConfig = {
+            mapDef,
+            arrivalDoorId,
+            durationMs: Number.isFinite(durationMs) && durationMs > 0 ? durationMs : SLICE_CHASE_DURATION_MS,
+            onCaught: typeof onCaught === 'function' ? onCaught : null
+        };
+        this.pendingSliceDoor = door;
+        this.scene.gameState.sliceChasing = true;
+        this.sliceArrivalTimers.push(
+            this.scene.time.delayedCall(DOOR_BANG_MS, () => this.telegraphSliceDoor('bang')),
+            this.scene.time.delayedCall(WARNING_MS, () => this.telegraphSliceDoor('footsteps')),
+            this.scene.time.delayedCall(ARRIVAL_DELAY_MS, () => this.attemptSliceSpawn())
+        );
+        return true;
+    }
+
+    createSliceGrid(mapDef, forceOpen = []) {
+        if (!hasNavigationData(mapDef)) return [];
+        return createNavigationGrid(mapDef.data, this.scene.navigationBlockedRects || [], forceOpen);
+    }
+
+    isSliceChasing() {
+        return this.sliceConfig !== null;
+    }
+
+    telegraphSliceDoor(stage) {
+        if (!this.pendingSliceDoor || !this.sliceConfig) return;
+        const point = this.getDoorWorldPosition(this.pendingSliceDoor);
+        this.scene.soundManager?.playSpatialNoise(stage === 'bang' ? 0.24 : 0.16, point.x, point.y);
+        if (!this.sliceDoorGlow) {
+            this.sliceDoorGlow = this.scene.add.circle(point.x, point.y, 24, 0x8b0000, 0.22).setDepth(340);
+            this.scene.tweens.add({ targets: this.sliceDoorGlow, alpha: 0.56, duration: 360, yoyo: true, repeat: -1 });
+        }
+        if (stage === 'footsteps' && !this.sliceFootsteps) {
+            this.sliceFootsteps = this.scene.add.rectangle(point.x, point.y + 30, 18, 4, 0x6b4b3b, 0.34).setDepth(341);
+            this.scene.tweens.add({ targets: this.sliceFootsteps, alpha: 0.08, scaleX: 2.2, duration: 420, yoyo: true, repeat: -1 });
+        }
+    }
+
+    attemptSliceSpawn() {
+        this.sliceArrivalTimers = [];
+        if (!this.pendingSliceDoor || !this.sliceConfig || this.chaser?.active) return;
+        const playerSprite = this.scene.player?.sprite;
+        if (!playerSprite) return;
+        const playerCell = worldToGrid(playerSprite.x, playerSprite.y);
+        const grid = this.createSliceGrid(this.sliceConfig.mapDef, [playerCell]);
+        const spawnCell = findSafeDoorSpawn(grid, this.pendingSliceDoor, playerCell, 5);
+        if (!spawnCell) {
+            this.sliceSpawnRetryTimer = this.scene.time.delayedCall(SPAWN_RETRY_MS, () => {
+                this.sliceSpawnRetryTimer = null;
+                this.attemptSliceSpawn();
+            });
+            return;
+        }
+        this.spawnSliceAt(gridToWorld(spawnCell));
+    }
+
+    spawnSliceAt(spawn) {
+        if (!this.sliceConfig) return false;
+        this.clearSliceArrivalVisuals();
+        this.chaser = this.scene.physics.add.sprite(spawn.x, spawn.y, 'npc_paper').setTint(0xff0000).setAlpha(0);
+        if (!this.scene.isMobile) this.chaser.setPipeline('Light2D');
+        this.scene.chaser = this.chaser;
+        this.materializing = true;
+        this.chaser.body.enable = false;
+        this.scene.physics.add.collider(this.chaser, this.scene.walls);
+        this.scene.physics.add.collider(this.chaser, this.scene.furniture);
+        if (this.scene.trees) this.scene.physics.add.collider(this.chaser, this.scene.trees);
+        this.scene.physics.add.overlap(this.scene.player.sprite, this.chaser, () => this.handleCaught());
+        this.scene.tweens.add({
+            targets: this.chaser,
+            alpha: 0.78,
+            duration: MATERIALIZE_MS,
+            onComplete: () => {
+                if (!this.chaser?.active || !this.sliceConfig) return;
+                this.chaser.body.enable = true;
+                this.materializing = false;
+                this.nextRepathAt = 0;
+            }
+        });
+        this.sliceEndTimer = this.scene.time.delayedCall(this.sliceConfig.durationMs, () => this.endSliceChase('timeout'));
+        return true;
     }
 
     telegraphDoor(showWarning) {
@@ -143,7 +250,9 @@ export class ChaseManager {
         const playerCell = worldToGrid(this.scene.player.sprite.x, this.scene.player.sprite.y);
         const targetKey = `${playerCell.x},${playerCell.y}`;
         if (now >= this.nextRepathAt || targetKey !== this.lastTargetKey || this.path.length < 2) {
-            const grid = this.createGrid([chaserCell, playerCell]);
+            const grid = this.sliceConfig
+                ? this.createSliceGrid(this.sliceConfig.mapDef, [chaserCell, playerCell])
+                : this.createGrid([chaserCell, playerCell]);
             this.path = findGridPath(grid, chaserCell, playerCell);
             this.nextRepathAt = now + REPATH_MS;
             this.lastTargetKey = targetKey;
@@ -198,6 +307,14 @@ export class ChaseManager {
     }
 
     handleCaught() {
+        if (this.sliceConfig) {
+            if (this.caught || this.materializing) return;
+            this.caught = true;
+            const onCaught = this.sliceConfig.onCaught;
+            this.endSliceChase('caught');
+            onCaught?.();
+            return;
+        }
         if (this.caught || this.materializing || this.scene.gameState.isHidden) return;
         this.caught = true;
         this.scene.physics.pause();
@@ -230,9 +347,44 @@ export class ChaseManager {
         this.pendingDoor = null;
     }
 
+    clearSliceArrivalVisuals() {
+        this.sliceDoorGlow?.destroy();
+        this.sliceFootsteps?.destroy();
+        this.sliceDoorGlow = null;
+        this.sliceFootsteps = null;
+    }
+
+    cancelSliceArrival() {
+        this.sliceArrivalTimers.forEach(timer => timer?.remove?.());
+        this.sliceArrivalTimers = [];
+        this.sliceSpawnRetryTimer?.remove?.();
+        this.sliceSpawnRetryTimer = null;
+        this.clearSliceArrivalVisuals();
+        this.pendingSliceDoor = null;
+    }
+
+    endSliceChase(reason = 'timeout') {
+        if (!this.sliceConfig) return false;
+        this.sliceEndTimer?.remove?.();
+        this.sliceEndTimer = null;
+        this.cancelSliceArrival();
+        this.chaser?.destroy?.();
+        this.chaser = null;
+        this.scene.chaser = null;
+        this.scene.dangerOverlay?.setAlpha?.(0);
+        this.scene.gameState.sliceChasing = false;
+        this.sliceConfig = null;
+        this.materializing = false;
+        this.path = [];
+        this.lastTargetKey = '';
+        this.caught = false;
+        return reason;
+    }
+
     destroy() {
         this.cancelHideEscape();
         this.cancelArrival();
+        this.endSliceChase('destroy');
         this.chaser?.destroy();
         this.chaser = null;
         this.scene.chaser = null;

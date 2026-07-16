@@ -1583,6 +1583,313 @@ const Maps = {
 };
         // END bundled src/data/Maps.js
 
+        // BEGIN bundled src/data/SliceMaps.js
+function boxedRoom(width, height, openings) {
+    const data = Array.from({ length: height }, (_, y) => (
+        Array.from({ length: width }, (_, x) => (
+            x === 0 || y === 0 || x === width - 1 || y === height - 1 ? 1 : 0
+        ))
+    ));
+
+    for (const [x, y] of openings) {
+        const inBounds = x >= 0 && x < width && y >= 0 && y < height;
+        if (!inBounds) throw new Error(`Room opening is out of bounds: ${x},${y}`);
+        const onBoundary = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+        if (!onBoundary) throw new Error(`Room opening is not on the boundary: ${x},${y}`);
+        data[y][x] = 0;
+    }
+
+    return data;
+}
+
+function deepFreeze(value) {
+    if (value === null || typeof value !== 'object' || Object.isFrozen(value)) return value;
+    Object.freeze(value);
+    for (const nestedValue of Object.values(value)) deepFreeze(nestedValue);
+    return value;
+}
+
+const SliceMaps = deepFreeze({
+    room_main: {
+        id: 'room_main',
+        name: '正厅',
+        purpose: '听见第四副碗筷并进入厨房',
+        width: 24,
+        height: 18,
+        data: boxedRoom(24, 18, [[23, 8]]),
+        visual: {
+            ambient: 0x5a4638,
+            floorTint: 0x8c745d,
+            wallTint: 0x5d4535,
+            rain: false
+        },
+        objects: {
+            playerStart: { x: 384, y: 496 },
+            doors: [
+                {
+                    id: 'main_kitchen_door',
+                    x: 23,
+                    y: 8,
+                    targetMap: 'room_kitchen',
+                    targetX: 64,
+                    targetY: 256
+                }
+            ],
+            props: [
+                {
+                    id: 'main_cold_bowl',
+                    kind: 'observe',
+                    texture: 'bowl_offering',
+                    x: 384,
+                    y: 220,
+                    label: '积灰冷碗',
+                    text: '三只碗有擦拭痕迹，只有这只积着灰。'
+                },
+                {
+                    id: 'main_kitchen_sound',
+                    kind: 'ambient_anchor',
+                    effect: 'four_place_settings',
+                    x: 700,
+                    y: 256
+                },
+                {
+                    id: 'main_kitchen_light',
+                    kind: 'ambient_anchor',
+                    effect: 'warm_door_seam',
+                    x: 730,
+                    y: 256
+                },
+                {
+                    id: 'main_food_smell',
+                    kind: 'ambient_anchor',
+                    effect: 'faint_rice_steam',
+                    x: 640,
+                    y: 256
+                }
+            ]
+        }
+    },
+
+    room_kitchen: {
+        id: 'room_kitchen',
+        name: '厨房',
+        purpose: '用碗、桌位和残影还原饭桌',
+        width: 20,
+        height: 16,
+        data: boxedRoom(20, 16, [[0, 8], [19, 8]]),
+        visual: {
+            ambient: 0x594638,
+            floorTint: 0x846b52,
+            wallTint: 0x553d2d,
+            rain: false
+        },
+        objects: {
+            playerStart: { x: 64, y: 256 },
+            doors: [
+                {
+                    id: 'kitchen_main_door',
+                    x: 0,
+                    y: 8,
+                    targetMap: 'room_main',
+                    targetX: 704,
+                    targetY: 272
+                },
+                {
+                    id: 'kitchen_side_door',
+                    x: 19,
+                    y: 8,
+                    targetMap: 'room_bedroom_me',
+                    targetX: 64,
+                    targetY: 256,
+                    gate: 'tableSolved'
+                }
+            ],
+            table: {
+                x: 320,
+                y: 240,
+                seats: {
+                    nail: { x: 320, y: 176 },
+                    stove: { x: 384, y: 240 },
+                    side: { x: 320, y: 304 }
+                },
+                offering: { x: 256, y: 240 },
+                bowlOrigins: {
+                    wine: { x: 176, y: 120 },
+                    medicine: { x: 224, y: 120 },
+                    child: { x: 272, y: 120 }
+                },
+                collisionBounds: { x: 280, y: 208, width: 80, height: 64 },
+                safeZones: {
+                    under_table: { x: 296, y: 272, width: 48, height: 24 }
+                }
+            },
+            props: [
+                {
+                    id: 'nailed_chair',
+                    kind: 'observe',
+                    texture: 'chair_nailed',
+                    x: 320,
+                    y: 160,
+                    label: '钉死的椅子',
+                    text: '椅脚钉进地板，坐在这里能看住两扇门。'
+                },
+                {
+                    id: 'stove_stain',
+                    kind: 'observe',
+                    texture: 'stove',
+                    x: 480,
+                    y: 112,
+                    label: '药渍和烫痕',
+                    text: '灶台边缘结着几圈褐色药渍，旁边木面被烫得发黑。'
+                },
+                {
+                    id: 'door_shard',
+                    kind: 'observe',
+                    texture: 'blue_shard',
+                    x: 560,
+                    y: 272,
+                    label: '蓝边碎瓷',
+                    text: '侧门门槛下卡着一片蓝边碎瓷，断面落满旧灰。'
+                }
+            ]
+        }
+    },
+
+    room_bedroom_me: {
+        id: 'room_bedroom_me',
+        name: '孩子卧室',
+        purpose: '决定带走还是留下纸飞机',
+        width: 20,
+        height: 16,
+        data: boxedRoom(20, 16, [[0, 8], [10, 15]]),
+        visual: {
+            ambient: 0x4b5063,
+            floorTint: 0x677083,
+            wallTint: 0x3d4353,
+            rain: false
+        },
+        objects: {
+            playerStart: { x: 64, y: 256 },
+            doors: [
+                {
+                    id: 'bedroom_side_door',
+                    x: 0,
+                    y: 8,
+                    targetMap: 'room_kitchen',
+                    targetX: 576,
+                    targetY: 256,
+                    gate: 'planeTake'
+                },
+                {
+                    id: 'bedroom_main_door',
+                    x: 10,
+                    y: 15,
+                    targetMap: 'room_main',
+                    targetX: 384,
+                    targetY: 128,
+                    gate: 'planeChosen'
+                }
+            ],
+            props: [
+                {
+                    id: 'bedroom_plane',
+                    kind: 'plane',
+                    texture: 'toy_plane',
+                    x: 300,
+                    y: 220,
+                    label: '折断的纸飞机'
+                },
+                {
+                    id: 'plane_bag',
+                    kind: 'plane_choice',
+                    choice: 'take',
+                    texture: 'cabinet',
+                    x: 420,
+                    y: 250,
+                    label: '旧书包'
+                },
+                {
+                    id: 'plane_drawer',
+                    kind: 'plane_choice',
+                    choice: 'leave',
+                    texture: 'desk',
+                    x: 180,
+                    y: 250,
+                    label: '抽屉'
+                },
+                {
+                    id: 'child_mirror',
+                    kind: 'mirror',
+                    texture: 'slice_mirror',
+                    x: 320,
+                    y: 96,
+                    label: '过低的镜子'
+                },
+                {
+                    id: 'school_uniform',
+                    kind: 'observe',
+                    texture: 'slice_uniform',
+                    x: 470,
+                    y: 120,
+                    label: '叠好的旧校服',
+                    text: '袖口内侧缝着一小块蓝布，像是留给谁辨认。'
+                },
+                {
+                    id: 'unused_ticket',
+                    kind: 'observe',
+                    texture: 'train_ticket',
+                    x: 222,
+                    y: 190,
+                    label: '未寄出的车票',
+                    text: '车票只写了离开日期，背面没有回程。'
+                },
+                {
+                    id: 'comic_stack',
+                    kind: 'observe',
+                    texture: 'comic_stack',
+                    x: 500,
+                    y: 290,
+                    label: '压在床脚的漫画',
+                    text: '最后一册夹着一张画：孩子从侧门跑出去。'
+                }
+            ]
+        }
+    }
+});
+
+const SLICE_DOOR_IDS = Object.freeze(
+    Object.values(SliceMaps).flatMap(map => map.objects.doors.map(door => door.id))
+);
+
+const SLICE_DOOR_REGISTRY = Object.freeze(
+    Object.fromEntries(SLICE_DOOR_IDS.map(doorId => [doorId, true]))
+);
+
+function isSliceDoorId(id) {
+    return typeof id === 'string' && Object.hasOwn(SLICE_DOOR_REGISTRY, id);
+}
+
+function getSliceDoorAccess(doorId, state) {
+    if (!isSliceDoorId(doorId)) {
+        throw new Error(`Unknown slice door: ${doorId}`);
+    }
+
+    switch (doorId) {
+        case 'main_kitchen_door':
+        case 'kitchen_main_door':
+            return true;
+        case 'kitchen_side_door':
+            return state?.tableSolved === true;
+        case 'bedroom_side_door':
+            return state?.planeChoice === 'take';
+        case 'bedroom_main_door':
+            return state?.planeChoice === 'take' || state?.planeChoice === 'leave';
+    }
+
+    throw new Error(`Unhandled slice door: ${doorId}`);
+}
+        // END bundled src/data/SliceMaps.js
+
         // BEGIN bundled src/data/Puzzles.js
 const board = config => ({ kind: 'board', hintAfter: 2, strongHintAfter: 4, ...config });
 
@@ -1823,6 +2130,7 @@ class TextureGenerator {
         this.createRain();
         this.createToyPlane(); // Added
         this.createScratch(); // Added
+        this.createSliceProps();
     }
 
     static createScratch() {
@@ -1853,6 +2161,130 @@ class TextureGenerator {
         planeG.strokePath();
 
         planeG.generateTexture('toy_plane', 32, 32);
+    }
+
+    static createSliceProps() {
+        const makeBowlTexture = (key, baseColor, accentColor, mark) => {
+            const bowl = this.scene.make.graphics({ x: 0, y: 0, add: false });
+            bowl.fillStyle(0x000000, 0.25);
+            bowl.fillEllipse(14, 15, 26, 9);
+            bowl.fillStyle(baseColor);
+            bowl.fillEllipse(14, 11, 28, 17);
+            bowl.fillStyle(0x2b2722);
+            bowl.fillEllipse(14, 8, 22, 9);
+            bowl.lineStyle(2, accentColor, 1);
+            bowl.strokeEllipse(14, 8, 23, 10);
+
+            if (mark === 'chip') {
+                bowl.fillStyle(0x16130f);
+                bowl.fillTriangle(22, 2, 28, 5, 24, 10);
+            } else if (mark === 'stain') {
+                bowl.fillStyle(accentColor, 0.9);
+                bowl.fillCircle(10, 8, 3);
+                bowl.fillCircle(15, 6, 2);
+            } else if (mark === 'plane') {
+                bowl.lineStyle(2, accentColor, 1);
+                bowl.beginPath();
+                bowl.moveTo(8, 10);
+                bowl.lineTo(15, 4);
+                bowl.lineTo(20, 10);
+                bowl.lineTo(15, 8);
+                bowl.closePath();
+                bowl.strokePath();
+            } else if (mark === 'rice') {
+                bowl.fillStyle(0xd8d0c2, 0.85);
+                bowl.fillEllipse(10, 7, 4, 2);
+                bowl.fillEllipse(15, 6, 5, 2);
+                bowl.fillEllipse(19, 8, 4, 2);
+            }
+
+            bowl.generateTexture(key, 28, 20);
+        };
+
+        makeBowlTexture('bowl_wine', 0xb7a27e, 0x5b2e1f, 'chip');
+        makeBowlTexture('bowl_medicine', 0xe8e3d7, 0x7b8e52, 'stain');
+        makeBowlTexture('bowl_child', 0xd9e6ef, 0x3f6f9d, 'plane');
+        makeBowlTexture('bowl_offering', 0x8a8175, 0x4b4038, 'rice');
+
+        const chair = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        chair.fillStyle(0x3f2b20);
+        chair.fillRect(8, 4, 32, 30);
+        chair.fillRect(5, 30, 7, 24);
+        chair.fillRect(36, 30, 7, 24);
+        chair.lineStyle(3, 0x241812);
+        chair.strokeRect(8, 4, 32, 30);
+        chair.fillStyle(0xd6d6c8);
+        chair.fillCircle(8, 49, 3);
+        chair.fillCircle(40, 49, 3);
+        chair.generateTexture('chair_nailed', 48, 56);
+
+        const shard = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        shard.fillStyle(0xd7d0bd);
+        shard.fillTriangle(1, 11, 7, 1, 17, 9);
+        shard.lineStyle(2, 0x315f89);
+        shard.beginPath();
+        shard.moveTo(1, 11);
+        shard.lineTo(7, 1);
+        shard.lineTo(17, 9);
+        shard.strokePath();
+        shard.generateTexture('blue_shard', 18, 12);
+
+        const mirror = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        mirror.fillStyle(0x49382c);
+        mirror.fillRoundedRect(0, 0, 48, 72, 4);
+        mirror.fillStyle(0x1d2931);
+        mirror.fillRoundedRect(5, 5, 38, 62, 3);
+        mirror.lineStyle(2, 0x71808a, 0.5);
+        mirror.beginPath();
+        mirror.moveTo(9, 58);
+        mirror.lineTo(36, 12);
+        mirror.strokePath();
+        mirror.generateTexture('slice_mirror', 48, 72);
+
+        const uniform = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        uniform.fillStyle(0x202936);
+        uniform.fillRoundedRect(2, 8, 44, 30, 3);
+        uniform.fillStyle(0x141a23);
+        uniform.fillRect(8, 2, 32, 10);
+        uniform.lineStyle(2, 0x33465a);
+        uniform.strokeRect(2, 8, 44, 30);
+        uniform.fillStyle(0x4d7da5);
+        uniform.fillRect(34, 27, 9, 6);
+        uniform.generateTexture('slice_uniform', 48, 40);
+
+        const ticket = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        ticket.fillStyle(0xc8b996);
+        ticket.fillRect(1, 1, 46, 20);
+        ticket.fillStyle(0x2b2925);
+        ticket.fillCircle(43, 4, 3);
+        ticket.lineStyle(1, 0x716750);
+        ticket.beginPath();
+        ticket.moveTo(23, 2);
+        ticket.lineTo(22, 20);
+        ticket.moveTo(7, 8);
+        ticket.lineTo(18, 8);
+        ticket.moveTo(7, 13);
+        ticket.lineTo(16, 13);
+        ticket.strokePath();
+        ticket.generateTexture('train_ticket', 48, 22);
+
+        const comics = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        comics.fillStyle(0x25344a);
+        comics.fillRect(5, 8, 39, 25);
+        comics.fillStyle(0x6f4938);
+        comics.fillRect(2, 5, 39, 25);
+        comics.fillStyle(0x8b7b59);
+        comics.fillRect(0, 2, 39, 25);
+        comics.lineStyle(2, 0x26211c);
+        comics.strokeRect(0, 2, 39, 25);
+        comics.lineStyle(1, 0xd0c59f);
+        comics.beginPath();
+        comics.moveTo(8, 8);
+        comics.lineTo(31, 22);
+        comics.moveTo(31, 8);
+        comics.lineTo(8, 22);
+        comics.strokePath();
+        comics.generateTexture('comic_stack', 48, 36);
     }
 
     static createPlayerSheet() {
@@ -2327,6 +2759,7 @@ class TextureGenerator {
         // END bundled src/systems/TextureGenerator.js
 
         // BEGIN bundled src/systems/StoryState.js
+
 function createDefaultStoryFlags() {
     return {
         clues: { control: 0, illness: 0, death: 0 },
@@ -2372,6 +2805,7 @@ function createDefaultGameState() {
         isChasing: false,
         cabinetMoved: false,
         sanity: 100,
+        slice: null,
         storyFlags: createDefaultStoryFlags()
     };
 }
@@ -2430,6 +2864,7 @@ function normalizeGameState(gameState) {
     if (!gameState.clues) gameState.clues = [];
     if (gameState.candlesLit === undefined) gameState.candlesLit = 0;
     ensureStoryFlags(gameState);
+    if (gameState.slice?.enabled === true) ensureSliceState(gameState);
     return gameState;
 }
 
@@ -2490,6 +2925,561 @@ function canChooseCrashEnding(gameState) {
     return getTruthLevel(gameState) === 'complete' && flags.crashEvidence.car && flags.crashEvidence.guardrail;
 }
         // END bundled src/systems/StoryState.js
+
+        // BEGIN bundled src/systems/KitchenTableRules.js
+const KITCHEN_SEATS = Object.freeze(['nail', 'stove', 'side']);
+const KITCHEN_BOWLS = Object.freeze(['wine', 'medicine', 'child']);
+const CORRECT_SEATING = Object.freeze({
+    nail: 'wine',
+    stove: 'medicine',
+    side: 'child'
+});
+
+const CONTRADICTIONS = [
+    ['nail', 'wine', 'father_lock'],
+    ['stove', 'medicine', 'mother_break'],
+    ['side', 'child', 'child_shard']
+];
+
+function normalizeBowlPlacements(placements) {
+    if (placements === null || typeof placements !== 'object' || Array.isArray(placements)) {
+        throw new Error('Placements must be an object');
+    }
+
+    const seenBowls = new Set();
+    return Object.fromEntries(KITCHEN_SEATS.map(seat => {
+        const bowl = placements[seat];
+        if (!KITCHEN_BOWLS.includes(bowl) || seenBowls.has(bowl)) {
+            return [seat, null];
+        }
+        seenBowls.add(bowl);
+        return [seat, bowl];
+    }));
+}
+
+function placeBowl(placements, seat, bowl) {
+    const nextPlacements = normalizeBowlPlacements(placements);
+    if (!KITCHEN_SEATS.includes(seat)) {
+        throw new Error(`Unknown seat: ${seat}`);
+    }
+    if (!KITCHEN_BOWLS.includes(bowl)) {
+        throw new Error(`Unknown bowl: ${bowl}`);
+    }
+
+    for (const currentSeat of KITCHEN_SEATS) {
+        if (nextPlacements[currentSeat] === bowl) nextPlacements[currentSeat] = null;
+    }
+    nextPlacements[seat] = bowl;
+    return nextPlacements;
+}
+
+function evaluateSeating(placements) {
+    const normalizedPlacements = normalizeBowlPlacements(placements);
+    if (KITCHEN_SEATS.some(seat => normalizedPlacements[seat] === null)) {
+        return { status: 'incomplete', contradictions: [] };
+    }
+
+    const contradictions = CONTRADICTIONS
+        .filter(([seat, expectedBowl]) => normalizedPlacements[seat] !== expectedBowl)
+        .map(([, , contradictionId]) => contradictionId);
+
+    if (contradictions.length === 0) {
+        return { status: 'correct', contradictions: [] };
+    }
+    return { status: 'incorrect', contradictions };
+}
+
+function selectContradiction(placements, seen = []) {
+    if (!Array.isArray(seen)) {
+        throw new Error('Seen contradictions must be an array');
+    }
+    const { contradictions } = evaluateSeating(placements);
+    if (contradictions.length === 0) return null;
+    return contradictions.find(contradictionId => !seen.includes(contradictionId))
+        ?? contradictions[0];
+}
+        // END bundled src/systems/KitchenTableRules.js
+
+        // BEGIN bundled src/systems/MemoryReplayDirector.js
+const SHORT_REPLAY_DURATION_MS = 720;
+const MEMORY_REPLAY_SHUTDOWN_EVENT = globalThis.Phaser?.Scenes?.Events?.SHUTDOWN || 'shutdown';
+
+function freezeMealReplayRegistry(value) {
+    for (const definition of Object.values(value)) Object.freeze(definition);
+    return Object.freeze(value);
+}
+
+const MEAL_REPLAYS = freezeMealReplayRegistry({
+    father_lock: { id: 'father_lock', durationMs: 4400, actor: 'father', consequence: 'lock_side_door' },
+    mother_break: { id: 'mother_break', durationMs: 4200, actor: 'mother', consequence: 'return_stain_to_stove' },
+    child_shard: { id: 'child_shard', durationMs: 3800, actor: 'child', consequence: 'reject_shard_match' },
+    correct_meal: { id: 'correct_meal', durationMs: 5200, actor: 'family', consequence: 'open_side_door' }
+});
+
+const MEAL_CONTRADICTION_IDS = Object.freeze(['father_lock', 'mother_break', 'child_shard']);
+
+function assertMealContradictionId(id) {
+    if (!MEAL_CONTRADICTION_IDS.includes(id)) {
+        throw new Error(`Unknown meal contradiction: ${String(id)}`);
+    }
+}
+
+function assertMealReplaySeenContainer(seen) {
+    if (!Array.isArray(seen)) throw new Error('Seen meal replays must be an array');
+}
+
+function getReplayDefinition(id) {
+    const definition = typeof id === 'string' && Object.hasOwn(MEAL_REPLAYS, id)
+        ? MEAL_REPLAYS[id]
+        : null;
+    if (!definition) throw new Error(`Unknown meal replay: ${String(id)}`);
+    return { ...definition };
+}
+
+function normalizeMealReplaySeen(seen) {
+    if (!Array.isArray(seen)) return [];
+    return [...new Set(seen.filter(id => MEAL_CONTRADICTION_IDS.includes(id)))];
+}
+
+function markReplaySeen(seen, id) {
+    assertMealReplaySeenContainer(seen);
+    assertMealContradictionId(id);
+    const normalized = normalizeMealReplaySeen(seen);
+    return normalized.includes(id) ? normalized : [...normalized, id];
+}
+
+function shouldUseShortReplay(seen, id) {
+    assertMealReplaySeenContainer(seen);
+    assertMealContradictionId(id);
+    return normalizeMealReplaySeen(seen).includes(id);
+}
+
+function setReplayObjectDepth(object, depth) {
+    object?.setDepth?.(depth);
+    return object;
+}
+
+class MemoryReplayDirector {
+    constructor(scene, state = scene.sliceState || scene.gameState?.slice) {
+        if (!scene || !state || typeof state !== 'object') {
+            throw new Error('Memory replay director requires a scene and slice state');
+        }
+        this.scene = scene;
+        this.state = state;
+        this.active = false;
+        this.destroyed = false;
+        this.session = null;
+        this.shutdownHandler = () => this.destroy();
+        this.scene.events?.once?.(MEMORY_REPLAY_SHUTDOWN_EVENT, this.shutdownHandler);
+    }
+
+    play(id, options = {}) {
+        if (this.destroyed) return { status: 'destroyed' };
+        if (this.active) return { status: 'replay_active' };
+        const definition = getReplayDefinition(id);
+        const short = options?.short === true && id !== 'correct_meal';
+        const durationMs = short ? SHORT_REPLAY_DURATION_MS : definition.durationMs;
+        const result = { status: 'playing', replayId: id, short, durationMs };
+
+        if (typeof this.scene.time?.delayedCall !== 'function') {
+            return { ...result, status: 'unavailable' };
+        }
+
+        const session = {
+            id,
+            short,
+            definition,
+            onComplete: typeof options?.onComplete === 'function' ? options.onComplete : null,
+            callbackCalled: false,
+            objects: [],
+            tweens: [],
+            worldSnapshots: [],
+            timer: null
+        };
+        this.session = session;
+        this.active = true;
+        this.createReplayAction(session);
+        session.timer = this.scene.time.delayedCall(durationMs, () => this.finishSession(session));
+        return result;
+    }
+
+    createReplayAction(session) {
+        if (session.short) {
+            this.createLocalizedEcho(session);
+            return;
+        }
+        if (session.id === 'father_lock') this.createFatherLock(session);
+        else if (session.id === 'mother_break') this.createMotherBreak(session);
+        else if (session.id === 'child_shard') this.createChildShard(session);
+        else this.createCorrectMeal(session);
+    }
+
+    tableData() {
+        return this.scene.sliceMapDef?.objects?.table || {
+            seats: {
+                nail: { x: 320, y: 176 },
+                stove: { x: 384, y: 240 },
+                side: { x: 320, y: 304 }
+            },
+            offering: { x: 256, y: 240 }
+        };
+    }
+
+    findProp(id) {
+        return this.scene.sliceMapManager?.findProp?.(id)
+            || (this.scene.interactables?.getChildren?.() || []).find(object => object.objId === id)
+            || null;
+    }
+
+    findDoor(id) {
+        return (this.scene.doors?.getChildren?.() || []).find(door => door.doorId === id) || null;
+    }
+
+    ownObject(session, object, marker = null) {
+        if (!object) return null;
+        if (marker) object.sliceReplayEffectId = marker;
+        session.objects.push(object);
+        return object;
+    }
+
+    ownTween(session, config) {
+        const targets = Array.isArray(config.targets) ? config.targets : [config.targets];
+        for (const target of targets) {
+            if (!target || session.objects.includes(target)) continue;
+            this.snapshotWorldTarget(session, target, config);
+        }
+        const tween = this.scene.tweens?.add?.(config);
+        if (tween) session.tweens.push(tween);
+        return tween;
+    }
+
+    snapshotWorldTarget(session, target, config) {
+        let snapshot = session.worldSnapshots.find(entry => entry.target === target);
+        if (!snapshot) {
+            snapshot = { target, properties: {} };
+            session.worldSnapshots.push(snapshot);
+        }
+        for (const property of ['x', 'y', 'alpha', 'angle', 'scale']) {
+            if (Object.hasOwn(config, property) && !Object.hasOwn(snapshot.properties, property)) {
+                snapshot.properties[property] = target[property];
+            }
+        }
+    }
+
+    createActor(session, actorId, position) {
+        const actor = this.ownObject(
+            session,
+            setReplayObjectDepth(this.scene.add?.image?.(position.x, position.y, 'npc_paper'), 30)
+        );
+        if (!actor) return null;
+        actor.sliceReplayActor = actorId;
+        actor.setAlpha?.(0.48);
+        return actor;
+    }
+
+    createEchoRectangle(session, id, x, y, width, height, color = 0xc7d0d3) {
+        const echo = this.ownObject(
+            session,
+            setReplayObjectDepth(this.scene.add?.rectangle?.(x, y, width, height, color, 0.18), 29),
+            id
+        );
+        echo?.setStrokeStyle?.(1, color, 0.45);
+        if (echo) this.ownTween(session, { targets: echo, alpha: 0.55, duration: 180, yoyo: true });
+        return echo;
+    }
+
+    createFatherLock(session) {
+        const table = this.tableData();
+        const actor = this.createActor(session, 'father', table.seats.nail);
+        const chair = this.findProp('nailed_chair');
+        const door = this.findDoor('kitchen_side_door');
+        this.createEchoRectangle(session, 'father_chair_pull', chair?.x ?? 320, chair?.y ?? 160, 30, 12, 0x9b8067);
+        this.createEchoRectangle(session, 'father_door_latch', door?.x ?? 624, door?.y ?? 272, 8, 42, 0xb4a184);
+        if (actor) this.ownTween(session, { targets: actor, x: door?.x ?? 600, y: door?.y ?? 272, duration: 2200, ease: 'Sine.easeInOut' });
+        if (chair) this.ownTween(session, { targets: chair, x: chair.x + 4, duration: 120, yoyo: true, repeat: 2 });
+        if (door) this.ownTween(session, { targets: door, alpha: 1, duration: 100, yoyo: true, repeat: 2 });
+        this.scene.playSound?.(94, 'square', 0.12);
+        this.scene.playSound?.(61, 'sine', 0.18);
+    }
+
+    createMotherBreak(session) {
+        const table = this.tableData();
+        const actor = this.createActor(session, 'mother', table.seats.stove);
+        const stain = this.findProp('stove_stain');
+        const bowl = this.ownObject(
+            session,
+            setReplayObjectDepth(this.scene.add?.image?.(table.seats.stove.x, table.seats.stove.y - 12, 'bowl_medicine'), 31),
+            'mother_bowl_break'
+        );
+        this.createEchoRectangle(session, 'mother_stain_return', stain?.x ?? 480, stain?.y ?? 112, 42, 18, 0x6c4b36);
+        if (actor) this.ownTween(session, { targets: actor, x: stain?.x ?? 480, y: stain?.y ?? 112, duration: 1600, ease: 'Sine.easeInOut' });
+        if (bowl) this.ownTween(session, { targets: bowl, y: (stain?.y ?? 112) + 10, angle: 36, duration: 1550 });
+        if (stain) this.ownTween(session, { targets: stain, alpha: 0.35, duration: 180, yoyo: true, repeat: 2 });
+        this.scene.playSound?.(132, 'triangle', 0.1);
+        this.scene.playSound?.(740, 'square', 0.08);
+    }
+
+    createChildShard(session) {
+        const table = this.tableData();
+        const actor = this.createActor(session, 'child', table.seats.side);
+        const shard = this.findProp('door_shard');
+        const door = this.findDoor('kitchen_side_door');
+        const shadow = this.ownObject(
+            session,
+            setReplayObjectDepth(this.scene.add?.image?.(table.seats.side.x, table.seats.side.y - 14, 'toy_plane'), 31),
+            'child_plane_shadow'
+        );
+        shadow?.setAlpha?.(0.34);
+        const shardAnswer = this.ownObject(
+            session,
+            setReplayObjectDepth(this.scene.add?.circle?.(shard?.x ?? 560, shard?.y ?? 272, 12, 0x7e9eb4, 0.2), 29),
+            'child_shard_answer'
+        );
+        shardAnswer?.setStrokeStyle?.(1, 0xa6c2d4, 0.6);
+        const mismatch = this.ownObject(
+            session,
+            setReplayObjectDepth(
+                this.scene.add?.image?.((shard?.x ?? 560) + 16, (shard?.y ?? 272) - 10, 'blue_shard'),
+                31
+            ),
+            'child_shard_mismatch'
+        );
+        mismatch?.setAlpha?.(0.38);
+        if (actor) this.ownTween(session, { targets: actor, x: door?.x ?? 624, y: door?.y ?? 272, duration: 1800, ease: 'Sine.easeIn' });
+        if (shadow) this.ownTween(session, {
+            targets: shadow,
+            x: door?.x ?? 624,
+            y: door?.y ?? 272,
+            angle: 28,
+            duration: 920,
+            ease: 'Sine.easeIn',
+            yoyo: true
+        });
+        if (mismatch) this.ownTween(session, { targets: mismatch, alpha: 0.68, duration: 140, yoyo: true, repeat: 2 });
+        if (shard) this.ownTween(session, { targets: shard, alpha: 1, duration: 90, yoyo: true, repeat: 3 });
+        this.scene.playSound?.(180, 'triangle', 0.12);
+        this.scene.playSound?.(84, 'square', 0.08);
+    }
+
+    createCorrectMeal(session) {
+        const table = this.tableData();
+        for (const [actorId, seatId] of [['father', 'nail'], ['mother', 'stove'], ['child', 'side']]) {
+            const actor = this.createActor(session, actorId, table.seats[seatId]);
+            if (actor) this.ownTween(session, { targets: actor, alpha: 0.68, duration: 520, yoyo: true, repeat: 2 });
+        }
+        const ripple = this.ownObject(
+            session,
+            setReplayObjectDepth(this.scene.add?.circle?.(table.offering.x, table.offering.y - 6, 8, 0xa9c4cb, 0.12), 32),
+            'offering_ripple'
+        );
+        ripple?.setStrokeStyle?.(2, 0xb8d3d7, 0.65);
+        if (ripple) this.ownTween(session, { targets: ripple, scale: 2.8, alpha: 0, duration: 880, repeat: 3 });
+        this.scene.playSound?.(196, 'sine', 0.18);
+        this.scene.playSound?.(122, 'triangle', 0.15);
+    }
+
+    createLocalizedEcho(session) {
+        if (session.id === 'father_lock') {
+            const chair = this.findProp('nailed_chair');
+            this.createEchoRectangle(session, 'father_chair_pull', chair?.x ?? 320, chair?.y ?? 160, 30, 12, 0x9b8067);
+            if (chair) this.ownTween(session, { targets: chair, x: chair.x + 3, duration: 80, yoyo: true, repeat: 1 });
+            this.scene.playSound?.(94, 'square', 0.08);
+        } else if (session.id === 'mother_break') {
+            const stain = this.findProp('stove_stain');
+            this.createEchoRectangle(session, 'mother_stain_return', stain?.x ?? 480, stain?.y ?? 112, 42, 18, 0x6c4b36);
+            if (stain) this.ownTween(session, { targets: stain, alpha: 0.4, duration: 110, yoyo: true, repeat: 1 });
+            this.scene.playSound?.(740, 'square', 0.06);
+        } else {
+            const shard = this.findProp('door_shard');
+            const echo = this.ownObject(
+                session,
+                setReplayObjectDepth(this.scene.add?.circle?.(shard?.x ?? 560, shard?.y ?? 272, 10, 0x7e9eb4, 0.2), 29),
+                'child_shard_answer'
+            );
+            echo?.setStrokeStyle?.(1, 0xa6c2d4, 0.6);
+            if (shard) this.ownTween(session, { targets: shard, alpha: 1, duration: 80, yoyo: true, repeat: 2 });
+            this.scene.playSound?.(84, 'triangle', 0.07);
+        }
+    }
+
+    finishSession(session) {
+        if (this.destroyed || this.session !== session) return;
+        const shouldCommitCorrect = session.id === 'correct_meal' && session.short === false;
+        this.cleanupSession(session);
+        if (shouldCommitCorrect) this.commitCorrectMeal();
+        if (session.onComplete && !session.callbackCalled) {
+            session.callbackCalled = true;
+            session.onComplete({ replayId: session.id, short: session.short });
+        }
+    }
+
+    commitCorrectMeal() {
+        this.state.tableSolved = true;
+        this.state.heldBowl = null;
+        this.state.houseRuleDemonstrated = false;
+        if (this.state.slicePhase === 'table') {
+            this.state.slicePhase = 'rule';
+            this.state.sliceCompleted = false;
+        }
+        this.scene.kitchenTableController?.syncSprites?.();
+        this.scene.sliceMapManager?.refreshDoorAccess?.(this.state);
+        this.scene.sliceMapManager?.applyRoomRevision?.(this.state);
+    }
+
+    cleanupSession(session) {
+        session.timer?.remove?.();
+        session.timer?.destroy?.();
+        session.timer = null;
+        for (const tween of session.tweens) {
+            tween?.stop?.();
+            if (typeof tween?.remove === 'function') tween.remove();
+            else tween?.destroy?.();
+        }
+        for (const snapshot of session.worldSnapshots) {
+            for (const [property, value] of Object.entries(snapshot.properties)) {
+                snapshot.target[property] = value;
+            }
+        }
+        for (const object of session.objects) object?.destroy?.();
+        this.scene.sliceMapManager?.refreshDoorAccess?.(this.state);
+        session.tweens = [];
+        session.worldSnapshots = [];
+        session.objects = [];
+        if (this.session === session) this.session = null;
+        this.active = false;
+    }
+
+    destroy() {
+        if (this.destroyed) return;
+        this.destroyed = true;
+        this.scene.events?.off?.(MEMORY_REPLAY_SHUTDOWN_EVENT, this.shutdownHandler);
+        if (this.session) this.cleanupSession(this.session);
+        this.active = false;
+    }
+}
+        // END bundled src/systems/MemoryReplayDirector.js
+
+        // BEGIN bundled src/systems/SliceState.js
+
+const SLICE_PHASES = Object.freeze(['arrival', 'investigation', 'table', 'rule', 'bedroom', 'return', 'complete']);
+
+const FATHER_ATTENTION_STATES = Object.freeze(['quiet', 'suspicious', 'checking', 'chasing']);
+
+function createDefaultSliceState() {
+    return {
+        enabled: true,
+        slicePhase: 'arrival',
+        bowlPlacements: { nail: null, stove: null, side: null },
+        heldBowl: null,
+        mealReplaySeen: [],
+        tableSolved: false,
+        houseRuleDemonstrated: false,
+        fatherAttention: 'quiet',
+        lastTraversedDoor: 'main_kitchen_door',
+        planeChoice: null,
+        paperDollIndex: 0,
+        sliceCompleted: false
+    };
+}
+
+function ensureSliceState(gameState) {
+    if (!gameState.slice || typeof gameState.slice !== 'object' || Array.isArray(gameState.slice)) {
+        gameState.slice = createDefaultSliceState();
+    }
+    const defaults = createDefaultSliceState();
+    const source = gameState.slice;
+    const slicePhase = SLICE_PHASES.includes(source.slicePhase) ? source.slicePhase : defaults.slicePhase;
+    const sourcePlacements = source.bowlPlacements;
+    const bowlPlacements = normalizeBowlPlacements(
+        sourcePlacements !== null && typeof sourcePlacements === 'object' && !Array.isArray(sourcePlacements)
+            ? sourcePlacements
+            : defaults.bowlPlacements
+    );
+    const tableSolved = source.tableSolved === true && evaluateSeating(bowlPlacements).status === 'correct';
+    let heldBowl = KITCHEN_BOWLS.includes(source.heldBowl) ? source.heldBowl : null;
+    if (tableSolved) {
+        heldBowl = null;
+    } else if (heldBowl !== null) {
+        for (const seat of Object.keys(bowlPlacements)) {
+            if (bowlPlacements[seat] === heldBowl) bowlPlacements[seat] = null;
+        }
+    }
+    const mealReplaySeen = normalizeMealReplaySeen(source.mealReplaySeen);
+    gameState.slice = {
+        enabled: true,
+        slicePhase,
+        bowlPlacements,
+        heldBowl,
+        mealReplaySeen,
+        tableSolved,
+        houseRuleDemonstrated: tableSolved && source.houseRuleDemonstrated === true,
+        fatherAttention: FATHER_ATTENTION_STATES.includes(source.fatherAttention)
+            ? source.fatherAttention
+            : defaults.fatherAttention,
+        lastTraversedDoor: isSliceDoorId(source.lastTraversedDoor)
+            ? source.lastTraversedDoor
+            : defaults.lastTraversedDoor,
+        planeChoice: source.planeChoice === 'take' || source.planeChoice === 'leave'
+            ? source.planeChoice
+            : null,
+        paperDollIndex: Number.isInteger(source.paperDollIndex) && source.paperDollIndex >= 0 && source.paperDollIndex <= 2
+            ? source.paperDollIndex
+            : defaults.paperDollIndex,
+        sliceCompleted: slicePhase === 'complete'
+    };
+    return gameState.slice;
+}
+
+function transitionSlicePhase(state, nextPhase) {
+    const current = SLICE_PHASES.indexOf(state.slicePhase);
+    const next = SLICE_PHASES.indexOf(nextPhase);
+    if (current < 0) throw new Error(`Unknown slice phase: ${state.slicePhase}`);
+    if (next < 0) throw new Error(`Unknown slice phase: ${nextPhase}`);
+    if (next > current + 1) throw new Error(`Slice phase cannot skip from ${state.slicePhase} to ${nextPhase}`);
+    if (next < current) return state;
+    return { ...state, slicePhase: nextPhase, sliceCompleted: nextPhase === 'complete' };
+}
+
+function choosePlane(state, choice) {
+    if (!['take', 'leave'].includes(choice)) throw new Error(`Unknown plane choice: ${choice}`);
+    if (state.planeChoice && state.planeChoice !== choice) throw new Error('Plane choice is locked');
+    return { ...state, planeChoice: choice };
+}
+        // END bundled src/systems/SliceState.js
+
+        // BEGIN bundled src/systems/HouseRuleState.js
+const ATTENTION_STATES = Object.freeze(['quiet', 'suspicious', 'checking', 'chasing']);
+
+function normalizeAttention(attention) {
+    return ATTENTION_STATES.includes(attention) ? attention : 'quiet';
+}
+
+function evaluateDinnerBell({ demonstrated, elapsedMs = 0, movedDistance = 0 } = {}) {
+    if (demonstrated !== true) return 'demonstration';
+    if (movedDistance >= 16) return 'violated';
+    return elapsedMs >= 2500 ? 'obeyed' : 'listening';
+}
+
+function advanceAttention(attention) {
+    if (!ATTENTION_STATES.includes(attention)) return 'quiet';
+    const current = normalizeAttention(attention);
+    return ATTENTION_STATES[Math.min(ATTENTION_STATES.indexOf(current) + 1, ATTENTION_STATES.length - 1)];
+}
+
+function recoverAttention(attention) {
+    if (!ATTENTION_STATES.includes(attention)) return 'quiet';
+    const current = normalizeAttention(attention);
+    return ATTENTION_STATES[Math.max(ATTENTION_STATES.indexOf(current) - 1, 0)];
+}
+
+function shouldPauseHouseRule({ dialog, replay, switching, carryingAnimation } = {}) {
+    return dialog === true || replay === true || switching === true || carryingAnimation === true;
+}
+
+function isFatherSafeZone({ zone, moving } = {}) {
+    return zone === 'under_table' && moving !== true;
+}
+        // END bundled src/systems/HouseRuleState.js
 
         // BEGIN bundled src/systems/NarrativeDirector.js
 
@@ -2887,12 +3877,24 @@ const ARRIVAL_DELAY_MS = 4000;
 const MATERIALIZE_MS = 600;
 const REPATH_MS = 350;
 const SPAWN_RETRY_MS = 500;
+const SLICE_CHASE_DURATION_MS = 10000;
 
 function getArrivalStage(elapsedMs) {
     if (elapsedMs >= ARRIVAL_DELAY_MS) return 'arriving';
     if (elapsedMs >= WARNING_MS) return 'warning';
     if (elapsedMs >= DOOR_BANG_MS) return 'door_bang';
     return 'approaching';
+}
+
+function getSliceArrivalStage(elapsedMs) {
+    return getArrivalStage(elapsedMs);
+}
+
+function hasNavigationData(mapDef) {
+    return Array.isArray(mapDef?.data) &&
+        mapDef.data.length > 0 &&
+        mapDef.data.every(row => Array.isArray(row) && row.length > 0) &&
+        new Set(mapDef.data.map(row => row.length)).size === 1;
 }
 
 class ChaseManager {
@@ -2909,6 +3911,13 @@ class ChaseManager {
         this.path = [];
         this.nextRepathAt = 0;
         this.lastTargetKey = '';
+        this.sliceConfig = null;
+        this.pendingSliceDoor = null;
+        this.sliceArrivalTimers = [];
+        this.sliceSpawnRetryTimer = null;
+        this.sliceEndTimer = null;
+        this.sliceDoorGlow = null;
+        this.sliceFootsteps = null;
     }
 
     getArrivalDoor() {
@@ -2938,6 +3947,94 @@ class ChaseManager {
             this.scene.time.delayedCall(ARRIVAL_DELAY_MS, () => this.attemptSpawn())
         );
         this.scene.refreshObjective();
+    }
+
+    startSlice({ mapDef, arrivalDoorId, durationMs = SLICE_CHASE_DURATION_MS, onCaught } = {}) {
+        const door = mapDef?.objects?.doors?.find(candidate => candidate.id === arrivalDoorId);
+        if (!hasNavigationData(mapDef) || !door || this.sliceConfig || this.chaser?.active) return false;
+
+        this.sliceConfig = {
+            mapDef,
+            arrivalDoorId,
+            durationMs: Number.isFinite(durationMs) && durationMs > 0 ? durationMs : SLICE_CHASE_DURATION_MS,
+            onCaught: typeof onCaught === 'function' ? onCaught : null
+        };
+        this.pendingSliceDoor = door;
+        this.scene.gameState.sliceChasing = true;
+        this.sliceArrivalTimers.push(
+            this.scene.time.delayedCall(DOOR_BANG_MS, () => this.telegraphSliceDoor('bang')),
+            this.scene.time.delayedCall(WARNING_MS, () => this.telegraphSliceDoor('footsteps')),
+            this.scene.time.delayedCall(ARRIVAL_DELAY_MS, () => this.attemptSliceSpawn())
+        );
+        return true;
+    }
+
+    createSliceGrid(mapDef, forceOpen = []) {
+        if (!hasNavigationData(mapDef)) return [];
+        return createNavigationGrid(mapDef.data, this.scene.navigationBlockedRects || [], forceOpen);
+    }
+
+    isSliceChasing() {
+        return this.sliceConfig !== null;
+    }
+
+    telegraphSliceDoor(stage) {
+        if (!this.pendingSliceDoor || !this.sliceConfig) return;
+        const point = this.getDoorWorldPosition(this.pendingSliceDoor);
+        this.scene.soundManager?.playSpatialNoise(stage === 'bang' ? 0.24 : 0.16, point.x, point.y);
+        if (!this.sliceDoorGlow) {
+            this.sliceDoorGlow = this.scene.add.circle(point.x, point.y, 24, 0x8b0000, 0.22).setDepth(340);
+            this.scene.tweens.add({ targets: this.sliceDoorGlow, alpha: 0.56, duration: 360, yoyo: true, repeat: -1 });
+        }
+        if (stage === 'footsteps' && !this.sliceFootsteps) {
+            this.sliceFootsteps = this.scene.add.rectangle(point.x, point.y + 30, 18, 4, 0x6b4b3b, 0.34).setDepth(341);
+            this.scene.tweens.add({ targets: this.sliceFootsteps, alpha: 0.08, scaleX: 2.2, duration: 420, yoyo: true, repeat: -1 });
+        }
+    }
+
+    attemptSliceSpawn() {
+        this.sliceArrivalTimers = [];
+        if (!this.pendingSliceDoor || !this.sliceConfig || this.chaser?.active) return;
+        const playerSprite = this.scene.player?.sprite;
+        if (!playerSprite) return;
+        const playerCell = worldToGrid(playerSprite.x, playerSprite.y);
+        const grid = this.createSliceGrid(this.sliceConfig.mapDef, [playerCell]);
+        const spawnCell = findSafeDoorSpawn(grid, this.pendingSliceDoor, playerCell, 5);
+        if (!spawnCell) {
+            this.sliceSpawnRetryTimer = this.scene.time.delayedCall(SPAWN_RETRY_MS, () => {
+                this.sliceSpawnRetryTimer = null;
+                this.attemptSliceSpawn();
+            });
+            return;
+        }
+        this.spawnSliceAt(gridToWorld(spawnCell));
+    }
+
+    spawnSliceAt(spawn) {
+        if (!this.sliceConfig) return false;
+        this.clearSliceArrivalVisuals();
+        this.chaser = this.scene.physics.add.sprite(spawn.x, spawn.y, 'npc_paper').setTint(0xff0000).setAlpha(0);
+        if (!this.scene.isMobile) this.chaser.setPipeline('Light2D');
+        this.scene.chaser = this.chaser;
+        this.materializing = true;
+        this.chaser.body.enable = false;
+        this.scene.physics.add.collider(this.chaser, this.scene.walls);
+        this.scene.physics.add.collider(this.chaser, this.scene.furniture);
+        if (this.scene.trees) this.scene.physics.add.collider(this.chaser, this.scene.trees);
+        this.scene.physics.add.overlap(this.scene.player.sprite, this.chaser, () => this.handleCaught());
+        this.scene.tweens.add({
+            targets: this.chaser,
+            alpha: 0.78,
+            duration: MATERIALIZE_MS,
+            onComplete: () => {
+                if (!this.chaser?.active || !this.sliceConfig) return;
+                this.chaser.body.enable = true;
+                this.materializing = false;
+                this.nextRepathAt = 0;
+            }
+        });
+        this.sliceEndTimer = this.scene.time.delayedCall(this.sliceConfig.durationMs, () => this.endSliceChase('timeout'));
+        return true;
     }
 
     telegraphDoor(showWarning) {
@@ -3015,7 +4112,9 @@ class ChaseManager {
         const playerCell = worldToGrid(this.scene.player.sprite.x, this.scene.player.sprite.y);
         const targetKey = `${playerCell.x},${playerCell.y}`;
         if (now >= this.nextRepathAt || targetKey !== this.lastTargetKey || this.path.length < 2) {
-            const grid = this.createGrid([chaserCell, playerCell]);
+            const grid = this.sliceConfig
+                ? this.createSliceGrid(this.sliceConfig.mapDef, [chaserCell, playerCell])
+                : this.createGrid([chaserCell, playerCell]);
             this.path = findGridPath(grid, chaserCell, playerCell);
             this.nextRepathAt = now + REPATH_MS;
             this.lastTargetKey = targetKey;
@@ -3070,6 +4169,14 @@ class ChaseManager {
     }
 
     handleCaught() {
+        if (this.sliceConfig) {
+            if (this.caught || this.materializing) return;
+            this.caught = true;
+            const onCaught = this.sliceConfig.onCaught;
+            this.endSliceChase('caught');
+            onCaught?.();
+            return;
+        }
         if (this.caught || this.materializing || this.scene.gameState.isHidden) return;
         this.caught = true;
         this.scene.physics.pause();
@@ -3102,15 +4209,387 @@ class ChaseManager {
         this.pendingDoor = null;
     }
 
+    clearSliceArrivalVisuals() {
+        this.sliceDoorGlow?.destroy();
+        this.sliceFootsteps?.destroy();
+        this.sliceDoorGlow = null;
+        this.sliceFootsteps = null;
+    }
+
+    cancelSliceArrival() {
+        this.sliceArrivalTimers.forEach(timer => timer?.remove?.());
+        this.sliceArrivalTimers = [];
+        this.sliceSpawnRetryTimer?.remove?.();
+        this.sliceSpawnRetryTimer = null;
+        this.clearSliceArrivalVisuals();
+        this.pendingSliceDoor = null;
+    }
+
+    endSliceChase(reason = 'timeout') {
+        if (!this.sliceConfig) return false;
+        this.sliceEndTimer?.remove?.();
+        this.sliceEndTimer = null;
+        this.cancelSliceArrival();
+        this.chaser?.destroy?.();
+        this.chaser = null;
+        this.scene.chaser = null;
+        this.scene.dangerOverlay?.setAlpha?.(0);
+        this.scene.gameState.sliceChasing = false;
+        this.sliceConfig = null;
+        this.materializing = false;
+        this.path = [];
+        this.lastTargetKey = '';
+        this.caught = false;
+        return reason;
+    }
+
     destroy() {
         this.cancelHideEscape();
         this.cancelArrival();
+        this.endSliceChase('destroy');
         this.chaser?.destroy();
         this.chaser = null;
         this.scene.chaser = null;
     }
 }
         // END bundled src/systems/ChaseManager.js
+
+        // BEGIN bundled src/systems/HouseRuleDirector.js
+
+const EXIT_BELL_RADIUS = 96;
+const HOUSE_RULE_CHASE_DURATION_MS = 10000;
+const HOUSE_RULE_CHECKPOINT_MS = 30000;
+
+const HOUSE_RULE_SHUTDOWN_EVENT = globalThis.Phaser?.Scenes?.Events?.SHUTDOWN || 'shutdown';
+const HOUSE_RULE_CUES = Object.freeze([
+    { id: 'bell', at: 0 },
+    { id: 'knock', at: 550 },
+    { id: 'footsteps', at: 1150 },
+    { id: 'door_shadow', at: 2000 },
+    { id: 'door_check', at: 3200 }
+]);
+
+function distanceBetween(first, second) {
+    if (!first || !second) return Infinity;
+    return Math.hypot(first.x - second.x, first.y - second.y);
+}
+
+function pointInRect(point, rect) {
+    return Boolean(
+        point && rect &&
+        point.x >= rect.x && point.x <= rect.x + rect.width &&
+        point.y >= rect.y && point.y <= rect.y + rect.height
+    );
+}
+
+function setDepth(object, depth) {
+    object?.setDepth?.(depth);
+    return object;
+}
+
+class HouseRuleDirector {
+    constructor(scene, state = scene?.sliceState || scene?.gameState?.slice) {
+        if (!scene || !state || typeof state !== 'object') {
+            throw new Error('House rule director requires a scene and slice state');
+        }
+        this.scene = scene;
+        this.state = state;
+        this.activeBell = null;
+        this.warningEffects = [];
+        this.fatherChecker = null;
+        this.checkpoint = null;
+        this.playerElapsedMs = 0;
+        this.exitBellResolved = false;
+        this.requiresExitReentry = false;
+        this.destroyed = false;
+        this.shutdownHandler = () => this.destroy();
+        this.scene.events?.once?.(HOUSE_RULE_SHUTDOWN_EVENT, this.shutdownHandler);
+    }
+
+    update(_time, delta = 0) {
+        if (this.destroyed) return;
+        if (this.isPaused()) return;
+        const safeDelta = Number.isFinite(delta) && delta > 0 ? delta : 0;
+        this.playerElapsedMs += safeDelta;
+        this.expireCheckpoint();
+
+        if (!this.activeBell) {
+            this.tryStartNextBell();
+            return;
+        }
+
+        this.activeBell.elapsedMs += safeDelta;
+        this.recordPlayerMotion();
+        for (const cue of HOUSE_RULE_CUES) {
+            if (!this.activeBell.fired.has(cue.id) && this.activeBell.elapsedMs >= cue.at) {
+                this.activeBell.fired.add(cue.id);
+                this.runCue(cue.id);
+                if (!this.activeBell) return;
+            }
+        }
+    }
+
+    isPaused() {
+        return shouldPauseHouseRule({
+            dialog: globalThis.window?.dialogActive === true,
+            replay: this.scene.memoryReplayDirector?.active === true,
+            switching: this.scene.isSwitching === true,
+            carryingAnimation: this.scene.kitchenTableController?.isCarryingAnimation === true
+        });
+    }
+
+    tryStartNextBell() {
+        if (this.state.tableSolved !== true) return false;
+        if (this.state.houseRuleDemonstrated !== true) {
+            return this.startBell('demonstration', this.getExitDoor() || this.getCheckDoor());
+        }
+        if (this.exitBellResolved || !this.isExitDoorOpen()) return false;
+        if (this.requiresExitReentry) {
+            if (this.distanceToExitDoor() > EXIT_BELL_RADIUS) this.requiresExitReentry = false;
+            return false;
+        }
+        if (this.distanceToExitDoor() > EXIT_BELL_RADIUS) return false;
+        return this.startBell('exit', this.getExitDoor());
+    }
+
+    startBell(kind, door) {
+        if (!door || this.activeBell || this.destroyed) return false;
+        this.clearFatherChecker();
+        if (kind === 'exit') this.captureCheckpoint();
+        const player = this.scene.player?.sprite;
+        this.activeBell = {
+            kind,
+            door,
+            arrivalDoor: this.getCheckDoor() || door,
+            elapsedMs: 0,
+            movedDistance: 0,
+            frameMovedDistance: 0,
+            lastPlayerPosition: player ? { x: player.x, y: player.y } : null,
+            fired: new Set()
+        };
+        this.activeBell.fired.add('bell');
+        this.runCue('bell');
+        return true;
+    }
+
+    runCue(id) {
+        const bell = this.activeBell;
+        if (!bell || this.destroyed) return;
+        const point = this.getDoorPoint(bell.arrivalDoor);
+        if (id === 'bell') {
+            this.scene.soundManager?.playSpatialNoise?.(0.14, point.x, point.y);
+            this.createWarningCircle(point.x, point.y, 20, 0x89745d, 0.18, 'bell');
+            if (bell.kind === 'demonstration') this.createFrozenFamily();
+            return;
+        }
+        if (id === 'knock') {
+            this.scene.soundManager?.playSpatialNoise?.(0.22, point.x, point.y);
+            this.createWarningCircle(point.x, point.y, 28, 0x8b0000, 0.25, 'knock');
+            return;
+        }
+        if (id === 'footsteps') {
+            this.scene.soundManager?.playSpatialNoise?.(0.11, point.x, point.y + 24);
+            const footsteps = setDepth(this.scene.add?.rectangle?.(point.x, point.y + 28, 22, 5, 0x6b4b3b, 0.36), 342);
+            if (footsteps) this.warningEffects.push(footsteps);
+            return;
+        }
+        if (id === 'door_shadow') {
+            const shadow = setDepth(this.scene.add?.image?.(point.x, point.y, 'npc_paper'), 343);
+            shadow?.setAlpha?.(0.22);
+            shadow?.setTint?.(0x381818);
+            if (shadow) this.warningEffects.push(shadow);
+            return;
+        }
+        if (id === 'door_check') this.resolveDoorCheck();
+    }
+
+    createWarningCircle(x, y, radius, color, alpha, marker) {
+        const circle = setDepth(this.scene.add?.circle?.(x, y, radius, color, alpha), 341);
+        if (!circle) return null;
+        circle.sliceHouseRuleEffect = marker;
+        this.warningEffects.push(circle);
+        return circle;
+    }
+
+    createFrozenFamily() {
+        const seats = this.scene.sliceMapDef?.objects?.table?.seats || {
+            nail: { x: 320, y: 176 },
+            stove: { x: 384, y: 240 },
+            side: { x: 320, y: 304 }
+        };
+        for (const [actor, position] of Object.entries(seats)) {
+            const ghost = setDepth(this.scene.add?.image?.(position.x, position.y, 'npc_paper'), 344);
+            ghost?.setAlpha?.(0.28);
+            ghost?.setTint?.(0xb7c9d0);
+            if (ghost) {
+                ghost.sliceHouseRuleEffect = `frozen_${actor}`;
+                this.warningEffects.push(ghost);
+            }
+        }
+    }
+
+    recordPlayerMotion() {
+        const bell = this.activeBell;
+        const player = this.scene.player?.sprite;
+        if (!bell || !player) return;
+        const current = { x: player.x, y: player.y };
+        const distance = distanceBetween(current, bell.lastPlayerPosition);
+        bell.frameMovedDistance = Number.isFinite(distance) ? distance : 0;
+        bell.movedDistance += bell.frameMovedDistance;
+        bell.lastPlayerPosition = current;
+    }
+
+    resolveDoorCheck() {
+        const bell = this.activeBell;
+        if (!bell) return;
+        if (bell.kind === 'demonstration') {
+            this.state.houseRuleDemonstrated = true;
+            this.finishBell('demonstration');
+            return;
+        }
+
+        const result = evaluateDinnerBell({
+            demonstrated: this.state.houseRuleDemonstrated === true,
+            elapsedMs: bell.elapsedMs,
+            movedDistance: bell.movedDistance
+        });
+        if (result === 'violated') {
+            this.state.fatherAttention = advanceAttention(this.state.fatherAttention);
+            if (this.state.fatherAttention === 'chasing') {
+                this.startSliceChase();
+                this.finishBell('chasing');
+            } else {
+                this.requiresExitReentry = true;
+                this.finishBell('violated');
+            }
+            return;
+        }
+
+        const safe = this.isPlayerSafe();
+        if (this.state.fatherAttention === 'checking' && !safe) this.createFatherChecker();
+        this.state.fatherAttention = recoverAttention(this.state.fatherAttention);
+        this.exitBellResolved = true;
+        this.finishBell(safe ? 'safe' : 'obeyed');
+    }
+
+    startSliceChase() {
+        const checkDoor = this.getCheckDoor();
+        const mapDef = this.scene.sliceMapDef;
+        if (!checkDoor || !mapDef) return false;
+        return this.scene.chaseManager?.startSlice?.({
+            mapDef,
+            arrivalDoorId: checkDoor.doorId,
+            durationMs: HOUSE_RULE_CHASE_DURATION_MS,
+            onCaught: () => this.restoreCheckpoint()
+        }) === true;
+    }
+
+    finishBell(_reason) {
+        this.clearWarningEffects();
+        this.activeBell = null;
+    }
+
+    getDoorPoint(door) {
+        return { x: door?.x ?? 0, y: door?.y ?? 0 };
+    }
+
+    getExitDoor() {
+        return (this.scene.doors?.getChildren?.() || []).find(door => door.doorId === 'kitchen_side_door') || null;
+    }
+
+    getCheckDoor() {
+        const doors = this.scene.doors?.getChildren?.() || [];
+        const exact = doors.find(door => door.doorId === this.state.lastTraversedDoor);
+        if (exact) return exact;
+        const previousMap = this.scene.previousMapId;
+        return doors.find(door => door.targetMap === previousMap) || null;
+    }
+
+    isExitDoorOpen() {
+        const door = this.getExitDoor();
+        return this.state.tableSolved === true && door?.locked !== true;
+    }
+
+    distanceToExitDoor() {
+        return distanceBetween(this.scene.player?.sprite, this.getExitDoor());
+    }
+
+    isPlayerSafe() {
+        const player = this.scene.player?.sprite;
+        const zone = pointInRect(player, this.scene.sliceSafeZones?.under_table) ? 'under_table' : null;
+        return isFatherSafeZone({ zone, moving: (this.activeBell?.frameMovedDistance || 0) > 0.5 });
+    }
+
+    captureCheckpoint() {
+        const player = this.scene.player?.sprite;
+        if (!player) return;
+        this.checkpoint = {
+            mapId: this.scene.currentMapId,
+            x: player.x,
+            y: player.y,
+            createdAtMs: this.playerElapsedMs
+        };
+    }
+
+    expireCheckpoint() {
+        if (this.checkpoint && this.playerElapsedMs - this.checkpoint.createdAtMs > HOUSE_RULE_CHECKPOINT_MS) {
+            this.checkpoint = null;
+        }
+    }
+
+    restoreCheckpoint() {
+        this.expireCheckpoint();
+        const checkpoint = this.checkpoint;
+        if (!checkpoint || this.destroyed) return false;
+        this.scene.scene?.restart?.({
+            mapId: checkpoint.mapId,
+            x: checkpoint.x,
+            y: checkpoint.y,
+            previousMapId: this.scene.previousMapId,
+            sliceMode: true
+        });
+        return true;
+    }
+
+    blocksDoorTransition(door) {
+        return door?.doorId === 'kitchen_side_door' && this.activeBell?.kind === 'exit';
+    }
+
+    clearWarningEffects() {
+        for (const effect of this.warningEffects) effect?.destroy?.();
+        this.warningEffects = [];
+    }
+
+    createFatherChecker() {
+        const door = this.getCheckDoor();
+        if (!door) return null;
+        this.clearFatherChecker();
+        const father = setDepth(this.scene.add?.image?.(door.x, door.y, 'npc_paper'), 345);
+        father?.setAlpha?.(0.62);
+        father?.setTint?.(0x6a3030);
+        if (father) {
+            father.sliceHouseRuleEffect = 'father_check';
+            this.fatherChecker = father;
+        }
+        return father;
+    }
+
+    clearFatherChecker() {
+        this.fatherChecker?.destroy?.();
+        this.fatherChecker = null;
+    }
+
+    destroy() {
+        if (this.destroyed) return;
+        this.destroyed = true;
+        this.scene.events?.off?.(HOUSE_RULE_SHUTDOWN_EVENT, this.shutdownHandler);
+        this.activeBell = null;
+        this.clearWarningEffects();
+        this.clearFatherChecker();
+        this.checkpoint = null;
+    }
+}
+        // END bundled src/systems/HouseRuleDirector.js
 
         // BEGIN bundled src/systems/HauntingDirector.js
 
@@ -3250,21 +4729,49 @@ class HauntingDirector {
 
         // BEGIN bundled src/systems/StartRoute.js
 
+const SLICE_MAP_IDS = new Set([
+    'room_main',
+    'room_kitchen',
+    'room_bedroom_me'
+]);
+
+function createRouteData(mapId, sliceMode, params) {
+    const data = { mapId, sliceMode };
+
+    for (const coordinate of ['x', 'y']) {
+        if (!params.has(coordinate)) continue;
+        const rawValue = params.get(coordinate);
+        if (rawValue.trim() === '') continue;
+        const value = Number(rawValue);
+        if (Number.isFinite(value)) data[coordinate] = value;
+    }
+
+    return data;
+}
+
 function resolveStartRoute(search = '') {
     const params = new URLSearchParams(search);
     const mapId = params.get('map');
+    const legacyValues = params.getAll('legacy');
+    const legacy = legacyValues.length === 1 && legacyValues[0] === '1';
 
-    if (!mapId || !Maps[mapId]) {
-        return { scene: 'IntroScene', data: undefined };
+    if (legacy) {
+        if (!mapId || !Object.hasOwn(Maps, mapId)) {
+            return { scene: 'IntroScene', data: undefined };
+        }
+
+        return {
+            scene: 'GameScene',
+            data: createRouteData(mapId, false, params)
+        };
     }
 
-    const data = { mapId };
-    const x = params.has('x') ? Number(params.get('x')) : NaN;
-    const y = params.has('y') ? Number(params.get('y')) : NaN;
-    if (Number.isFinite(x)) data.x = x;
-    if (Number.isFinite(y)) data.y = y;
+    const sliceMapId = SLICE_MAP_IDS.has(mapId) ? mapId : 'room_main';
 
-    return { scene: 'GameScene', data };
+    return {
+        scene: 'GameScene',
+        data: createRouteData(sliceMapId, true, params)
+    };
 }
         // END bundled src/systems/StartRoute.js
 
@@ -4490,6 +5997,870 @@ class MapManager {
 }
         // END bundled src/systems/MapManager.js
 
+        // BEGIN bundled src/systems/SliceMapManager.js
+
+const TILE_SIZE = 32;
+
+function cloneAuthoredValue(value) {
+    if (Array.isArray(value)) return value.map(cloneAuthoredValue);
+    if (value !== null && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value).map(([key, nestedValue]) => [key, cloneAuthoredValue(nestedValue)])
+        );
+    }
+    return value;
+}
+
+function getSliceState(scene) {
+    return scene.sliceState || scene.gameState?.slice || {};
+}
+
+class SliceMapManager {
+    constructor(scene) {
+        this.scene = scene;
+        this.mapDef = null;
+        this.currentMapId = null;
+        this.walls = null;
+        this.doors = null;
+        this.furniture = null;
+        this.interactables = null;
+        this.floorLayer = [];
+        this.navigationBlockedRects = [];
+        this.safeZones = {};
+        this.baseSafeZones = {};
+        this.roomEffects = [];
+        this.revisionEffects = [];
+        this._revisionKey = null;
+    }
+
+    createMap(mapId) {
+        const authoredMap = SliceMaps[mapId];
+        if (!authoredMap) {
+            console.error('Slice map not found:', mapId);
+            return false;
+        }
+
+        this.destroyRoomEffects();
+        this.clearRevisionEffects();
+        this.currentMapId = mapId;
+        this.mapDef = cloneAuthoredValue(authoredMap);
+        this._revisionKey = null;
+        this.scene.sliceMapDef = this.mapDef;
+
+        const mapWidth = this.mapDef.width * TILE_SIZE;
+        const mapHeight = this.mapDef.height * TILE_SIZE;
+        this.scene.physics.world.setBounds(0, 0, mapWidth, mapHeight);
+        this.scene.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
+
+        this.scene.lights.enable();
+        this.scene.lights.setAmbientColor(this.mapDef.visual?.ambient ?? 0x555555);
+
+        this.walls = this.scene.physics.add.staticGroup();
+        this.doors = this.scene.add.group();
+        this.furniture = this.scene.physics.add.staticGroup();
+        this.interactables = this.scene.physics.add.staticGroup();
+        this.floorLayer = [];
+        this.navigationBlockedRects = [];
+        this.safeZones = {};
+        this.baseSafeZones = {};
+
+        this.scene.walls = this.walls;
+        this.scene.doors = this.doors;
+        this.scene.furniture = this.furniture;
+        this.scene.interactables = this.interactables;
+        this.scene.floorLayer = this.floorLayer;
+        this.scene.navigationBlockedRects = this.navigationBlockedRects;
+        this.scene.sliceSafeZones = this.safeZones;
+
+        this.renderTiles();
+        this.createTable(this.mapDef.objects.table);
+        this.createProps(this.mapDef.objects.props || []);
+        this.createDoors(this.mapDef.objects.doors || []);
+        this.applyRoomRevision(getSliceState(this.scene));
+        return true;
+    }
+
+    renderTiles() {
+        const visual = this.mapDef.visual || {};
+        for (let y = 0; y < this.mapDef.data.length; y += 1) {
+            for (let x = 0; x < this.mapDef.data[y].length; x += 1) {
+                const worldX = x * TILE_SIZE + TILE_SIZE / 2;
+                const worldY = y * TILE_SIZE + TILE_SIZE / 2;
+                const floor = this.scene.add.image(worldX, worldY, 'tile_floor');
+                if (visual.floorTint !== undefined) floor.setTint(visual.floorTint);
+                if (!this.scene.isMobile) floor.setPipeline('Light2D');
+                this.floorLayer.push(floor);
+
+                if (this.mapDef.data[y][x] !== 1) continue;
+                const wall = this.walls.create(worldX, worldY, 'tile_wall');
+                if (visual.wallTint !== undefined) wall.setTint(visual.wallTint);
+                if (!this.scene.isMobile) wall.setPipeline('Light2D');
+            }
+        }
+    }
+
+    createTable(tableData) {
+        if (!tableData) return;
+
+        const tableVisual = this.scene.add.image(tableData.x, tableData.y, 'desk');
+        tableVisual.setDisplaySize?.(tableData.collisionBounds.width, tableData.collisionBounds.height);
+        if (!this.scene.isMobile) tableVisual.setPipeline('Light2D');
+        tableVisual.setDepth?.(20);
+        this.scene.table = tableVisual;
+
+        const bounds = cloneAuthoredValue(tableData.collisionBounds);
+        const blocker = this.scene.add.rectangle(
+            bounds.x + bounds.width / 2,
+            bounds.y + bounds.height / 2,
+            bounds.width,
+            bounds.height,
+            0x000000,
+            0
+        );
+        blocker.objId = 'kitchen_table_collision';
+        blocker.sliceAction = null;
+        this.scene.physics.add.existing(blocker, true);
+        blocker.body?.setSize?.(bounds.width, bounds.height);
+        blocker.refreshBody?.();
+        this.furniture.add(blocker);
+        this.scene.tableCollision = blocker;
+
+        this.navigationBlockedRects.push(bounds);
+        this.baseSafeZones = cloneAuthoredValue(tableData.safeZones || {});
+        this.safeZones = cloneAuthoredValue(this.baseSafeZones);
+        this.scene.navigationBlockedRects = this.navigationBlockedRects;
+        this.scene.sliceSafeZones = this.safeZones;
+    }
+
+    createProps(props) {
+        for (const data of props) {
+            if (data.kind === 'ambient_anchor') {
+                this.createAmbientAnchor(data);
+                continue;
+            }
+
+            const object = this.scene.add.image(data.x, data.y, data.texture);
+            if (!this.scene.isMobile) object.setPipeline('Light2D');
+            this.scene.physics.add.existing(object, true);
+            this.attachInteraction(object, data);
+        }
+    }
+
+    attachInteraction(obj, data) {
+        obj.objId = data.id;
+        obj.sliceAction = data.kind;
+        obj.sliceData = cloneAuthoredValue(data);
+        obj.interaction = normalizeInteractionMeta({
+            id: data.id,
+            dialog: data.text,
+            interaction: {
+                label: data.label || data.id,
+                verb: data.verb || (data.kind === 'observe' ? '观察' : '操作'),
+                priority: data.priority || 30,
+                radius: data.radius || 72,
+                marker: false,
+                blocksMovement: data.blocksMovement ?? false
+            }
+        }, { textureKey: obj.texture?.key });
+        this.scene.interactables.add(obj);
+    }
+
+    createAmbientAnchor(data) {
+        if (data.effect === 'four_place_settings') {
+            const timer = this.scene.time.addEvent({
+                delay: 5200,
+                loop: true,
+                callback: () => this.scene.soundManager?.playSpatialNoise(0.025, data.x, data.y)
+            });
+            this.roomEffects.push(timer);
+            return;
+        }
+
+        if (data.effect === 'warm_door_seam') {
+            const seam = this.scene.add.rectangle(data.x, data.y, 6, 54, 0xc58b55, 0.24);
+            seam.setDepth?.(18);
+            if (!this.scene.isMobile) seam.setPipeline?.('Light2D');
+            this.roomEffects.push(seam);
+            return;
+        }
+
+        if (data.effect === 'faint_rice_steam') {
+            const steam = this.scene.add.particles(data.x, data.y, 'rain', {
+                speedY: { min: -12, max: -5 },
+                speedX: { min: -3, max: 3 },
+                scale: { start: 0.28, end: 0 },
+                alpha: { start: 0.16, end: 0 },
+                lifespan: 1800,
+                quantity: 1,
+                frequency: 650,
+                tint: 0xd8d0bd
+            });
+            steam.setDepth?.(16);
+            this.roomEffects.push(steam);
+        }
+    }
+
+    createDoors(doors) {
+        for (const data of doors) {
+            const width = (data.w || 1) * TILE_SIZE;
+            const height = (data.h || 1) * TILE_SIZE;
+            const x = data.x * TILE_SIZE + width / 2;
+            const y = data.y * TILE_SIZE + height / 2;
+            const door = this.scene.add.image(x, y, 'tile_wall');
+            door.setDisplaySize?.(width + 16, height + 16);
+            door.setDepth?.(12);
+            this.scene.physics.add.existing(door, true);
+            door.body?.setSize?.(width + 16, height + 16);
+            door.refreshBody?.();
+            door.objId = data.id;
+            door.doorId = data.id;
+            door.targetMap = data.targetMap;
+            door.targetX = data.targetX;
+            door.targetY = data.targetY;
+            door.sliceData = cloneAuthoredValue(data);
+            this.doors.add(door);
+        }
+        this.refreshDoorAccess(getSliceState(this.scene));
+    }
+
+    refreshDoorAccess(sliceState = getSliceState(this.scene)) {
+        for (const door of this.doors?.getChildren?.() || []) {
+            door.locked = !getSliceDoorAccess(door.doorId, sliceState);
+            if (
+                this.currentMapId === 'room_kitchen' &&
+                door.doorId === 'kitchen_side_door' &&
+                sliceState?.planeChoice === 'leave'
+            ) {
+                door.locked = true;
+            }
+            door.setTint?.(door.locked ? 0x4a2727 : 0x796754);
+            door.setAlpha?.(door.locked ? 0.82 : 0.32);
+        }
+    }
+
+    applyRoomRevision(sliceState = getSliceState(this.scene)) {
+        const revision = {
+            mapId: this.currentMapId,
+            slicePhase: sliceState?.slicePhase || 'arrival',
+            tableSolved: sliceState?.tableSolved === true,
+            bowlPlacements: cloneAuthoredValue(sliceState?.bowlPlacements || {}),
+            mealReplaySeen: Array.isArray(sliceState?.mealReplaySeen) ? [...sliceState.mealReplaySeen] : [],
+            planeChoice: sliceState?.planeChoice === 'take' || sliceState?.planeChoice === 'leave'
+                ? sliceState.planeChoice
+                : null,
+            paperDollIndex: Number.isInteger(sliceState?.paperDollIndex) ? sliceState.paperDollIndex : 0
+        };
+        const revisionKey = JSON.stringify(revision);
+        if (revisionKey === this._revisionKey) return false;
+        this._revisionKey = revisionKey;
+
+        this.clearRevisionEffects();
+        if (this.currentMapId === 'room_kitchen') {
+            const keepsTableProtection = revision.planeChoice !== 'take';
+            this.safeZones = keepsTableProtection ? cloneAuthoredValue(this.baseSafeZones) : {};
+            this.scene.sliceSafeZones = this.safeZones;
+            if (revision.tableSolved && keepsTableProtection) this.createKitchenProtectionEffects();
+        }
+
+        this.refreshDoorAccess(sliceState);
+        this.scene.sliceRoomRevision = cloneAuthoredValue(revision);
+
+        if (this.currentMapId === 'room_main') {
+            const coldBowl = this.findProp('main_cold_bowl');
+            coldBowl?.setAlpha(revision.tableSolved ? (revision.slicePhase === 'return' ? 0.28 : 0.55) : 1);
+            if (coldBowl) coldBowl.sliceRevision = revision.tableSolved ? 'table_restored' : 'cold_fourth_place';
+        }
+
+        if (this.currentMapId === 'room_kitchen') {
+            this.scene.sliceBowlPlacements = cloneAuthoredValue(revision.bowlPlacements);
+            this.scene.sliceMealReplaySeen = [...revision.mealReplaySeen];
+            this.scene.slicePaperDollIndex = revision.paperDollIndex;
+            if (this.scene.table) this.scene.table.sliceRevision = revision.tableSolved ? 'solved' : 'unresolved';
+        }
+
+        if (this.currentMapId === 'room_bedroom_me') {
+            const plane = this.findProp('bedroom_plane');
+            if (plane) {
+                plane.sliceRevision = revision.planeChoice || 'unresolved';
+                plane.setVisible(revision.planeChoice !== 'take');
+                plane.setAlpha(revision.planeChoice === 'leave' ? 0.45 : 1);
+            }
+            const mirror = this.findProp('child_mirror');
+            if (mirror) mirror.sliceRevision = revision.planeChoice ? 'after_choice' : 'waiting';
+            for (const choiceId of ['plane_bag', 'plane_drawer']) {
+                const choice = this.findProp(choiceId);
+                if (choice) choice.choiceSelected = choice.sliceData?.choice === revision.planeChoice;
+            }
+        }
+
+        return true;
+    }
+
+    createKitchenProtectionEffects() {
+        const table = this.mapDef?.objects?.table;
+        if (!table) return;
+
+        const warmth = this.scene.add.rectangle(table.x, table.y, 104, 84, 0xb37845, 0.09);
+        warmth.objId = 'kitchen_table_warmth';
+        warmth.sliceEffectId = 'kitchen_table_warmth';
+        warmth.setDepth?.(19);
+        if (!this.scene.isMobile) warmth.setPipeline?.('Light2D');
+
+        const steam = this.scene.add.particles(table.offering.x, table.offering.y - 5, 'rain', {
+            speedY: { min: -16, max: -7 },
+            speedX: { min: -3, max: 3 },
+            scale: { start: 0.3, end: 0 },
+            alpha: { start: 0.2, end: 0 },
+            lifespan: 1600,
+            quantity: 1,
+            frequency: 520,
+            tint: 0xe1d5bb
+        });
+        steam.objId = 'kitchen_offering_steam';
+        steam.sliceEffectId = 'kitchen_offering_steam';
+        steam.setDepth?.(22);
+        this.revisionEffects.push(warmth, steam);
+    }
+
+    findProp(objId) {
+        return (this.interactables?.getChildren?.() || []).find(object => object.objId === objId) || null;
+    }
+
+    destroyRoomEffects() {
+        for (const effect of this.roomEffects) {
+            if (typeof effect?.remove === 'function') effect.remove();
+            else effect?.destroy?.();
+        }
+        this.roomEffects = [];
+    }
+
+    clearRevisionEffects() {
+        for (const effect of this.revisionEffects) {
+            if (typeof effect?.remove === 'function') effect.remove();
+            else effect?.destroy?.();
+        }
+        this.revisionEffects = [];
+    }
+
+    destroy() {
+        this.destroyRoomEffects();
+        this.clearRevisionEffects();
+        this._revisionKey = null;
+    }
+}
+        // END bundled src/systems/SliceMapManager.js
+
+        // BEGIN bundled src/systems/SliceInteractionManager.js
+
+const DEFAULT_INTERACTION_RADIUS = 72;
+const SLICE_MIN_FACING_DOT = 0;
+const SLICE_DIRECTION_EPSILON = 0.000001;
+
+function getSlicePrompt(meta) {
+    return `${meta.verb}：${meta.label}  [空格/E]`;
+}
+
+function routeSliceAction(action) {
+    if (action === 'bowl' || action === 'seat') return 'table';
+    if (action === 'plane' || action === 'plane_choice' || action === 'mirror') return 'plane';
+    if (action === 'observe') return 'observe';
+    return 'ignore';
+}
+
+function clamp(value, minimum, maximum) {
+    return Math.max(minimum, Math.min(maximum, value));
+}
+
+function isAvailableInteraction(object) {
+    if (!object || object.active === false || object.visible === false) return false;
+    if (object.interactionEnabled === false) return false;
+    if (object.sliceAction === 'ambient_anchor' || object.sliceData?.kind === 'ambient_anchor') return false;
+    return routeSliceAction(object.sliceAction) !== 'ignore';
+}
+
+function getInteractionMeta(object) {
+    const authored = object.sliceData || {};
+    return {
+        label: object.interaction?.label || authored.label || authored.id || object.objId || '可疑物件',
+        verb: object.interaction?.verb || authored.verb || (object.sliceAction === 'observe' ? '观察' : '操作'),
+        priority: object.interaction?.priority ?? authored.priority ?? 30,
+        radius: object.interaction?.radius ?? authored.radius ?? DEFAULT_INTERACTION_RADIUS
+    };
+}
+
+class SliceInteractionManager {
+    constructor(scene, focusBand = INTERACTION_FOCUS_BAND) {
+        this.scene = scene;
+        this.focusBand = focusBand;
+    }
+
+    update() {
+        this.checkInteraction();
+    }
+
+    getDistanceToObject(playerX, playerY, object) {
+        if (!object || object.active === false) return Infinity;
+
+        let bodyDistance = Infinity;
+        const body = object.body;
+        if (
+            body &&
+            Number.isFinite(body.x) &&
+            Number.isFinite(body.y) &&
+            Number.isFinite(body.width) &&
+            Number.isFinite(body.height)
+        ) {
+            const nearestX = clamp(playerX, body.x, body.x + body.width);
+            const nearestY = clamp(playerY, body.y, body.y + body.height);
+            bodyDistance = Math.hypot(nearestX - playerX, nearestY - playerY);
+        }
+
+        const centerDistance = Number.isFinite(object.x) && Number.isFinite(object.y)
+            ? Math.hypot(object.x - playerX, object.y - playerY)
+            : Infinity;
+        return Math.min(bodyDistance, centerDistance);
+    }
+
+    findInteractionTarget() {
+        const player = this.scene.player;
+        const sprite = player?.sprite;
+        if (!sprite) return null;
+
+        const rawFacingX = Number.isFinite(player.facingX) ? player.facingX : 0;
+        const rawFacingY = Number.isFinite(player.facingY) ? player.facingY : 0;
+        const facingLength = Math.hypot(rawFacingX, rawFacingY);
+        const hasFacing = facingLength > SLICE_DIRECTION_EPSILON;
+        const facingX = hasFacing ? rawFacingX / facingLength : 0;
+        const facingY = hasFacing ? rawFacingY / facingLength : 0;
+        const candidates = [];
+        for (const object of this.scene.interactables?.getChildren?.() || []) {
+            if (!isAvailableInteraction(object)) continue;
+            const meta = getInteractionMeta(object);
+            const distance = this.getDistanceToObject(sprite.x, sprite.y, object);
+            const radius = Number.isFinite(meta.radius) && meta.radius > 0
+                ? meta.radius
+                : DEFAULT_INTERACTION_RADIUS;
+            if (distance > radius) continue;
+
+            const dx = object.x - sprite.x;
+            const dy = object.y - sprite.y;
+            const centerDistance = Math.hypot(dx, dy);
+            const centersOverlap = centerDistance <= SLICE_DIRECTION_EPSILON;
+            const facingDot = centersOverlap || !hasFacing
+                ? 0
+                : (dx / centerDistance) * facingX + (dy / centerDistance) * facingY;
+            if (hasFacing && !centersOverlap && facingDot <= SLICE_MIN_FACING_DOT) continue;
+            candidates.push({
+                obj: object,
+                distance,
+                priority: meta.priority,
+                facingDot,
+                meta,
+                route: routeSliceAction(object.sliceAction)
+            });
+        }
+        return selectInteractionCandidate(candidates, this.focusBand);
+    }
+
+    checkInteraction() {
+        const keyboard = globalThis.Phaser?.Input?.Keyboard;
+        const readPressed = key => (
+            key && typeof keyboard?.JustDown === 'function'
+                ? keyboard.JustDown(key) === true
+                : false
+        );
+        // Read both edges every frame. A short-circuit here leaves the second edge pending.
+        const pressedE = readPressed(this.scene.keyE);
+        const pressedSpace = readPressed(this.scene.keySpace);
+        const lastDialogCloseTime = Number(globalThis.window?.lastDialogCloseTime) || 0;
+        if (lastDialogCloseTime > 0 && Date.now() - lastDialogCloseTime < 500) {
+            this.scene.interactText?.setVisible?.(false);
+            this.scene.currentTarget = null;
+            return null;
+        }
+
+        const selected = this.findInteractionTarget();
+        const prompt = this.scene.interactText;
+        const sprite = this.scene.player?.sprite;
+
+        if (!selected || !prompt || !sprite) {
+            prompt?.setVisible?.(false);
+            this.scene.currentTarget = null;
+            return null;
+        }
+
+        this.scene.currentTarget = {
+            type: selected.route,
+            route: selected.route,
+            obj: selected.obj
+        };
+        prompt
+            .setText(getSlicePrompt(selected.meta))
+            .setPosition(sprite.x, sprite.y - 40)
+            .setVisible(true);
+
+        if (pressedE || pressedSpace) {
+            return this.handleInteraction();
+        }
+        return this.scene.currentTarget;
+    }
+
+    handleInteraction() {
+        const target = this.scene.currentTarget;
+        const object = target?.obj;
+        if (!target || !isAvailableInteraction(object)) return { status: 'ignored' };
+
+        const route = target.route || target.type || routeSliceAction(object.sliceAction);
+        if (route === 'table') {
+            return this.scene.kitchenTableController?.handleAction(object) || { status: 'table_unavailable' };
+        }
+
+        if (route === 'observe') {
+            const fact = object.sliceData?.text;
+            if (typeof fact !== 'string' || fact.length === 0) return { status: 'missing_fact' };
+            globalThis.window?.showDialog?.('主角', fact);
+            return { status: 'observed', targetId: object.objId || object.sliceData?.id || null };
+        }
+
+        if (route === 'plane') {
+            return {
+                status: 'deferred',
+                route: 'plane',
+                targetId: object.objId || object.sliceData?.id || null
+            };
+        }
+        return { status: 'ignored' };
+    }
+
+    destroy() {
+        this.scene.interactText?.setVisible?.(false);
+        this.scene.currentTarget = null;
+    }
+}
+        // END bundled src/systems/SliceInteractionManager.js
+
+        // BEGIN bundled src/systems/KitchenTableController.js
+
+const HELD_BOWL_OFFSET = Object.freeze({ x: 18, y: -28 });
+
+const BOWL_PRESENTATION = Object.freeze({
+    wine: Object.freeze({ texture: 'bowl_wine', label: '酒味缺口碗' }),
+    medicine: Object.freeze({ texture: 'bowl_medicine', label: '药渍白瓷碗' }),
+    child: Object.freeze({ texture: 'bowl_child', label: '蓝边纸飞机碗' })
+});
+
+const SEAT_LABELS = Object.freeze({
+    nail: '钉死椅前的座位',
+    stove: '靠灶台的座位',
+    side: '靠侧门的座位'
+});
+
+function cloneKitchenTableValue(value) {
+    if (Array.isArray(value)) return value.map(cloneKitchenTableValue);
+    if (value !== null && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value).map(([key, nested]) => [key, cloneKitchenTableValue(nested)])
+        );
+    }
+    return value;
+}
+
+function setPosition(object, x, y) {
+    if (typeof object?.setPosition === 'function') object.setPosition(x, y);
+    else if (object) {
+        object.x = x;
+        object.y = y;
+    }
+}
+
+function setBodyEnabled(object, enabled) {
+    if (!object?.body) return;
+    object.body.enable = enabled;
+}
+
+function syncBody(object) {
+    object?.body?.updateFromGameObject?.();
+}
+
+function withReplayObservation(result, replayId, short) {
+    return { ...result, replayId, short };
+}
+
+class KitchenTableController {
+    constructor(scene, tableData = scene.sliceMapDef?.objects?.table, state = scene.sliceState || scene.gameState?.slice) {
+        this.scene = scene;
+        this.tableData = cloneKitchenTableValue(tableData);
+        this.state = state;
+        this.bowlSprites = new Map();
+        this.seatHotspots = new Map();
+        this.offeringBowl = null;
+        this.ownedObjects = [];
+        this.destroyed = false;
+
+        if (!this.tableData || !this.state || typeof this.state !== 'object') {
+            throw new Error('Kitchen table controller requires authored table data and slice state');
+        }
+
+        this.advancePhase('investigation', 'arrival');
+        this.normalizePersistedState();
+        this.createEntities();
+        this.syncSprites();
+        const existingDirector = this.scene.memoryReplayDirector;
+        this.memoryReplayDirector = existingDirector && existingDirector.destroyed !== true
+            ? existingDirector
+            : new MemoryReplayDirector(this.scene, this.state);
+        this.scene.memoryReplayDirector = this.memoryReplayDirector;
+    }
+
+    advancePhase(nextPhase, requiredCurrentPhase) {
+        if (this.state.slicePhase !== requiredCurrentPhase) return false;
+        Object.assign(this.state, transitionSlicePhase(this.state, nextPhase));
+        return true;
+    }
+
+    replayIsActive() {
+        return this.memoryReplayDirector?.active === true;
+    }
+
+    normalizePersistedState() {
+        const sourcePlacements = this.state.bowlPlacements;
+        const safeSource = sourcePlacements !== null && typeof sourcePlacements === 'object' && !Array.isArray(sourcePlacements)
+            ? sourcePlacements
+            : Object.fromEntries(KITCHEN_SEATS.map(seatId => [seatId, null]));
+        this.state.bowlPlacements = normalizeBowlPlacements(safeSource);
+
+        let heldBowl = KITCHEN_BOWLS.includes(this.state.heldBowl) ? this.state.heldBowl : null;
+        if (this.state.tableSolved === true) heldBowl = null;
+        if (heldBowl) {
+            for (const seatId of KITCHEN_SEATS) {
+                if (this.state.bowlPlacements[seatId] === heldBowl) {
+                    this.state.bowlPlacements[seatId] = null;
+                }
+            }
+        }
+        this.state.heldBowl = heldBowl;
+    }
+
+    createEntities() {
+        for (const bowlId of KITCHEN_BOWLS) {
+            const origin = this.tableData.bowlOrigins[bowlId];
+            const presentation = BOWL_PRESENTATION[bowlId];
+            const bowl = this.scene.add.image(origin.x, origin.y, presentation.texture);
+            bowl.objId = `kitchen_bowl_${bowlId}`;
+            bowl.sliceAction = 'bowl';
+            bowl.sliceData = {
+                id: bowl.objId,
+                kind: 'bowl',
+                bowlId,
+                label: presentation.label,
+                verb: '端起'
+            };
+            bowl.interaction = {
+                label: presentation.label,
+                verb: '端起',
+                priority: 40,
+                radius: 64,
+                marker: false
+            };
+            bowl.interactionEnabled = true;
+            bowl.setDepth?.(26);
+            this.scene.physics.add.existing(bowl, true);
+            this.scene.interactables.add(bowl);
+            this.bowlSprites.set(bowlId, bowl);
+            this.ownedObjects.push(bowl);
+        }
+
+        for (const seatId of KITCHEN_SEATS) {
+            const seat = this.tableData.seats[seatId];
+            const hotspot = this.scene.add.rectangle(seat.x, seat.y, 24, 24, 0xcab889, 0.02);
+            hotspot.objId = `kitchen_seat_${seatId}`;
+            hotspot.sliceAction = 'seat';
+            hotspot.sliceData = {
+                id: hotspot.objId,
+                kind: 'seat',
+                seatId,
+                label: SEAT_LABELS[seatId],
+                verb: '放下'
+            };
+            hotspot.interaction = {
+                label: SEAT_LABELS[seatId],
+                verb: '放下',
+                priority: 35,
+                radius: 64,
+                marker: false
+            };
+            hotspot.interactionEnabled = false;
+            hotspot.setDepth?.(24);
+            hotspot.setStrokeStyle?.(1, 0xd6c7a5, 0.35);
+            this.scene.physics.add.existing(hotspot, true);
+            this.scene.interactables.add(hotspot);
+            this.seatHotspots.set(seatId, hotspot);
+            this.ownedObjects.push(hotspot);
+        }
+
+        const offering = this.tableData.offering;
+        this.offeringBowl = this.scene.add.image(offering.x, offering.y, 'bowl_offering');
+        this.offeringBowl.objId = 'kitchen_offering_bowl';
+        this.offeringBowl.sliceAction = 'offering';
+        this.offeringBowl.sliceData = {
+            id: 'kitchen_offering_bowl',
+            kind: 'offering',
+            label: '积灰冷饭碗',
+            verb: '不能端起',
+            fixed: true
+        };
+        this.offeringBowl.interaction = {
+            label: '积灰冷饭碗',
+            verb: '不能端起',
+            priority: 0,
+            radius: 0,
+            marker: false
+        };
+        this.offeringBowl.interactionEnabled = false;
+        this.offeringBowl.setDepth?.(26);
+        this.scene.physics.add.existing(this.offeringBowl, true);
+        this.ownedObjects.push(this.offeringBowl);
+    }
+
+    update() {
+        if (this.destroyed || !this.state.heldBowl) return;
+        this.syncHeldBowl();
+    }
+
+    syncHeldBowl() {
+        const heldSprite = this.bowlSprites.get(this.state.heldBowl);
+        const playerSprite = this.scene.player?.sprite;
+        if (!heldSprite || !playerSprite) return;
+        setPosition(
+            heldSprite,
+            playerSprite.x + HELD_BOWL_OFFSET.x,
+            playerSprite.y + HELD_BOWL_OFFSET.y
+        );
+        setBodyEnabled(heldSprite, false);
+        heldSprite.interactionEnabled = false;
+    }
+
+    syncSprites() {
+        this.normalizePersistedState();
+        const occupiedSeatByBowl = new Map();
+        for (const seatId of KITCHEN_SEATS) {
+            const bowlId = this.state.bowlPlacements[seatId];
+            if (bowlId) occupiedSeatByBowl.set(bowlId, seatId);
+        }
+
+        for (const bowlId of KITCHEN_BOWLS) {
+            const sprite = this.bowlSprites.get(bowlId);
+            if (!sprite) continue;
+            if (this.state.heldBowl === bowlId) {
+                this.syncHeldBowl();
+                continue;
+            }
+
+            const seatId = occupiedSeatByBowl.get(bowlId);
+            const position = seatId
+                ? this.tableData.seats[seatId]
+                : this.tableData.bowlOrigins[bowlId];
+            setPosition(sprite, position.x, position.y);
+            setBodyEnabled(sprite, true);
+            // While carrying a bowl, seat hotspots own the focus even when another bowl occupies that seat.
+            // This makes replacement possible without the occupied bowl stealing the interaction target.
+            sprite.interactionEnabled = this.state.tableSolved !== true && this.state.heldBowl === null;
+            syncBody(sprite);
+        }
+
+        const canPlace = this.state.tableSolved !== true && this.state.heldBowl !== null;
+        for (const hotspot of this.seatHotspots.values()) {
+            hotspot.interactionEnabled = canPlace;
+            hotspot.setAlpha?.(canPlace ? 0.16 : 0.02);
+            setBodyEnabled(hotspot, canPlace);
+            if (canPlace) syncBody(hotspot);
+        }
+        setBodyEnabled(this.offeringBowl, true);
+        syncBody(this.offeringBowl);
+    }
+
+    pickBowl(bowlId) {
+        if (this.replayIsActive()) return { status: 'replay_active' };
+        if (this.state.tableSolved === true) return { status: 'locked' };
+        if (!KITCHEN_BOWLS.includes(bowlId)) return { status: 'unknown_bowl' };
+        if (this.state.heldBowl) {
+            if (this.state.heldBowl === bowlId) return { status: 'holding', bowlId };
+            return { status: 'hands_full', heldBowl: this.state.heldBowl };
+        }
+
+        this.advancePhase('table', 'investigation');
+        for (const seatId of KITCHEN_SEATS) {
+            if (this.state.bowlPlacements[seatId] === bowlId) this.state.bowlPlacements[seatId] = null;
+        }
+        this.state.heldBowl = bowlId;
+        this.syncSprites();
+        return { status: 'holding', bowlId };
+    }
+
+    placeHeldBowl(seatId) {
+        if (this.replayIsActive()) return { status: 'replay_active' };
+        if (this.state.tableSolved === true) return { status: 'locked' };
+        if (!this.state.heldBowl) return { status: 'empty_hands' };
+        if (!KITCHEN_SEATS.includes(seatId)) return { status: 'unknown_seat' };
+
+        const bowlId = this.state.heldBowl;
+        this.state.bowlPlacements = placeBowl(this.state.bowlPlacements, seatId, bowlId);
+        this.state.heldBowl = null;
+        this.syncSprites();
+        const evaluation = evaluateSeating(this.state.bowlPlacements);
+        if (evaluation.status === 'incomplete') return evaluation;
+
+        if (evaluation.status === 'incorrect') {
+            const seen = normalizeMealReplaySeen(this.state.mealReplaySeen);
+            this.state.mealReplaySeen = seen;
+            const replayId = selectContradiction(this.state.bowlPlacements, seen);
+            const short = shouldUseShortReplay(seen, replayId);
+            const replay = this.memoryReplayDirector.play(replayId, {
+                short,
+                onComplete: () => {
+                    if (this.destroyed) return;
+                    this.state.mealReplaySeen = markReplaySeen(this.state.mealReplaySeen, replayId);
+                    this.scene.sliceMapManager?.applyRoomRevision?.(this.state);
+                }
+            });
+            return replay.status === 'playing'
+                ? withReplayObservation(evaluation, replayId, short)
+                : evaluation;
+        }
+
+        const replay = this.memoryReplayDirector.play('correct_meal', { short: false });
+        return replay.status === 'playing'
+            ? withReplayObservation(evaluation, 'correct_meal', false)
+            : evaluation;
+    }
+
+    handleAction(object) {
+        if (this.replayIsActive()) return { status: 'replay_active' };
+        if (!object) return { status: 'ignored' };
+        if (object === this.offeringBowl || object.sliceAction === 'offering') {
+            return { status: 'fixed_offering' };
+        }
+        if (object.sliceAction === 'bowl') return this.pickBowl(object.sliceData?.bowlId);
+        if (object.sliceAction === 'seat') return this.placeHeldBowl(object.sliceData?.seatId);
+        return { status: 'ignored' };
+    }
+
+    destroy() {
+        if (this.destroyed) return;
+        this.destroyed = true;
+        this.memoryReplayDirector?.destroy?.();
+        if (this.scene.memoryReplayDirector === this.memoryReplayDirector) {
+            this.scene.memoryReplayDirector = null;
+        }
+        for (const object of this.ownedObjects) {
+            this.scene.interactables?.remove?.(object);
+            object.destroy?.();
+        }
+        this.ownedObjects = [];
+    }
+}
+        // END bundled src/systems/KitchenTableController.js
+
         // BEGIN bundled src/systems/InteractionManager.js
 
 class InteractionManager {
@@ -5407,10 +7778,16 @@ class TitleScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        const authorText = this.add.text(400, 280, '作者WeChat：baidai_baidai', {
+        const previewText = this.add.text(400, 290, '实体解谜重做预览', {
             fontFamily: '"SimSun", serif',
-            fontSize: '24px',
-            color: '#aaaaaa'
+            fontSize: '20px',
+            color: '#777777'
+        }).setOrigin(0.5);
+
+        const authorText = this.add.text(400, 550, '作者WeChat：baidai_baidai', {
+            fontFamily: '"SimSun", serif',
+            fontSize: '14px',
+            color: '#777777'
         }).setOrigin(0.5);
 
         this.tweens.add({
@@ -5717,15 +8094,16 @@ class GameScene extends Phaser.Scene {
         super('GameScene');
     }
 
-    init(data) {
-        this.currentMapId = data.mapId || 'room_prologue';
+    init(data = {}) {
+        this.sliceMode = data.sliceMode === true;
+        this.currentMapId = data.mapId || (this.sliceMode ? 'room_main' : 'room_prologue');
         this.playerStartX = data.x ?? null;
         this.playerStartY = data.y ?? null;
         this.previousMapId = data.previousMapId || null;
 
         // If restarting from Title (no data provided), ensure we start fresh
         if (!data.mapId) {
-             this.currentMapId = 'room_prologue';
+             this.currentMapId = this.sliceMode ? 'room_main' : 'room_prologue';
              // Force reset if not already handled (though TitleScene handles it now)
         }
     }
@@ -5772,6 +8150,8 @@ class GameScene extends Phaser.Scene {
         this.rightCandle = null;
         this.shownCorridorHint = false;
         this.chaser = null; // Reset chaser ref
+        this.kitchenTableController = null;
+        this.houseRuleDirector = null;
 
         this.safe = null; // New Safe Object
         this.wet_paper = null; // New Clue Object
@@ -5796,6 +8176,7 @@ class GameScene extends Phaser.Scene {
             window.globalGameState = createDefaultGameState();
         }
         this.gameState = normalizeGameState(window.globalGameState);
+        this.sliceState = this.sliceMode ? ensureSliceState(this.gameState) : null;
         this.objectiveManager = new ObjectiveManager(this.gameState, document.getElementById('objective-panel'));
         this.refreshObjective();
 
@@ -5818,21 +8199,15 @@ class GameScene extends Phaser.Scene {
         // Joystick Logic
         this.joystick = { x: 0, y: 0, active: false };
         this.initJoystick();
-        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-            this.destroyJoystick();
-            this.chaseManager?.destroy();
-            this.hauntingDirector?.destroy();
-            window.closePuzzle?.();
-            this.narrativeBeatTimer?.remove();
-            this.narrativeBeatTimer = null;
-        });
+        this.registerShutdownCleanup();
 
         // Initialize Map Manager
-        this.mapManager = new MapManager(this);
+        this.mapManager = this.sliceMode ? new SliceMapManager(this) : new MapManager(this);
+        this.sliceMapManager = this.sliceMode ? this.mapManager : null;
         this.mapManager.createMap(this.currentMapId);
 
         // Create Player
-        const mapData = Maps[this.currentMapId];
+        const mapData = this.sliceMode ? SliceMaps[this.currentMapId] : Maps[this.currentMapId];
         const startX = resolveSpawnCoordinate(this.playerStartX, mapData.objects.playerStart.x);
         const startY = resolveSpawnCoordinate(this.playerStartY, mapData.objects.playerStart.y);
         this.player = new Player(this, startX, startY);
@@ -5850,7 +8225,7 @@ class GameScene extends Phaser.Scene {
         }
 
         // Spawn Chaser if active (Persist chase across scenes)
-        if (this.gameState.isChasing || this.gameState.storyFlags.chasePhase === 'active') {
+        if (!this.sliceMode && (this.gameState.isChasing || this.gameState.storyFlags.chasePhase === 'active')) {
             this.chaseManager.start();
         }
 
@@ -5935,9 +8310,16 @@ class GameScene extends Phaser.Scene {
             loop: true
         });
 
+        // Interaction UI must exist before either interaction system captures the scene surface.
+        this.interactText = this.add.text(0, 0, '按 [空格] / [A] 调查', {
+            fontSize: '16px',
+            color: '#fff',
+            backgroundColor: '#000'
+        }).setOrigin(0.5).setVisible(false).setDepth(400);
+
         // Initialize Systems
         this.eventManager = new EventManager(this);
-        this.interactionManager = new InteractionManager(this);
+        this.initializeInteractionSystems();
 
         // Random Horror Events (Poltergeist)
         this.time.addEvent({
@@ -5950,13 +8332,6 @@ class GameScene extends Phaser.Scene {
             },
             loop: true
         });
-
-        // UI Text
-        this.interactText = this.add.text(0, 0, '按 [空格] / [A] 调查', {
-            fontSize: '16px',
-            color: '#fff',
-            backgroundColor: '#000'
-        }).setOrigin(0.5).setVisible(false).setDepth(400);
 
         // Intro Dialog (Prologue)
         if (this.currentMapId === 'room_prologue' && !this.gameState.viewedIntro) {
@@ -5983,8 +8358,21 @@ class GameScene extends Phaser.Scene {
         this.showPostMemoryDialog();
     }
 
+    initializeInteractionSystems() {
+        this.kitchenTableController = this.sliceMode && this.currentMapId === 'room_kitchen'
+            ? new KitchenTableController(this)
+            : null;
+        this.houseRuleDirector = this.sliceMode && this.currentMapId === 'room_kitchen'
+            ? new HouseRuleDirector(this)
+            : null;
+        this.interactionManager = this.sliceMode
+            ? new SliceInteractionManager(this)
+            : new InteractionManager(this);
+    }
+
     update(time, delta) {
         this.hauntingDirector?.update(time, delta);
+        this.houseRuleDirector?.update(time, delta);
         if (window.dialogActive) {
             this.player.sprite.setVelocity(0);
             return;
@@ -6036,38 +8424,26 @@ class GameScene extends Phaser.Scene {
             this.player.update(this.cursors, this.wasd, this.joystick, this.soundManager, delta);
         }
 
+        this.kitchenTableController?.update();
         if (this.interactionManager) this.interactionManager.update();
 
         this.physics.overlap(this.player.sprite, this.doors, (player, door) => {
             if (door.locked) {
-                // Check for key
-                let hasKey = false;
-                if (door.key === 'silver_key' && this.gameState.inventory.includes('地下室钥匙')) hasKey = true;
-
-                if (hasKey) {
-                    // Unlock
-                    door.locked = false; // Permanently unlock in this session (though map reload resets it, we should check inventory on create map actually. But for now, simple is fine)
-                    this.switchScene(door.targetMap, door.targetX, door.targetY);
-                    this.playSound(400, 'sine', 1);
-                } else {
-                    if (!this.gameState.lastLockedMsg || this.time.now - this.gameState.lastLockedMsg > 2000) {
-                        this.gameState.lastLockedMsg = this.time.now;
-                        window.showDialog('主角', '门锁住了。需要一把银色的钥匙。');
-                    }
-                }
+                this.handleLockedDoor(door);
                 return;
             }
+            if (this.houseRuleDirector?.blocksDoorTransition?.(door)) return;
 
             if (door.isLoop && !this.gameState.corridorSolved) {
                 // Loop back to start of corridor
-                this.switchScene(door.targetMap, door.targetX, door.targetY);
+                this.switchScene(door.targetMap, door.targetX, door.targetY, door.doorId || door.objId);
                 // Play a loop sound or effect?
                 this.cameras.main.flash(200, 0, 0, 0);
             } else if (door.isLoop && this.gameState.corridorSolved) {
                 // Break the loop -> go to backyard
-                this.switchScene('room_backyard', 320, 100);
+                this.switchScene('room_backyard', 320, 100, door.doorId || door.objId);
             } else {
-                this.switchScene(door.targetMap, door.targetX, door.targetY);
+                this.switchScene(door.targetMap, door.targetX, door.targetY, door.doorId || door.objId);
             }
         });
 
@@ -6080,6 +8456,49 @@ class GameScene extends Phaser.Scene {
         // Sanity System Logic
         this.updateSanity(delta);
         this.refreshObjective();
+    }
+
+    handleLockedDoor(door) {
+        if (this.sliceMode) {
+            const now = this.time.now;
+            if (
+                this.lastSliceLockedDoorFeedbackAt !== undefined &&
+                now - this.lastSliceLockedDoorFeedbackAt < 900
+            ) {
+                return false;
+            }
+
+            this.lastSliceLockedDoorFeedbackAt = now;
+            const restingX = door.x;
+            this.playSound(115, 'square', 0.08);
+            this.tweens.add({
+                targets: door,
+                x: restingX + 3,
+                duration: 60,
+                yoyo: true,
+                ease: 'Sine.easeInOut',
+                onUpdate: () => door.body?.updateFromGameObject?.(),
+                onComplete: () => {
+                    door.x = restingX;
+                    door.body?.updateFromGameObject?.();
+                }
+            });
+            return false;
+        }
+
+        const hasKey = door.key === 'silver_key' && this.gameState.inventory.includes('地下室钥匙');
+        if (hasKey) {
+            door.locked = false;
+            this.switchScene(door.targetMap, door.targetX, door.targetY, door.doorId || door.objId);
+            this.playSound(400, 'sine', 1);
+            return true;
+        }
+
+        if (!this.gameState.lastLockedMsg || this.time.now - this.gameState.lastLockedMsg > 2000) {
+            this.gameState.lastLockedMsg = this.time.now;
+            window.showDialog('主角', '门锁住了。需要一把银色的钥匙。');
+        }
+        return false;
     }
 
     refreshObjective() {
@@ -6133,9 +8552,12 @@ class GameScene extends Phaser.Scene {
         }
     }
 
-    switchScene(mapId, targetX, targetY) {
+    switchScene(mapId, targetX, targetY, doorId = null) {
         if (this.isSwitching) return;
         this.isSwitching = true;
+        if (this.sliceMode && doorId && this.sliceState) {
+            this.sliceState.lastTraversedDoor = doorId;
+        }
 
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
@@ -6144,7 +8566,13 @@ class GameScene extends Phaser.Scene {
                 // Keep chasing state
             }
 
-            this.scene.restart({ mapId: mapId, x: targetX, y: targetY, previousMapId: this.currentMapId });
+            this.scene.restart({
+                mapId,
+                x: targetX,
+                y: targetY,
+                previousMapId: this.currentMapId,
+                sliceMode: this.sliceMode
+            });
             this.isSwitching = false;
         });
     }
@@ -6164,7 +8592,7 @@ class GameScene extends Phaser.Scene {
                  const targetMap = getTruthLevel(this.gameState) === 'complete' ? 'memory_crash' : 'room_memory';
                  const targetX = targetMap === 'memory_crash' ? 120 : 320;
                  const targetY = targetMap === 'memory_crash' ? 200 : 400;
-                 this.scene.restart({ mapId: targetMap, x: targetX, y: targetY });
+                 this.scene.restart({ mapId: targetMap, x: targetX, y: targetY, sliceMode: this.sliceMode });
 
                  // Reset UI for memory room (clean state)
                  // We don't reset globalGameState fully yet, as we might want to check flags
@@ -6462,6 +8890,21 @@ class GameScene extends Phaser.Scene {
         this.mobileUiTimer = null;
         if (this.exitHideListener) document.removeEventListener('touchstart', this.exitHideListener);
         this.exitHideListener = null;
+    }
+
+    registerShutdownCleanup() {
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            this.destroyJoystick();
+            this.interactionManager?.destroy?.();
+            this.kitchenTableController?.destroy?.();
+            this.houseRuleDirector?.destroy?.();
+            this.sliceMapManager?.destroy();
+            this.chaseManager?.destroy();
+            this.hauntingDirector?.destroy();
+            window.closePuzzle?.();
+            this.narrativeBeatTimer?.remove();
+            this.narrativeBeatTimer = null;
+        });
     }
 
     updateJoystick(clientX, clientY, centerX, centerY, knob, maxDist) {

@@ -14,6 +14,7 @@ import { resolveSpawnCoordinate, updateBoundedResource } from '../systems/Runtim
 import { DomListenerRegistry } from '../systems/DomListenerRegistry.js';
 import { ObjectiveManager } from '../systems/ObjectiveManager.js';
 import { ChaseManager } from '../systems/ChaseManager.js';
+import { HouseRuleDirector } from '../systems/HouseRuleDirector.js';
 import { getPendingNarrativeBeat, markNarrativeBeatSeen } from '../systems/NarrativeDirector.js';
 import { HauntingDirector } from '../systems/HauntingDirector.js';
 
@@ -79,6 +80,7 @@ export class GameScene extends Phaser.Scene {
         this.shownCorridorHint = false;
         this.chaser = null; // Reset chaser ref
         this.kitchenTableController = null;
+        this.houseRuleDirector = null;
 
         this.safe = null; // New Safe Object
         this.wet_paper = null; // New Clue Object
@@ -152,7 +154,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Spawn Chaser if active (Persist chase across scenes)
-        if (this.gameState.isChasing || this.gameState.storyFlags.chasePhase === 'active') {
+        if (!this.sliceMode && (this.gameState.isChasing || this.gameState.storyFlags.chasePhase === 'active')) {
             this.chaseManager.start();
         }
 
@@ -289,6 +291,9 @@ export class GameScene extends Phaser.Scene {
         this.kitchenTableController = this.sliceMode && this.currentMapId === 'room_kitchen'
             ? new KitchenTableController(this)
             : null;
+        this.houseRuleDirector = this.sliceMode && this.currentMapId === 'room_kitchen'
+            ? new HouseRuleDirector(this)
+            : null;
         this.interactionManager = this.sliceMode
             ? new SliceInteractionManager(this)
             : new InteractionManager(this);
@@ -296,6 +301,7 @@ export class GameScene extends Phaser.Scene {
 
     update(time, delta) {
         this.hauntingDirector?.update(time, delta);
+        this.houseRuleDirector?.update(time, delta);
         if (window.dialogActive) {
             this.player.sprite.setVelocity(0);
             return;
@@ -355,6 +361,7 @@ export class GameScene extends Phaser.Scene {
                 this.handleLockedDoor(door);
                 return;
             }
+            if (this.houseRuleDirector?.blocksDoorTransition?.(door)) return;
 
             if (door.isLoop && !this.gameState.corridorSolved) {
                 // Loop back to start of corridor
@@ -819,6 +826,7 @@ export class GameScene extends Phaser.Scene {
             this.destroyJoystick();
             this.interactionManager?.destroy?.();
             this.kitchenTableController?.destroy?.();
+            this.houseRuleDirector?.destroy?.();
             this.sliceMapManager?.destroy();
             this.chaseManager?.destroy();
             this.hauntingDirector?.destroy();
