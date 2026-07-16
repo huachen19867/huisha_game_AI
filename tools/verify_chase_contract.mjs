@@ -48,7 +48,7 @@ assert.equal(manager.startSlice({
 }), true);
 assert.equal(scene.gameState.isChasing, false, 'slice chase must not activate the legacy flag');
 assert.equal(scene.gameState.sliceChasing, true, 'slice chase needs an isolated active flag');
-assert.deepEqual(timers.map(timer => timer.delay), [2000, 3000, 4000]);
+assert.deepEqual(timers.map(timer => timer.delay), [2000, 3000, 4000, SLICE_CHASE_DURATION_MS]);
 const grid = manager.createSliceGrid(SliceMaps.room_kitchen, [{ x: 1, y: 8 }]);
 assert.equal(grid.length, 16, 'slice grid must use the authored 20×16 kitchen definition');
 assert.equal(grid[0].length, 20, 'slice grid must use the authored 20×16 kitchen definition');
@@ -128,7 +128,7 @@ assert.equal(runtimeManager.startSlice({
     durationMs: 10000,
     onCaught: () => { caughtCalls += 1; }
 }), true);
-for (const timer of [...runtimeTimers]) timer.callback();
+for (const timer of runtimeTimers.filter(timer => timer.delay <= 4000)) timer.callback();
 assert.ok(runtimeManager.chaser?.active, 'slice chaser must materialize only after the four-second arrival callbacks');
 assert.equal(runtimeScene.gameState.isChasing, false);
 assert.equal(runtimeScene.gameState.storyFlags.chasePhase, undefined);
@@ -137,5 +137,41 @@ overlapHandler();
 assert.equal(caughtCalls, 1, 'slice caught must call its supplied checkpoint callback');
 assert.equal(runtimeScene.gameState.sliceChasing, false);
 assert.equal(runtimeManager.chaser, null);
+
+const noSpawnTimers = [];
+const noSpawnScene = {
+    currentMapId: 'room_kitchen',
+    gameState: { isChasing: false, storyFlags: {} },
+    navigationBlockedRects: [],
+    player: { sprite: makeRuntimeObject(48, 48) },
+    time: {
+        delayedCall(delay, callback) {
+            const timer = { delay, callback, remove() { this.removed = true; } };
+            noSpawnTimers.push(timer);
+            return timer;
+        }
+    },
+    add: {
+        circle(x, y) { return makeRuntimeObject(x, y); },
+        rectangle(x, y) { return makeRuntimeObject(x, y); }
+    },
+    tweens: { add() { return { stop() {}, remove() {} }; } },
+    soundManager: { playSpatialNoise() {} },
+    physics: { add: {} }
+};
+const noSpawnManager = new ChaseManager(noSpawnScene);
+assert.equal(noSpawnManager.startSlice({
+    mapDef: {
+        data: [[1, 1, 1], [1, 0, 1], [1, 1, 1]],
+        objects: { doors: [{ id: 'sealed_door', x: 0, y: 1 }] }
+    },
+    arrivalDoorId: 'sealed_door',
+    durationMs: 1000
+}), true);
+noSpawnTimers.find(timer => timer.delay === 4000)?.callback();
+assert.ok(noSpawnTimers.some(timer => timer.delay === 500), 'a missing safe spawn may retry before the bounded chase deadline');
+noSpawnTimers.find(timer => timer.delay === 1000)?.callback();
+assert.equal(noSpawnManager.isSliceChasing(), false, 'no-spawn slice pursuit must still expire');
+assert.equal(noSpawnScene.gameState.sliceChasing, false);
 
 console.log('Chase contract verification passed');

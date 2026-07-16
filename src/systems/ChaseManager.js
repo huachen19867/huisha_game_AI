@@ -104,6 +104,7 @@ export class ChaseManager {
             this.scene.time.delayedCall(WARNING_MS, () => this.telegraphSliceDoor('footsteps')),
             this.scene.time.delayedCall(ARRIVAL_DELAY_MS, () => this.attemptSliceSpawn())
         );
+        this.sliceEndTimer = this.scene.time.delayedCall(this.sliceConfig.durationMs, () => this.endSliceChase('timeout'));
         return true;
     }
 
@@ -171,7 +172,9 @@ export class ChaseManager {
                 this.nextRepathAt = 0;
             }
         });
-        this.sliceEndTimer = this.scene.time.delayedCall(this.sliceConfig.durationMs, () => this.endSliceChase('timeout'));
+        if (!this.sliceEndTimer) {
+            this.sliceEndTimer = this.scene.time.delayedCall(this.sliceConfig.durationMs, () => this.endSliceChase('timeout'));
+        }
         return true;
     }
 

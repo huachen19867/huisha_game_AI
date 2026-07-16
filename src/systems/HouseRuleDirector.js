@@ -9,6 +9,7 @@ import {
 export const EXIT_BELL_RADIUS = 96;
 export const HOUSE_RULE_CHASE_DURATION_MS = 10000;
 export const HOUSE_RULE_CHECKPOINT_MS = 30000;
+export const FATHER_CHECK_HOLD_MS = 850;
 
 const HOUSE_RULE_SHUTDOWN_EVENT = globalThis.Phaser?.Scenes?.Events?.SHUTDOWN || 'shutdown';
 const HOUSE_RULE_CUES = Object.freeze([
@@ -47,6 +48,7 @@ export class HouseRuleDirector {
         this.activeBell = null;
         this.warningEffects = [];
         this.fatherChecker = null;
+        this.fatherCheckTimer = null;
         this.checkpoint = null;
         this.playerElapsedMs = 0;
         this.exitBellResolved = false;
@@ -89,6 +91,7 @@ export class HouseRuleDirector {
     }
 
     tryStartNextBell() {
+        if (this.scene.chaseManager?.isSliceChasing?.() || this.scene.gameState?.sliceChasing === true) return false;
         if (this.state.tableSolved !== true) return false;
         if (this.state.houseRuleDemonstrated !== true) {
             return this.startBell('demonstration', this.getExitDoor() || this.getCheckDoor());
@@ -140,6 +143,7 @@ export class HouseRuleDirector {
         if (id === 'footsteps') {
             this.scene.soundManager?.playSpatialNoise?.(0.11, point.x, point.y + 24);
             const footsteps = setDepth(this.scene.add?.rectangle?.(point.x, point.y + 28, 22, 5, 0x6b4b3b, 0.36), 342);
+            if (footsteps) footsteps.sliceHouseRuleEffect = 'footsteps';
             if (footsteps) this.warningEffects.push(footsteps);
             return;
         }
@@ -147,6 +151,7 @@ export class HouseRuleDirector {
             const shadow = setDepth(this.scene.add?.image?.(point.x, point.y, 'npc_paper'), 343);
             shadow?.setAlpha?.(0.22);
             shadow?.setTint?.(0x381818);
+            if (shadow) shadow.sliceHouseRuleEffect = 'door_shadow';
             if (shadow) this.warningEffects.push(shadow);
             return;
         }
@@ -209,6 +214,9 @@ export class HouseRuleDirector {
                 this.startSliceChase();
                 this.finishBell('chasing');
             } else {
+                if (this.state.fatherAttention === 'checking' && !this.isPlayerSafe()) {
+                    this.createFatherChecker();
+                }
                 this.requiresExitReentry = true;
                 this.finishBell('violated');
             }
@@ -320,11 +328,21 @@ export class HouseRuleDirector {
         if (father) {
             father.sliceHouseRuleEffect = 'father_check';
             this.fatherChecker = father;
+            let timer = null;
+            timer = this.scene.time?.delayedCall?.(FATHER_CHECK_HOLD_MS, () => {
+                if (this.fatherCheckTimer !== timer) return;
+                this.fatherCheckTimer = null;
+                this.fatherChecker?.destroy?.();
+                this.fatherChecker = null;
+            }) || null;
+            this.fatherCheckTimer = timer;
         }
         return father;
     }
 
     clearFatherChecker() {
+        this.fatherCheckTimer?.remove?.();
+        this.fatherCheckTimer = null;
         this.fatherChecker?.destroy?.();
         this.fatherChecker = null;
     }

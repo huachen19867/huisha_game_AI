@@ -56,6 +56,7 @@ function makeDisplayObject(x = 0, y = 0) {
 
 function makeKitchenScene({ attention = 'quiet', sideDoorLocked = false } = {}) {
     const objects = [];
+    const timers = [];
     const sideDoor = { ...makeDisplayObject(624, 272), doorId: 'kitchen_side_door', locked: sideDoorLocked };
     const mainDoor = { ...makeDisplayObject(16, 272), doorId: 'kitchen_main_door', locked: false, targetMap: 'room_main' };
     const sliceState = {
@@ -79,11 +80,26 @@ function makeKitchenScene({ attention = 'quiet', sideDoorLocked = false } = {}) 
         },
         tweens: { add: () => ({ stop() {}, remove() {} }) },
         soundManager: { playSpatialNoise() {} },
+        time: {
+            delayedCall(delay, callback) {
+                const timer = { delay, callback, remove() { this.removed = true; } };
+                timers.push(timer);
+                return timer;
+            }
+        },
         events: { once() {}, off() {} },
         scene: { restart(data) { scene.restartData = data; } },
-        chaseManager: { startSlice(options) { scene.sliceChaseOptions = options; return true; } }
+        chaseManager: {
+            sliceActive: false,
+            startSlice(options) {
+                this.sliceActive = true;
+                scene.sliceChaseOptions = options;
+                return true;
+            },
+            isSliceChasing() { return this.sliceActive; }
+        }
     };
-    return { scene, sideDoor, mainDoor, objects };
+    return { scene, sideDoor, mainDoor, objects, timers };
 }
 
 const priorWindow = globalThis.window;
@@ -124,6 +140,57 @@ assert.equal(checkingDirector.fatherChecker.x, checking.mainDoor.x, 'a checking 
 checkingDirector.destroy();
 assert.equal(checkingDirector.fatherChecker, null);
 
+const escalated = makeKitchenScene({ attention: 'suspicious' });
+escalated.scene.sliceState.houseRuleDemonstrated = true;
+const escalatedDirector = new HouseRuleDirector(escalated.scene);
+escalatedDirector.update(0, 0);
+escalated.scene.player.sprite.x += 20;
+escalatedDirector.update(1600, 1600);
+escalatedDirector.update(3200, 1600);
+assert.equal(escalated.scene.sliceState.fatherAttention, 'checking', 'a suspicious violation must advance into checking');
+assert.ok(escalatedDirector.fatherChecker, 'the first real checking escalation must create a father checker immediately');
+assert.equal(escalatedDirector.fatherChecker?.x, escalated.mainDoor.x);
+assert.equal(escalatedDirector.fatherChecker?.y, escalated.mainDoor.y);
+const escalationEffectIndex = (id) => escalated.objects.findIndex(object => object.sliceHouseRuleEffect === id);
+const fatherCheckIndex = escalationEffectIndex('father_check');
+assert.ok(escalationEffectIndex('knock') >= 0);
+assert.ok(escalationEffectIndex('footsteps') >= 0);
+assert.ok(escalationEffectIndex('door_shadow') >= 0);
+assert.ok(fatherCheckIndex > escalationEffectIndex('knock'));
+assert.ok(fatherCheckIndex > escalationEffectIndex('footsteps'));
+assert.ok(fatherCheckIndex > escalationEffectIndex('door_shadow'));
+assert.equal(escalatedDirector.blocksDoorTransition(escalated.sideDoor), false, 'checking must not permanently occupy the open exit');
+assert.ok(escalated.timers.some(timer => timer.delay === 850), 'the checker must have a bounded visible hold');
+escalated.timers.find(timer => timer.delay === 850)?.callback();
+assert.equal(escalatedDirector.fatherChecker, null, 'the check silhouette must clean up after its brief hold');
+
+const stationaryUnderTable = makeKitchenScene({ attention: 'checking' });
+stationaryUnderTable.scene.sliceState.houseRuleDemonstrated = true;
+stationaryUnderTable.scene.player.sprite.x = 320;
+stationaryUnderTable.scene.player.sprite.y = 280;
+const stationaryDirector = new HouseRuleDirector(stationaryUnderTable.scene);
+assert.equal(stationaryDirector.startBell('exit', stationaryUnderTable.sideDoor), true);
+stationaryDirector.update(3200, 3200);
+assert.equal(stationaryUnderTable.scene.sliceChaseOptions, undefined, 'a stationary player under the table must avoid the check');
+assert.equal(stationaryDirector.fatherChecker, null);
+assert.equal(stationaryUnderTable.scene.sliceState.fatherAttention, 'suspicious');
+
+const movingUnderTable = makeKitchenScene({ attention: 'checking' });
+movingUnderTable.scene.sliceState.houseRuleDemonstrated = true;
+movingUnderTable.scene.sliceMapDef = {
+    id: 'room_kitchen',
+    data: Array.from({ length: 16 }, () => Array(20).fill(0)),
+    objects: { doors: [{ id: 'kitchen_main_door' }] }
+};
+movingUnderTable.scene.player.sprite.x = 320;
+movingUnderTable.scene.player.sprite.y = 280;
+const movingDirector = new HouseRuleDirector(movingUnderTable.scene);
+assert.equal(movingDirector.startBell('exit', movingUnderTable.sideDoor), true);
+movingUnderTable.scene.player.sprite.x = 340;
+movingDirector.update(3200, 3200);
+assert.ok(movingUnderTable.scene.sliceChaseOptions, 'moving under the table must expose the player to the checking father');
+assert.equal(movingUnderTable.scene.sliceState.fatherAttention, 'chasing');
+
 const locked = makeKitchenScene({ sideDoorLocked: true });
 locked.scene.sliceState.houseRuleDemonstrated = true;
 const lockedDirector = new HouseRuleDirector(locked.scene);
@@ -149,6 +216,13 @@ assert.equal(chased.scene.sliceChaseOptions.arrivalDoorId, 'kitchen_main_door');
 assert.deepEqual(chased.scene.sliceState.bowlPlacements, { nail: 'wine', stove: 'medicine', side: 'child' });
 assert.deepEqual(chased.scene.sliceState.mealReplaySeen, ['father_lock']);
 assert.equal(chased.scene.sliceState.fatherAttention, 'chasing');
+const warningCountDuringChase = chased.objects.length;
+chasedDirector.update(3201, 1);
+chasedDirector.update(6401, 3200);
+assert.equal(chasedDirector.activeBell, null, 'a running slice chase must not re-arm the exit bell');
+assert.equal(chased.objects.length, warningCountDuringChase, 'a running slice chase must not add a second warning stack');
+assert.equal(chasedDirector.blocksDoorTransition(chased.sideDoor), false, 'a running slice chase must not occupy the exit door again');
+assert.equal(chased.scene.sliceState.fatherAttention, 'chasing', 'a running slice chase must not recover attention');
 assert.equal(chased.scene.sliceChaseOptions.onCaught(), true);
 assert.deepEqual(chased.scene.restartData, {
     mapId: 'room_kitchen', x: 540, y: 256, previousMapId: 'room_main', sliceMode: true
