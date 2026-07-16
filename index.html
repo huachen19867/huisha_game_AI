@@ -3915,6 +3915,7 @@ class ChaseManager {
         this.pendingSliceDoor = null;
         this.sliceArrivalTimers = [];
         this.sliceSpawnRetryTimer = null;
+        this.sliceSetupTimer = null;
         this.sliceEndTimer = null;
         this.sliceDoorGlow = null;
         this.sliceFootsteps = null;
@@ -3966,7 +3967,10 @@ class ChaseManager {
             this.scene.time.delayedCall(WARNING_MS, () => this.telegraphSliceDoor('footsteps')),
             this.scene.time.delayedCall(ARRIVAL_DELAY_MS, () => this.attemptSliceSpawn())
         );
-        this.sliceEndTimer = this.scene.time.delayedCall(this.sliceConfig.durationMs, () => this.endSliceChase('timeout'));
+        this.sliceSetupTimer = this.scene.time.delayedCall(
+            ARRIVAL_DELAY_MS + this.sliceConfig.durationMs,
+            () => this.endSliceChase('setup_timeout')
+        );
         return true;
     }
 
@@ -4013,6 +4017,7 @@ class ChaseManager {
 
     spawnSliceAt(spawn) {
         if (!this.sliceConfig) return false;
+        this.cancelSliceSetupDeadline();
         this.clearSliceArrivalVisuals();
         this.chaser = this.scene.physics.add.sprite(spawn.x, spawn.y, 'npc_paper').setTint(0xff0000).setAlpha(0);
         if (!this.scene.isMobile) this.chaser.setPipeline('Light2D');
@@ -4228,10 +4233,16 @@ class ChaseManager {
         this.pendingSliceDoor = null;
     }
 
+    cancelSliceSetupDeadline() {
+        this.sliceSetupTimer?.remove?.();
+        this.sliceSetupTimer = null;
+    }
+
     endSliceChase(reason = 'timeout') {
         if (!this.sliceConfig) return false;
         this.sliceEndTimer?.remove?.();
         this.sliceEndTimer = null;
+        this.cancelSliceSetupDeadline();
         this.cancelSliceArrival();
         this.chaser?.destroy?.();
         this.chaser = null;
@@ -4313,7 +4324,10 @@ class HouseRuleDirector {
 
     update(_time, delta = 0) {
         if (this.destroyed) return;
-        if (this.isPaused()) return;
+        if (this.isPaused()) {
+            this.syncPausedPlayerPosition();
+            return;
+        }
         const safeDelta = Number.isFinite(delta) && delta > 0 ? delta : 0;
         this.playerElapsedMs += safeDelta;
         this.expireCheckpoint();
@@ -4341,6 +4355,14 @@ class HouseRuleDirector {
             switching: this.scene.isSwitching === true,
             carryingAnimation: this.scene.kitchenTableController?.isCarryingAnimation === true
         });
+    }
+
+    syncPausedPlayerPosition() {
+        const bell = this.activeBell;
+        const player = this.scene.player?.sprite;
+        if (!bell || !player) return;
+        bell.lastPlayerPosition = { x: player.x, y: player.y };
+        bell.frameMovedDistance = 0;
     }
 
     tryStartNextBell() {

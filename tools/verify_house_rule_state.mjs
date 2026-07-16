@@ -125,6 +125,7 @@ tutorial.scene.player.sprite.x += 40;
 tutorialDirector.update(4300, 1000);
 assert.equal(tutorialDirector.activeBell.elapsedMs, frozenElapsed, 'dialog time and movement must not count');
 globalThis.window.dialogActive = false;
+tutorial.scene.player.sprite.x += 16;
 tutorialDirector.update(5900, 1600);
 tutorialDirector.update(7500, 1600);
 assert.equal(tutorial.scene.sliceState.fatherAttention, 'suspicious', 'a taught rule advances attention only after the full warning sequence');
@@ -190,6 +191,33 @@ movingUnderTable.scene.player.sprite.x = 340;
 movingDirector.update(3200, 3200);
 assert.ok(movingUnderTable.scene.sliceChaseOptions, 'moving under the table must expose the player to the checking father');
 assert.equal(movingUnderTable.scene.sliceState.fatherAttention, 'chasing');
+
+for (const pauseKind of ['dialog', 'replay', 'switching', 'carryingAnimation']) {
+    const paused = makeKitchenScene();
+    paused.scene.sliceState.houseRuleDemonstrated = true;
+    const pausedDirector = new HouseRuleDirector(paused.scene);
+    pausedDirector.update(0, 0);
+    pausedDirector.update(550, 550);
+    const elapsedBeforePause = pausedDirector.activeBell.elapsedMs;
+    const movedBeforePause = pausedDirector.activeBell.movedDistance;
+    if (pauseKind === 'dialog') globalThis.window.dialogActive = true;
+    if (pauseKind === 'replay') paused.scene.memoryReplayDirector = { active: true };
+    if (pauseKind === 'switching') paused.scene.isSwitching = true;
+    if (pauseKind === 'carryingAnimation') paused.scene.kitchenTableController = { isCarryingAnimation: true };
+    paused.scene.player.sprite.x += 40;
+    pausedDirector.update(1550, 1000);
+    assert.equal(pausedDirector.activeBell.elapsedMs, elapsedBeforePause, `${pauseKind} must freeze bell time`);
+    if (pauseKind === 'dialog') globalThis.window.dialogActive = false;
+    if (pauseKind === 'replay') paused.scene.memoryReplayDirector.active = false;
+    if (pauseKind === 'switching') paused.scene.isSwitching = false;
+    if (pauseKind === 'carryingAnimation') paused.scene.kitchenTableController.isCarryingAnimation = false;
+    pausedDirector.update(1551, 1);
+    assert.equal(pausedDirector.activeBell.movedDistance, movedBeforePause, `${pauseKind} movement must be discarded on resume`);
+    assert.equal(paused.scene.sliceState.fatherAttention, 'quiet', `${pauseKind} must not advance attention`);
+    paused.scene.player.sprite.x += 16;
+    pausedDirector.update(4200, 2649);
+    assert.equal(paused.scene.sliceState.fatherAttention, 'suspicious', `${pauseKind} must still count movement after the pause ends`);
+}
 
 const locked = makeKitchenScene({ sideDoorLocked: true });
 locked.scene.sliceState.houseRuleDemonstrated = true;

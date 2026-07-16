@@ -53,6 +53,7 @@ export class ChaseManager {
         this.pendingSliceDoor = null;
         this.sliceArrivalTimers = [];
         this.sliceSpawnRetryTimer = null;
+        this.sliceSetupTimer = null;
         this.sliceEndTimer = null;
         this.sliceDoorGlow = null;
         this.sliceFootsteps = null;
@@ -104,7 +105,10 @@ export class ChaseManager {
             this.scene.time.delayedCall(WARNING_MS, () => this.telegraphSliceDoor('footsteps')),
             this.scene.time.delayedCall(ARRIVAL_DELAY_MS, () => this.attemptSliceSpawn())
         );
-        this.sliceEndTimer = this.scene.time.delayedCall(this.sliceConfig.durationMs, () => this.endSliceChase('timeout'));
+        this.sliceSetupTimer = this.scene.time.delayedCall(
+            ARRIVAL_DELAY_MS + this.sliceConfig.durationMs,
+            () => this.endSliceChase('setup_timeout')
+        );
         return true;
     }
 
@@ -151,6 +155,7 @@ export class ChaseManager {
 
     spawnSliceAt(spawn) {
         if (!this.sliceConfig) return false;
+        this.cancelSliceSetupDeadline();
         this.clearSliceArrivalVisuals();
         this.chaser = this.scene.physics.add.sprite(spawn.x, spawn.y, 'npc_paper').setTint(0xff0000).setAlpha(0);
         if (!this.scene.isMobile) this.chaser.setPipeline('Light2D');
@@ -366,10 +371,16 @@ export class ChaseManager {
         this.pendingSliceDoor = null;
     }
 
+    cancelSliceSetupDeadline() {
+        this.sliceSetupTimer?.remove?.();
+        this.sliceSetupTimer = null;
+    }
+
     endSliceChase(reason = 'timeout') {
         if (!this.sliceConfig) return false;
         this.sliceEndTimer?.remove?.();
         this.sliceEndTimer = null;
+        this.cancelSliceSetupDeadline();
         this.cancelSliceArrival();
         this.chaser?.destroy?.();
         this.chaser = null;

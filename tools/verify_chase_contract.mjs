@@ -48,7 +48,7 @@ assert.equal(manager.startSlice({
 }), true);
 assert.equal(scene.gameState.isChasing, false, 'slice chase must not activate the legacy flag');
 assert.equal(scene.gameState.sliceChasing, true, 'slice chase needs an isolated active flag');
-assert.deepEqual(timers.map(timer => timer.delay), [2000, 3000, 4000, SLICE_CHASE_DURATION_MS]);
+assert.deepEqual(timers.map(timer => timer.delay), [2000, 3000, 4000, 14000]);
 const grid = manager.createSliceGrid(SliceMaps.room_kitchen, [{ x: 1, y: 8 }]);
 assert.equal(grid.length, 16, 'slice grid must use the authored 20×16 kitchen definition');
 assert.equal(grid[0].length, 20, 'slice grid must use the authored 20×16 kitchen definition');
@@ -132,11 +132,44 @@ for (const timer of runtimeTimers.filter(timer => timer.delay <= 4000)) timer.ca
 assert.ok(runtimeManager.chaser?.active, 'slice chaser must materialize only after the four-second arrival callbacks');
 assert.equal(runtimeScene.gameState.isChasing, false);
 assert.equal(runtimeScene.gameState.storyFlags.chasePhase, undefined);
+assert.ok(runtimeTimers.some(timer => timer.delay === 10000), 'a successful slice spawn must receive the full chase duration after arrival');
 runtimeTweens.find(config => typeof config.onComplete === 'function')?.onComplete();
 overlapHandler();
 assert.equal(caughtCalls, 1, 'slice caught must call its supplied checkpoint callback');
 assert.equal(runtimeScene.gameState.sliceChasing, false);
 assert.equal(runtimeManager.chaser, null);
+
+const pursuitTimers = [];
+const pursuitScene = {
+    ...runtimeScene,
+    gameState: { isChasing: false, storyFlags: {} },
+    player: { sprite: makeRuntimeObject(400, 256) },
+    time: {
+        now: 0,
+        delayedCall(delay, callback) {
+            const timer = { delay, at: pursuitScene.time.now + delay, callback, remove() { this.removed = true; } };
+            pursuitTimers.push(timer);
+            return timer;
+        }
+    }
+};
+const pursuitManager = new ChaseManager(pursuitScene);
+assert.equal(pursuitManager.startSlice({
+    mapDef: SliceMaps.room_kitchen,
+    arrivalDoorId: 'kitchen_main_door',
+    durationMs: 10000
+}), true);
+for (const timer of pursuitTimers.filter(timer => timer.delay <= 4000)) {
+    pursuitScene.time.now = timer.at;
+    timer.callback();
+}
+const pursuitTimer = pursuitTimers.find(timer => timer.delay === 10000 && timer.removed !== true);
+assert.equal(pursuitTimer.at, 14000, 'full pursuit duration must begin after the four-second arrival');
+pursuitScene.time.now = 13999;
+assert.equal(pursuitManager.isSliceChasing(), true, 'the pursuit must still be active just before its full duration ends');
+pursuitScene.time.now = 14000;
+pursuitTimer.callback();
+assert.equal(pursuitManager.isSliceChasing(), false, 'the pursuit must clean up when the full post-arrival duration ends');
 
 const noSpawnTimers = [];
 const noSpawnScene = {
@@ -170,7 +203,8 @@ assert.equal(noSpawnManager.startSlice({
 }), true);
 noSpawnTimers.find(timer => timer.delay === 4000)?.callback();
 assert.ok(noSpawnTimers.some(timer => timer.delay === 500), 'a missing safe spawn may retry before the bounded chase deadline');
-noSpawnTimers.find(timer => timer.delay === 1000)?.callback();
+assert.ok(noSpawnTimers.some(timer => timer.delay === 5000), 'setup timeout must include the four-second corresponding-door arrival');
+noSpawnTimers.find(timer => timer.delay === 5000)?.callback();
 assert.equal(noSpawnManager.isSliceChasing(), false, 'no-spawn slice pursuit must still expire');
 assert.equal(noSpawnScene.gameState.sliceChasing, false);
 

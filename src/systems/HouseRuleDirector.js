@@ -60,7 +60,10 @@ export class HouseRuleDirector {
 
     update(_time, delta = 0) {
         if (this.destroyed) return;
-        if (this.isPaused()) return;
+        if (this.isPaused()) {
+            this.syncPausedPlayerPosition();
+            return;
+        }
         const safeDelta = Number.isFinite(delta) && delta > 0 ? delta : 0;
         this.playerElapsedMs += safeDelta;
         this.expireCheckpoint();
@@ -88,6 +91,14 @@ export class HouseRuleDirector {
             switching: this.scene.isSwitching === true,
             carryingAnimation: this.scene.kitchenTableController?.isCarryingAnimation === true
         });
+    }
+
+    syncPausedPlayerPosition() {
+        const bell = this.activeBell;
+        const player = this.scene.player?.sprite;
+        if (!bell || !player) return;
+        bell.lastPlayerPosition = { x: player.x, y: player.y };
+        bell.frameMovedDistance = 0;
     }
 
     tryStartNextBell() {
