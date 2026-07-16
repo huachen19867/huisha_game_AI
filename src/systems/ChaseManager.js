@@ -57,6 +57,8 @@ export class ChaseManager {
         this.sliceEndTimer = null;
         this.sliceDoorGlow = null;
         this.sliceFootsteps = null;
+        this.sliceDoorGlowTween = null;
+        this.sliceFootstepsTween = null;
     }
 
     getArrivalDoor() {
@@ -127,11 +129,15 @@ export class ChaseManager {
         this.scene.soundManager?.playSpatialNoise(stage === 'bang' ? 0.24 : 0.16, point.x, point.y);
         if (!this.sliceDoorGlow) {
             this.sliceDoorGlow = this.scene.add.circle(point.x, point.y, 24, 0x8b0000, 0.22).setDepth(340);
-            this.scene.tweens.add({ targets: this.sliceDoorGlow, alpha: 0.56, duration: 360, yoyo: true, repeat: -1 });
+            this.sliceDoorGlowTween = this.scene.tweens.add({
+                targets: this.sliceDoorGlow, alpha: 0.56, duration: 360, yoyo: true, repeat: -1
+            });
         }
         if (stage === 'footsteps' && !this.sliceFootsteps) {
             this.sliceFootsteps = this.scene.add.rectangle(point.x, point.y + 30, 18, 4, 0x6b4b3b, 0.34).setDepth(341);
-            this.scene.tweens.add({ targets: this.sliceFootsteps, alpha: 0.08, scaleX: 2.2, duration: 420, yoyo: true, repeat: -1 });
+            this.sliceFootstepsTween = this.scene.tweens.add({
+                targets: this.sliceFootsteps, alpha: 0.08, scaleX: 2.2, duration: 420, yoyo: true, repeat: -1
+            });
         }
     }
 
@@ -356,10 +362,16 @@ export class ChaseManager {
     }
 
     clearSliceArrivalVisuals() {
+        for (const tween of [this.sliceDoorGlowTween, this.sliceFootstepsTween]) {
+            tween?.stop?.();
+            tween?.remove?.();
+        }
         this.sliceDoorGlow?.destroy();
         this.sliceFootsteps?.destroy();
         this.sliceDoorGlow = null;
         this.sliceFootsteps = null;
+        this.sliceDoorGlowTween = null;
+        this.sliceFootstepsTween = null;
     }
 
     cancelSliceArrival() {

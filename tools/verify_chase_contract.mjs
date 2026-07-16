@@ -208,4 +208,51 @@ noSpawnTimers.find(timer => timer.delay === 5000)?.callback();
 assert.equal(noSpawnManager.isSliceChasing(), false, 'no-spawn slice pursuit must still expire');
 assert.equal(noSpawnScene.gameState.sliceChasing, false);
 
+const arrivalTweenTimers = [];
+const arrivalTweenHandles = [];
+const arrivalTweenScene = {
+    currentMapId: 'room_kitchen',
+    gameState: { isChasing: false, storyFlags: {} },
+    time: {
+        delayedCall(delay, callback) {
+            const timer = { delay, callback, remove() { this.removed = true; } };
+            arrivalTweenTimers.push(timer);
+            return timer;
+        }
+    },
+    add: {
+        circle(x, y) { return makeRuntimeObject(x, y); },
+        rectangle(x, y) { return makeRuntimeObject(x, y); }
+    },
+    tweens: {
+        add(config) {
+            const handle = {
+                config,
+                active: true,
+                stop() { this.active = false; this.stopped = true; },
+                remove() { this.active = false; this.removed = true; }
+            };
+            arrivalTweenHandles.push(handle);
+            return handle;
+        }
+    },
+    soundManager: { playSpatialNoise() {} }
+};
+const arrivalTweenManager = new ChaseManager(arrivalTweenScene);
+for (let pass = 0; pass < 2; pass += 1) {
+    const timerStart = arrivalTweenTimers.length;
+    assert.equal(arrivalTweenManager.startSlice({
+        mapDef: SliceMaps.room_kitchen,
+        arrivalDoorId: 'kitchen_main_door',
+        durationMs: 10000
+    }), true);
+    arrivalTweenTimers[timerStart].callback();
+    arrivalTweenTimers[timerStart + 1].callback();
+    assert.equal(arrivalTweenHandles.filter(handle => handle.active).length, 2, 'each slice arrival creates exactly its own two looping telegraph tweens');
+    arrivalTweenManager.endSliceChase('timeout');
+    assert.equal(arrivalTweenHandles.filter(handle => handle.active).length, 0, 'slice arrival cleanup must stop every looping telegraph tween');
+    assert.ok(arrivalTweenHandles.every(handle => handle.stopped === true && handle.removed === true));
+}
+assert.equal(arrivalTweenHandles.length, 4, 'repeated slice chases must not retain prior arrival tween handles');
+
 console.log('Chase contract verification passed');

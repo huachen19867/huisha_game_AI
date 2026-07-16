@@ -222,8 +222,14 @@ export class HouseRuleDirector {
         if (result === 'violated') {
             this.state.fatherAttention = advanceAttention(this.state.fatherAttention);
             if (this.state.fatherAttention === 'chasing') {
-                this.startSliceChase();
-                this.finishBell('chasing');
+                if (this.startSliceChase()) {
+                    this.finishBell('chasing');
+                } else {
+                    this.state.fatherAttention = 'checking';
+                    this.createFatherChecker();
+                    this.requiresExitReentry = true;
+                    this.finishBell('chase_unavailable');
+                }
             } else {
                 if (this.state.fatherAttention === 'checking' && !this.isPlayerSafe()) {
                     this.createFatherChecker();

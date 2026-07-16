@@ -192,6 +192,23 @@ movingDirector.update(3200, 3200);
 assert.ok(movingUnderTable.scene.sliceChaseOptions, 'moving under the table must expose the player to the checking father');
 assert.equal(movingUnderTable.scene.sliceState.fatherAttention, 'chasing');
 
+const failedChaseStart = makeKitchenScene({ attention: 'checking' });
+failedChaseStart.scene.sliceState.houseRuleDemonstrated = true;
+failedChaseStart.scene.sliceMapDef = {
+    id: 'room_kitchen',
+    data: Array.from({ length: 16 }, () => Array(20).fill(0)),
+    objects: { doors: [{ id: 'kitchen_main_door' }] }
+};
+failedChaseStart.scene.chaseManager.startSlice = () => false;
+const failedChaseDirector = new HouseRuleDirector(failedChaseStart.scene);
+failedChaseDirector.update(0, 0);
+failedChaseStart.scene.player.sprite.x += 20;
+failedChaseDirector.update(1600, 1600);
+failedChaseDirector.update(3200, 1600);
+assert.equal(failedChaseStart.scene.sliceState.fatherAttention, 'checking', 'a failed slice chase must fail closed to checking');
+assert.equal(failedChaseDirector.activeBell, null);
+assert.equal(failedChaseDirector.blocksDoorTransition(failedChaseStart.sideDoor), false, 'a failed slice chase must not strand the player at the exit');
+
 for (const pauseKind of ['dialog', 'replay', 'switching', 'carryingAnimation']) {
     const paused = makeKitchenScene();
     paused.scene.sliceState.houseRuleDemonstrated = true;
