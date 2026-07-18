@@ -124,6 +124,7 @@ function makeNarrativeScene(mapId, state) {
     const created = [];
     const timers = [];
     const tweens = [];
+    let shutdownHandler = null;
     const props = new Map();
     for (const prop of SliceMaps[mapId].objects.props || []) {
         const object = makeObject(prop.x, prop.y, prop.texture);
@@ -183,7 +184,14 @@ function makeNarrativeScene(mapId, state) {
                 return timer;
             }
         },
-        events: { once() {}, off() {} },
+        events: {
+            once(eventName, handler) {
+                if (eventName === 'shutdown') shutdownHandler = handler;
+            },
+            off(eventName, handler) {
+                if (eventName === 'shutdown' && shutdownHandler === handler) shutdownHandler = null;
+            }
+        },
         sliceMapManager: {
             findProp(id) { return props.get(id) || null; },
             applyRoomRevision(nextState) { scene.revisions.push(structuredClone(nextState)); return true; },
@@ -193,7 +201,16 @@ function makeNarrativeScene(mapId, state) {
         reactions: [],
         showSliceReaction(line) { this.reactions.push(line); }
     };
-    return { scene, props, created, timers, tweens };
+    return {
+        scene,
+        props,
+        created,
+        timers,
+        tweens,
+        shutdown() {
+            shutdownHandler?.();
+        }
+    };
 }
 
 function advanceNarrativeClock(runtime, milliseconds) {
@@ -361,6 +378,37 @@ const naturallyFinishedActorCount = naturalCodaRuntime.created.length;
 advanceNarrativeClock(naturalCodaRuntime, 1000);
 assert.equal(naturalCodaRuntime.created.length, naturallyFinishedActorCount, 'a finished coda must not run a second delayed callback');
 naturalCodaDirector.destroy();
+
+const shutdownCodaSlice = { ...createDefaultSliceState(), slicePhase: 'return', planeChoice: 'take' };
+const shutdownCodaRuntime = makeNarrativeScene('room_main', shutdownCodaSlice);
+const unrelatedTween = shutdownCodaRuntime.scene.tweens.add({ targets: makeObject(12, 12), alpha: 0.4, duration: 300 });
+const shutdownCodaDirector = new SliceNarrativeDirector(shutdownCodaRuntime.scene);
+assert.equal(shutdownCodaDirector.handleInteraction(shutdownCodaRuntime.props.get('main_cold_bowl')).status, 'coda_playing');
+const codaTimerCallbacks = shutdownCodaRuntime.timers.map(timer => timer.callback);
+advanceNarrativeClock(shutdownCodaRuntime, 1250);
+const codaActorCount = shutdownCodaRuntime.created.length;
+assert.ok(codaTimerCallbacks.length > 0, 'the shutdown regression must exercise delayed coda timers');
+assert.ok(shutdownCodaDirector.ownedTweens.length > 0, 'the shutdown regression must exercise director-owned coda tweens');
+assert.ok(codaActorCount > 0, 'the shutdown regression must exercise coda actors');
+const completedShutdownState = structuredClone(shutdownCodaSlice);
+shutdownCodaRuntime.shutdown();
+assert.equal(shutdownCodaDirector.destroyed, true, 'scene shutdown must destroy an active coda director');
+assert.equal(shutdownCodaDirector.coda, null);
+assert.equal(shutdownCodaDirector.ownedTimers.length, 0);
+assert.equal(shutdownCodaDirector.ownedTweens.length, 0);
+assert.ok(shutdownCodaRuntime.timers.every(timer => timer.removed === true && timer.destroyed === true), 'scene shutdown must clean every coda timer');
+assert.ok(
+    shutdownCodaRuntime.tweens
+        .filter(tween => tween !== unrelatedTween)
+        .every(tween => tween.stopped === true && tween.removed === true),
+    'scene shutdown must stop and remove every director-owned coda tween'
+);
+assert.equal(unrelatedTween.stopped, undefined, 'scene shutdown must not stop unrelated scene tweens');
+assert.equal(unrelatedTween.removed, undefined, 'scene shutdown must not remove unrelated scene tweens');
+assert.ok(shutdownCodaRuntime.created.every(object => object.destroyed === true), 'scene shutdown must destroy every coda actor');
+for (const callback of codaTimerCallbacks) callback();
+assert.equal(shutdownCodaRuntime.created.length, codaActorCount, 'old coda timer callbacks cannot rebuild actors after shutdown');
+assert.deepEqual(shutdownCodaSlice, completedShutdownState, 'old coda callbacks cannot mutate completed slice state after shutdown');
 
 const codaInputSlice = { ...createDefaultSliceState(), slicePhase: 'return', planeChoice: 'take' };
 const codaInputRuntime = makeNarrativeScene('room_main', codaInputSlice);

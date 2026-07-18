@@ -21,10 +21,26 @@ function createDefaultNarrativeInvestigations() {
     };
 }
 
+function isNarrativeRecord(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function getOwnNarrativeBucket(record, key) {
+    if (!isNarrativeRecord(record) || !Object.hasOwn(record, key)) return null;
+    const bucket = record[key];
+    return isNarrativeRecord(bucket) ? bucket : null;
+}
+
+function getOwnNarrativeBoolean(bucket, key) {
+    return bucket !== null && Object.hasOwn(bucket, key) && bucket[key] === true;
+}
+
 function normalizeNarrativeInvestigations(value) {
+    const arrival = getOwnNarrativeBucket(value, 'arrival');
+    const bedroom = getOwnNarrativeBucket(value, 'bedroom');
     return {
-        arrival: { cold_bowl: value?.arrival?.cold_bowl === true },
-        bedroom: { mirror: value?.bedroom?.mirror === true }
+        arrival: { cold_bowl: getOwnNarrativeBoolean(arrival, 'cold_bowl') },
+        bedroom: { mirror: getOwnNarrativeBoolean(bedroom, 'mirror') }
     };
 }
 

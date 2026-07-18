@@ -241,6 +241,41 @@ for (const invalidNarrativeInvestigations of [undefined, null, [], { arrival: { 
         { arrival: { cold_bowl: false }, bedroom: { mirror: false } }
     );
 }
+const inheritedNarrativeInvestigations = Object.create({
+    arrival: { cold_bowl: true },
+    bedroom: { mirror: true }
+});
+const inheritedNarrativeState = ensureSliceState({ slice: { narrativeInvestigations: inheritedNarrativeInvestigations } });
+assert.deepEqual(
+    inheritedNarrativeState.narrativeInvestigations,
+    { arrival: { cold_bowl: false }, bedroom: { mirror: false } },
+    'inherited narrative investigations must not make a first observation look already seen'
+);
+assert.equal(markSliceNarrativeInvestigation(inheritedNarrativeState, 'arrival', 'cold_bowl'), true);
+
+const nestedInheritedNarrativeInvestigations = {
+    arrival: Object.create({ cold_bowl: true }),
+    bedroom: Object.create({ mirror: true })
+};
+const nestedInheritedNarrativeState = ensureSliceState({ slice: { narrativeInvestigations: nestedInheritedNarrativeInvestigations } });
+assert.deepEqual(
+    nestedInheritedNarrativeState.narrativeInvestigations,
+    { arrival: { cold_bowl: false }, bedroom: { mirror: false } },
+    'inherited nested investigation buckets must also be discarded'
+);
+
+const narrowedNarrativeState = ensureSliceState({
+    slice: {
+        narrativeInvestigations: {
+            arrival: { cold_bowl: true, ignored: true },
+            bedroom: { mirror: true, ignored: true },
+            ignored: true
+        }
+    }
+});
+assert.deepEqual(narrowedNarrativeState.narrativeInvestigations, { arrival: { cold_bowl: true }, bedroom: { mirror: true } });
+assert.equal(Object.hasOwn(narrowedNarrativeState.narrativeInvestigations, 'ignored'), false);
+assert.equal(Object.hasOwn(narrowedNarrativeState.narrativeInvestigations.arrival, 'ignored'), false);
 for (const invalidInvestigations of [undefined, null, [], { mirror: 'true', plane: 1 }, { other: true }]) {
     assert.deepEqual(
         ensureSliceState({ slice: { bedroomInvestigations: invalidInvestigations } }).bedroomInvestigations,
