@@ -367,6 +367,7 @@ export class GameScene extends Phaser.Scene {
                 this.handleLockedDoor(door);
                 return;
             }
+            if (this.sliceMode && this.sliceNarrativeDirector?.blocksDoorTransition?.(door)) return;
             if (this.houseRuleDirector?.blocksDoorTransition?.(door)) return;
 
             if (door.isLoop && !this.gameState.corridorSolved) {

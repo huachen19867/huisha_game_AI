@@ -1,4 +1,8 @@
-import { choosePlane, transitionSlicePhase } from './SliceState.js';
+import {
+    choosePlane,
+    markSliceNarrativeInvestigation,
+    transitionSlicePhase
+} from './SliceState.js';
 
 export const REACTIONS = Object.freeze({
     arrival: Object.freeze({
@@ -153,15 +157,20 @@ export class SliceNarrativeDirector {
         return null;
     }
 
+    blocksDoorTransition() {
+        return this.destroyed === false && this.coda !== null;
+    }
+
     handleMirror(object) {
         if (this.state.planeChoice) {
             this.createFinalMirrorReflection(object);
             return { status: 'mirror_after_choice' };
         }
+        const firstObservation = markSliceNarrativeInvestigation(this.state, 'bedroom', 'mirror');
         this.state.bedroomInvestigations = { ...this.state.bedroomInvestigations, mirror: true };
-        this.showReaction(getReaction('bedroom', 'mirror'));
+        if (firstObservation) this.showReaction(getReaction('bedroom', 'mirror'));
         this.applyRevision();
-        return { status: 'investigated', targetId: 'child_mirror' };
+        return { status: firstObservation ? 'investigated' : 'observed', targetId: 'child_mirror' };
     }
 
     handlePlaneObservation() {
@@ -215,8 +224,13 @@ export class SliceNarrativeDirector {
         if (this.scene.currentMapId !== 'room_main') {
             return { status: 'unavailable' };
         }
+        if (this.state.slicePhase === 'arrival') {
+            if (markSliceNarrativeInvestigation(this.state, 'arrival', 'cold_bowl')) {
+                this.showReaction(getReaction('arrival', 'cold_bowl'));
+            }
+            return { status: 'observed', targetId: 'main_cold_bowl' };
+        }
         if (this.state.slicePhase !== 'return' || !this.state.planeChoice) {
-            this.showReaction(getReaction('arrival', 'cold_bowl'));
             return { status: 'observed', targetId: 'main_cold_bowl' };
         }
         if (this.coda || this.state.sliceCompleted) return { status: 'complete' };

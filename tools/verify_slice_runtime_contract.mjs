@@ -497,6 +497,73 @@ globalThis.window ??= {};
 const dialogCalls = [];
 window.showDialog = (...args) => dialogCalls.push(args);
 
+const codaGuardState = {
+    ...createDefaultSliceState(),
+    slicePhase: 'return',
+    planeChoice: 'leave'
+};
+const codaGuardScene = new GameScene();
+codaGuardScene.init({ mapId: 'room_main', sliceMode: true });
+codaGuardScene.gameState = { isChasing: false, isHidden: false, slice: codaGuardState };
+codaGuardScene.sliceState = codaGuardState;
+codaGuardScene.player = { sprite: { x: 384, y: 220, setVelocity() {} } };
+codaGuardScene.add = {
+    image(x, y, texture) { return createDisplayObject('image', x, y, texture); },
+    rectangle(x, y, width, height) { return createDisplayObject('rectangle', x, y, undefined, width, height); },
+    text(x, y, text) { const object = createDisplayObject('text', x, y); object.text = text; return object; }
+};
+codaGuardScene.tweens = { add(config) { return { config, stop() {}, remove() {} }; } };
+codaGuardScene.time = { delayedCall(delay, callback) { return { delay, callback, remove() {}, destroy() {} }; } };
+codaGuardScene.events = { once() {}, off() {} };
+const codaColdBowl = createDisplayObject('image', 384, 220, 'bowl_offering');
+codaColdBowl.objId = 'main_cold_bowl';
+codaGuardScene.sliceMapManager = {
+    findProp(id) { return id === 'main_cold_bowl' ? codaColdBowl : null; },
+    refreshDoorAccess() {},
+    applyRoomRevision() {}
+};
+codaGuardScene.sliceNarrativeDirector = new SliceNarrativeDirector(codaGuardScene);
+assert.deepEqual(codaGuardScene.sliceNarrativeDirector.handleInteraction(codaColdBowl), { status: 'coda_playing' });
+let codaDoorTransitions = 0;
+const codaExitDoor = {
+    locked: false,
+    targetMap: 'room_kitchen',
+    targetX: 64,
+    targetY: 256,
+    doorId: 'main_kitchen_door'
+};
+codaGuardScene.physics = {
+    overlap(player, doors, callback) {
+        assert.equal(player, codaGuardScene.player.sprite);
+        callback(player, codaExitDoor);
+    }
+};
+codaGuardScene.doors = { getChildren() { return [codaExitDoor]; } };
+codaGuardScene.chaseManager = { update() {} };
+codaGuardScene.updateSanity = () => {};
+codaGuardScene.refreshObjective = () => {};
+codaGuardScene.switchScene = () => { codaDoorTransitions += 1; };
+codaGuardScene.update(0, 16);
+assert.equal(codaDoorTransitions, 0, 'an active slice coda must keep its final-room door from transitioning away');
+assert.ok(codaGuardScene.sliceNarrativeDirector.coda, 'the blocked door must leave the coda alive');
+codaGuardScene.sliceNarrativeDirector.showCodaCard();
+const originalJustDown = Phaser.Input.Keyboard.JustDown;
+Phaser.Input.Keyboard.JustDown = key => {
+    const pressed = key?.justDown === true;
+    if (key) key.justDown = false;
+    return pressed;
+};
+codaGuardScene.keyE = { justDown: true };
+codaGuardScene.keySpace = { justDown: false };
+codaGuardScene.interactText = { setVisible() { return this; } };
+codaGuardScene.interactionManager = new SliceInteractionManager(codaGuardScene);
+codaGuardScene.interactionManager.update();
+Phaser.Input.Keyboard.JustDown = originalJustDown;
+assert.equal(codaGuardScene.sliceNarrativeDirector.coda, null, 'the normal E path must clean up the coda before doors unlock again');
+codaGuardScene.interactionManager = null;
+codaGuardScene.update(16, 16);
+assert.equal(codaDoorTransitions, 1, 'the final-room door must become usable once the coda has been skipped');
+
 let sliceKeyChecks = 0;
 let sliceSwitchCalls = 0;
 let sliceCameraShakes = 0;

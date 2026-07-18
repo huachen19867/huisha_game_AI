@@ -151,7 +151,20 @@ function makeNarrativeScene(mapId, state) {
                 const tween = {
                     config,
                     stop() { this.stopped = true; },
-                    remove() { this.removed = true; }
+                    remove() { this.removed = true; },
+                    complete() {
+                        if (this.completed) return;
+                        this.completed = true;
+                        const targets = Array.isArray(config.targets) ? config.targets : [config.targets];
+                        for (const target of targets) {
+                            if (!target) continue;
+                            if (Number.isFinite(config.x)) target.x = config.x;
+                            if (Number.isFinite(config.y)) target.y = config.y;
+                            if (Number.isFinite(config.alpha)) target.setAlpha?.(config.alpha);
+                            if (Number.isFinite(config.scale)) target.setScale?.(config.scale);
+                        }
+                        config.onComplete?.();
+                    }
                 };
                 tweens.push(tween);
                 return tween;
@@ -196,6 +209,10 @@ function advanceNarrativeClock(runtime, milliseconds) {
         timer = pending();
     }
     runtime.scene.clockMs = targetTime;
+}
+
+function completeNarrativeTweens(runtime) {
+    for (const tween of runtime.tweens) tween.complete();
 }
 
 const bedroomSlice = { ...createDefaultSliceState(), slicePhase: 'bedroom' };
@@ -312,6 +329,10 @@ assert.ok(
         codaDirector.coda.outline.y !== initialOutline.y,
     'the drop must visibly disturb the child-height reflection'
 );
+completeNarrativeTweens(codaRuntime);
+assert.equal(codaDirector.coda.outline.alpha, 0, 'the drop tween must finish by actually fading the reflection out');
+assert.equal(codaDirector.coda.outline.scale, 0.66, 'the drop tween must finish by shrinking the reflection');
+assert.equal(codaDirector.coda.drop.alpha, 0, 'the drop tween must finish by dissipating the rain drop');
 advanceNarrativeClock(codaRuntime, 1600);
 assert.ok(codaDirector.coda.card?.active, 'the preview card must arrive only after the broken reflection');
 assert.equal(codaDirector.coda.card.alpha, 0, 'the preview card must appear through a fade rather than a same-frame opaque pop');
@@ -326,6 +347,20 @@ assert.ok(codaRuntime.created.every(object => object.destroyed === true), 'skipp
 assert.equal(codaDirector.ownedTweens.length, 0, 'skipping the preview must release every coda tween');
 assert.ok(codaRuntime.tweens.every(tween => tween.stopped === true && tween.removed === true), 'skipping the preview must stop and remove coda tweens');
 codaDirector.destroy();
+
+const naturalCodaSlice = { ...createDefaultSliceState(), slicePhase: 'return', planeChoice: 'leave' };
+const naturalCodaRuntime = makeNarrativeScene('room_main', naturalCodaSlice);
+const naturalCodaDirector = new SliceNarrativeDirector(naturalCodaRuntime.scene);
+assert.equal(naturalCodaDirector.handleInteraction(naturalCodaRuntime.props.get('main_cold_bowl')).status, 'coda_playing');
+advanceNarrativeClock(naturalCodaRuntime, 5200);
+assert.equal(naturalCodaDirector.coda, null, 'the unskipped coda must naturally finish on its bounded completion timer');
+assert.ok(naturalCodaRuntime.timers.every(timer => timer.removed === true), 'natural completion must remove every coda timer');
+assert.ok(naturalCodaRuntime.tweens.every(tween => tween.stopped === true && tween.removed === true), 'natural completion must stop and remove every coda tween');
+assert.ok(naturalCodaRuntime.created.every(object => object.destroyed === true), 'natural completion must destroy every coda actor');
+const naturallyFinishedActorCount = naturalCodaRuntime.created.length;
+advanceNarrativeClock(naturalCodaRuntime, 1000);
+assert.equal(naturalCodaRuntime.created.length, naturallyFinishedActorCount, 'a finished coda must not run a second delayed callback');
+naturalCodaDirector.destroy();
 
 const codaInputSlice = { ...createDefaultSliceState(), slicePhase: 'return', planeChoice: 'take' };
 const codaInputRuntime = makeNarrativeScene('room_main', codaInputSlice);
@@ -365,6 +400,36 @@ assert.deepEqual(arrivalDirector.handleInteraction(arrivalRuntime.props.get('mai
     status: 'observed', targetId: 'main_cold_bowl'
 });
 assert.deepEqual(arrivalRuntime.scene.reactions, [REACTIONS.arrival.cold_bowl]);
+assert.deepEqual(
+    arrivalDirector.handleInteraction(arrivalRuntime.props.get('main_cold_bowl')),
+    { status: 'observed', targetId: 'main_cold_bowl' },
+    'the already-observed arrival bowl remains inspectable without replaying its protagonist line'
+);
+assert.deepEqual(arrivalRuntime.scene.reactions, [REACTIONS.arrival.cold_bowl], 'each slice phase may emit its authored protagonist reaction only once');
 arrivalDirector.destroy();
+
+const crossPhaseSlice = { ...createDefaultSliceState(), slicePhase: 'table' };
+const crossPhaseRuntime = makeNarrativeScene('room_main', crossPhaseSlice);
+const crossPhaseDirector = new SliceNarrativeDirector(crossPhaseRuntime.scene);
+assert.deepEqual(crossPhaseDirector.handleInteraction(crossPhaseRuntime.props.get('main_cold_bowl')), {
+    status: 'observed', targetId: 'main_cold_bowl'
+});
+assert.deepEqual(crossPhaseRuntime.scene.reactions, [], 'the arrival cold-bowl line must not leak into later slice phases after a room return');
+crossPhaseDirector.destroy();
+
+const repeatMirrorSlice = { ...createDefaultSliceState(), slicePhase: 'bedroom' };
+const repeatMirrorRuntime = makeNarrativeScene('room_bedroom_me', repeatMirrorSlice);
+const repeatMirrorDirector = new SliceNarrativeDirector(repeatMirrorRuntime.scene);
+const repeatMirror = repeatMirrorRuntime.props.get('child_mirror');
+assert.deepEqual(repeatMirrorDirector.handleInteraction(repeatMirror), {
+    status: 'investigated', targetId: 'child_mirror'
+});
+assert.deepEqual(repeatMirrorDirector.handleInteraction(repeatMirror), {
+    status: 'observed', targetId: 'child_mirror'
+});
+assert.deepEqual(repeatMirrorRuntime.scene.reactions, [REACTIONS.bedroom.mirror], 'the low mirror may be reinspected without repeating its line');
+assert.equal(repeatMirrorDirector.handleInteraction(repeatMirrorRuntime.props.get('bedroom_plane')).status, 'investigated');
+assert.equal(repeatMirrorDirector.isPlaneChoiceReady(), true, 'a repeated mirror inspection must retain the choice prerequisite');
+repeatMirrorDirector.destroy();
 
 console.log('Slice narrative verification passed');

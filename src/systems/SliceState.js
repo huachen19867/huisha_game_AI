@@ -9,6 +9,35 @@ import { normalizeMealReplaySeen } from './MemoryReplayDirector.js';
 export const SLICE_PHASES = Object.freeze(['arrival', 'investigation', 'table', 'rule', 'bedroom', 'return', 'complete']);
 
 const FATHER_ATTENTION_STATES = Object.freeze(['quiet', 'suspicious', 'checking', 'chasing']);
+const NARRATIVE_INVESTIGATION_SHAPE = Object.freeze({
+    arrival: Object.freeze(['cold_bowl']),
+    bedroom: Object.freeze(['mirror'])
+});
+
+function createDefaultNarrativeInvestigations() {
+    return {
+        arrival: { cold_bowl: false },
+        bedroom: { mirror: false }
+    };
+}
+
+function normalizeNarrativeInvestigations(value) {
+    return {
+        arrival: { cold_bowl: value?.arrival?.cold_bowl === true },
+        bedroom: { mirror: value?.bedroom?.mirror === true }
+    };
+}
+
+export function markSliceNarrativeInvestigation(state, phase, id) {
+    if (!NARRATIVE_INVESTIGATION_SHAPE[phase]?.includes(id)) {
+        throw new Error(`Unknown narrative investigation: ${phase}.${id}`);
+    }
+    const investigations = normalizeNarrativeInvestigations(state?.narrativeInvestigations);
+    state.narrativeInvestigations = investigations;
+    const firstObservation = investigations[phase][id] !== true;
+    investigations[phase][id] = true;
+    return firstObservation;
+}
 
 export function createDefaultSliceState() {
     return {
@@ -23,6 +52,7 @@ export function createDefaultSliceState() {
         lastTraversedDoor: 'main_kitchen_door',
         planeChoice: null,
         bedroomInvestigations: { mirror: false, plane: false },
+        narrativeInvestigations: createDefaultNarrativeInvestigations(),
         paperDollIndex: 0,
         takeReturnAttentionRaised: false,
         sliceCompleted: false
@@ -60,9 +90,11 @@ export function ensureSliceState(gameState) {
         mirror: rawInvestigations?.mirror === true,
         plane: rawInvestigations?.plane === true
     };
+    const narrativeInvestigations = normalizeNarrativeInvestigations(source.narrativeInvestigations);
     if (planeChoice) {
         bedroomInvestigations.mirror = true;
         bedroomInvestigations.plane = true;
+        narrativeInvestigations.bedroom.mirror = true;
         if (SLICE_PHASES.indexOf(slicePhase) < SLICE_PHASES.indexOf('return')) slicePhase = 'return';
     }
     gameState.slice = {
@@ -81,6 +113,7 @@ export function ensureSliceState(gameState) {
             : defaults.lastTraversedDoor,
         planeChoice,
         bedroomInvestigations,
+        narrativeInvestigations,
         paperDollIndex: Number.isInteger(source.paperDollIndex) && source.paperDollIndex >= 0 && source.paperDollIndex <= 2
             ? source.paperDollIndex
             : defaults.paperDollIndex,

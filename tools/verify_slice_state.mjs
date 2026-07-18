@@ -8,6 +8,7 @@ import {
     choosePlane,
     createDefaultSliceState,
     ensureSliceState,
+    markSliceNarrativeInvestigation,
     transitionSlicePhase
 } from '../src/systems/SliceState.js';
 import { SLICE_DOOR_IDS } from '../src/data/SliceMaps.js';
@@ -27,12 +28,18 @@ assert.deepEqual(initial, {
     lastTraversedDoor: 'main_kitchen_door',
     planeChoice: null,
     bedroomInvestigations: { mirror: false, plane: false },
+    narrativeInvestigations: { arrival: { cold_bowl: false }, bedroom: { mirror: false } },
     paperDollIndex: 0,
     takeReturnAttentionRaised: false,
     sliceCompleted: false
 });
 assert.deepEqual(SLICE_PHASES, ['arrival', 'investigation', 'table', 'rule', 'bedroom', 'return', 'complete']);
 assert.equal(Object.isFrozen(SLICE_PHASES), true);
+const narrativeProbe = createDefaultSliceState();
+assert.equal(markSliceNarrativeInvestigation(narrativeProbe, 'arrival', 'cold_bowl'), true);
+assert.equal(markSliceNarrativeInvestigation(narrativeProbe, 'arrival', 'cold_bowl'), false);
+assert.equal(markSliceNarrativeInvestigation(narrativeProbe, 'bedroom', 'mirror'), true);
+assert.throws(() => markSliceNarrativeInvestigation(narrativeProbe, 'return', 'cold_bowl'), /unknown narrative investigation/i);
 assert.equal(Object.isFrozen(initial), false);
 assert.equal(Object.isFrozen(initial.bowlPlacements), false);
 assert.ok(SLICE_DOOR_IDS.includes(initial.lastTraversedDoor));
@@ -123,6 +130,7 @@ assert.deepEqual(canonicalSlice, {
     lastTraversedDoor: 'main_kitchen_door',
     planeChoice: null,
     bedroomInvestigations: { mirror: false, plane: false },
+    narrativeInvestigations: { arrival: { cold_bowl: false }, bedroom: { mirror: false } },
     paperDollIndex: 0,
     takeReturnAttentionRaised: false,
     sliceCompleted: false
@@ -223,6 +231,16 @@ assert.deepEqual(
     ensureSliceState({ slice: { bedroomInvestigations: { mirror: true, plane: false } } }).bedroomInvestigations,
     { mirror: true, plane: false }
 );
+assert.deepEqual(
+    ensureSliceState({ slice: { narrativeInvestigations: { arrival: { cold_bowl: true }, bedroom: { mirror: true } } } }).narrativeInvestigations,
+    { arrival: { cold_bowl: true }, bedroom: { mirror: true } }
+);
+for (const invalidNarrativeInvestigations of [undefined, null, [], { arrival: { cold_bowl: 'true' } }, { bedroom: { mirror: 1 } }]) {
+    assert.deepEqual(
+        ensureSliceState({ slice: { narrativeInvestigations: invalidNarrativeInvestigations } }).narrativeInvestigations,
+        { arrival: { cold_bowl: false }, bedroom: { mirror: false } }
+    );
+}
 for (const invalidInvestigations of [undefined, null, [], { mirror: 'true', plane: 1 }, { other: true }]) {
     assert.deepEqual(
         ensureSliceState({ slice: { bedroomInvestigations: invalidInvestigations } }).bedroomInvestigations,
