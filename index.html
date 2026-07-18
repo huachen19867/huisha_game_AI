@@ -3549,6 +3549,14 @@ function findForbiddenReveal(value, seen = new Set()) {
 }
 
 const NARRATIVE_SHUTDOWN_EVENT = globalThis.Phaser?.Scenes?.Events?.SHUTDOWN || 'shutdown';
+const CODA_TIMING = Object.freeze({
+    drop: 1250,
+    mother: 1750,
+    preview: 2600,
+    finish: 5200
+});
+const PAPER_DOLL_REVEAL_DISTANCE = 160;
+const PAPER_DOLL_TURN_AWAY_DOT = -0.25;
 const PAPER_DOLL_FALLBACK_ANCHORS = Object.freeze([
     Object.freeze({ x: 512, y: 336 }),
     Object.freeze({ x: 448, y: 384 }),
@@ -3741,6 +3749,7 @@ class SliceNarrativeDirector {
         const anchors = this.anchors();
         const index = Math.max(0, Math.min(anchors.length - 1, this.state.paperDollIndex || 0));
         const anchor = anchors[index];
+        if (this.shouldDelayFinalPaperDoll(anchor, index, anchors.length)) return;
         const doll = setNarrativeDepth(this.scene.add?.image?.(anchor.x, anchor.y, 'npc_paper'), 33);
         if (!doll) return;
         doll.setAlpha?.(0.38);
@@ -3748,6 +3757,23 @@ class SliceNarrativeDirector {
         doll.sliceNarrativeEffect = 'paper_doll';
         this.applyPaperDollPose(anchor, doll);
         this.paperDoll = doll;
+    }
+
+    shouldDelayFinalPaperDoll(anchor, index, anchorCount) {
+        if (this.state.planeChoice !== 'leave' || index !== anchorCount - 1) return false;
+        const player = this.scene.player?.sprite;
+        if (!player || !Number.isFinite(player.x) || !Number.isFinite(player.y)) return false;
+        const dx = anchor.x - player.x;
+        const dy = anchor.y - player.y;
+        const distance = Math.hypot(dx, dy);
+        if (distance >= PAPER_DOLL_REVEAL_DISTANCE) return false;
+        const facingX = this.scene.player?.facingX || 0;
+        const facingY = this.scene.player?.facingY || 0;
+        const facingLength = Math.hypot(facingX, facingY);
+        if (facingLength === 0 || distance === 0) return true;
+        const facingDot = (dx / distance) * (facingX / facingLength) +
+            (dy / distance) * (facingY / facingLength);
+        return facingDot > PAPER_DOLL_TURN_AWAY_DOT;
     }
 
     applyPaperDollPose(anchor, doll = this.paperDoll) {
@@ -3825,23 +3851,50 @@ class SliceNarrativeDirector {
         const bowl = this.findProp('main_cold_bowl');
         const fourthBowl = setNarrativeDepth(this.scene.add?.image?.(bowl?.x ?? 384, bowl?.y ?? 220, 'bowl_offering'), 46);
         const outline = setNarrativeDepth(this.scene.add?.image?.(bowl?.x ?? 384, (bowl?.y ?? 220) - 24, 'npc_paper'), 47);
-        const drop = setNarrativeDepth(this.scene.add?.rectangle?.((bowl?.x ?? 384) + 5, (bowl?.y ?? 220) - 8, 3, 8, 0xa8c7d8, 0.7), 48);
         outline?.setAlpha?.(0.17);
-        drop?.setAlpha?.(0.7);
-        this.coda = { bowl: fourthBowl, outline, drop, line: null, card: null, timers: [] };
+        this.coda = { bowl: fourthBowl, outline, drop: null, line: null, card: null, timers: [], tweens: [] };
         const scheduleCoda = (delay, callback) => {
             const timer = this.ownTimer(delay, callback);
             if (timer) this.coda?.timers.push(timer);
             return timer;
         };
-        scheduleCoda(900, () => {
+        scheduleCoda(CODA_TIMING.drop, () => this.breakCodaReflection());
+        scheduleCoda(CODA_TIMING.mother, () => {
             if (!this.coda) return;
             this.coda.line = setNarrativeDepth(this.scene.add?.text?.(320, 160, CODA_TEXT.mother, {
                 fontSize: '18px', color: '#d9d4c7'
             }), 49);
         });
-        scheduleCoda(2200, () => this.showCodaCard());
-        scheduleCoda(5200, () => this.finishCoda());
+        scheduleCoda(CODA_TIMING.preview, () => this.showCodaCard());
+        scheduleCoda(CODA_TIMING.finish, () => this.finishCoda());
+    }
+
+    breakCodaReflection() {
+        const coda = this.coda;
+        if (!coda || coda.drop) return;
+        const bowl = this.findProp('main_cold_bowl');
+        const drop = setNarrativeDepth(this.scene.add?.rectangle?.((bowl?.x ?? 384) + 5, (bowl?.y ?? 220) - 8, 3, 8, 0xa8c7d8, 0.7), 48);
+        if (!drop) return;
+        drop.setAlpha?.(0.7);
+        coda.drop = drop;
+        const outline = coda.outline;
+        outline?.setAlpha?.(0.06);
+        outline?.setScale?.(0.82);
+        outline?.setPosition?.((outline.x ?? 0) + 3, (outline.y ?? 0) + 7);
+        this.ownCodaTween(coda, {
+            targets: outline,
+            alpha: 0,
+            scale: 0.66,
+            duration: 360,
+            ease: 'Sine.easeOut'
+        });
+        this.ownCodaTween(coda, {
+            targets: drop,
+            y: drop.y + 14,
+            alpha: 0,
+            duration: 360,
+            ease: 'Sine.easeIn'
+        });
     }
 
     showCodaCard() {
@@ -3849,6 +3902,13 @@ class SliceNarrativeDirector {
         this.coda.card = setNarrativeDepth(this.scene.add?.text?.(320, 220, CODA_TEXT.preview, {
             fontSize: '20px', color: '#ece6db'
         }), 50);
+        this.coda.card?.setAlpha?.(0);
+        this.ownCodaTween(this.coda, {
+            targets: this.coda.card,
+            alpha: 1,
+            duration: 420,
+            ease: 'Sine.easeOut'
+        });
     }
 
     skipCoda() {
@@ -3865,8 +3925,20 @@ class SliceNarrativeDirector {
             timer?.remove?.();
             timer?.destroy?.();
         }
+        for (const tween of coda.tweens || []) {
+            tween?.stop?.();
+            if (typeof tween?.remove === 'function') tween.remove();
+            else tween?.destroy?.();
+        }
         this.ownedTimers = this.ownedTimers.filter(timer => !(coda.timers || []).includes(timer));
+        this.ownedTweens = this.ownedTweens.filter(tween => !(coda.tweens || []).includes(tween));
         for (const key of ['bowl', 'outline', 'drop', 'line', 'card']) destroyObject(coda[key]);
+    }
+
+    ownCodaTween(coda, config) {
+        const tween = this.ownTween(config);
+        if (tween) coda?.tweens.push(tween);
+        return tween;
     }
 
     ownTween(config) {

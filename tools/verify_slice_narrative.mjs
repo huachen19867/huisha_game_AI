@@ -134,6 +134,7 @@ function makeNarrativeScene(mapId, state) {
     }
     const scene = {
         currentMapId: mapId,
+        clockMs: 0,
         sliceState: state,
         gameState: { slice: state },
         isSwitching: false,
@@ -158,7 +159,13 @@ function makeNarrativeScene(mapId, state) {
         },
         time: {
             delayedCall(delay, callback) {
-                const timer = { delay, callback, remove() { this.removed = true; }, destroy() { this.destroyed = true; } };
+                const timer = {
+                    delay,
+                    dueAt: scene.clockMs + delay,
+                    callback,
+                    remove() { this.removed = true; },
+                    destroy() { this.destroyed = true; }
+                };
                 timers.push(timer);
                 return timer;
             }
@@ -174,6 +181,21 @@ function makeNarrativeScene(mapId, state) {
         showSliceReaction(line) { this.reactions.push(line); }
     };
     return { scene, props, created, timers, tweens };
+}
+
+function advanceNarrativeClock(runtime, milliseconds) {
+    const targetTime = runtime.scene.clockMs + milliseconds;
+    const pending = () => runtime.timers
+        .filter(timer => !timer.removed && !timer.fired && timer.dueAt <= targetTime)
+        .sort((first, second) => first.dueAt - second.dueAt)[0];
+    let timer = pending();
+    while (timer) {
+        runtime.scene.clockMs = timer.dueAt;
+        timer.fired = true;
+        timer.callback();
+        timer = pending();
+    }
+    runtime.scene.clockMs = targetTime;
 }
 
 const bedroomSlice = { ...createDefaultSliceState(), slicePhase: 'bedroom' };
@@ -213,6 +235,45 @@ assert.equal(
 );
 leaveBedroomDirector.destroy();
 
+const leaveReentrySlice = {
+    ...createDefaultSliceState(),
+    slicePhase: 'return',
+    planeChoice: 'leave',
+    paperDollIndex: 2
+};
+const leaveReentryRuntime = makeNarrativeScene('room_kitchen', leaveReentrySlice);
+leaveReentryRuntime.scene.player.sprite = { x: 400, y: 400 };
+leaveReentryRuntime.scene.player.facingX = 0;
+leaveReentryRuntime.scene.player.facingY = -1;
+const leaveReentryDirector = new SliceNarrativeDirector(leaveReentryRuntime.scene);
+assert.equal(
+    leaveReentryDirector.paperDoll,
+    null,
+    'returning to the kitchen while still facing the intended paper-doll anchor must not spawn it into view'
+);
+leaveReentryDirector.update(0, 16);
+assert.equal(leaveReentryDirector.paperDoll, null, 'the paper doll must keep waiting while the player remains close and looking at its anchor');
+leaveReentryRuntime.scene.player.facingY = 1;
+leaveReentryDirector.update(16, 16);
+assert.ok(leaveReentryDirector.paperDoll?.active, 'turning away from the final anchor must let the leave-route paper doll appear');
+assert.equal(leaveReentryDirector.paperDoll.slicePointsTo, 'under_table');
+leaveReentryDirector.destroy();
+
+const takeReentrySlice = {
+    ...createDefaultSliceState(),
+    slicePhase: 'return',
+    planeChoice: 'take',
+    paperDollIndex: 2
+};
+const takeReentryRuntime = makeNarrativeScene('room_kitchen', takeReentrySlice);
+takeReentryRuntime.scene.player.sprite = { x: 400, y: 400 };
+takeReentryRuntime.scene.player.facingX = 0;
+takeReentryRuntime.scene.player.facingY = 1;
+const takeReentryDirector = new SliceNarrativeDirector(takeReentryRuntime.scene);
+takeReentryDirector.update(0, 16);
+assert.equal(takeReentryDirector.paperDoll, null, 'the take route must never restore the paper doll after a kitchen re-entry');
+takeReentryDirector.destroy();
+
 const kitchenSlice = createDefaultSliceState();
 const kitchenRuntime = makeNarrativeScene('room_kitchen', kitchenSlice);
 const kitchenDirector = new SliceNarrativeDirector(kitchenRuntime.scene);
@@ -233,12 +294,37 @@ const codaDirector = new SliceNarrativeDirector(codaRuntime.scene);
 assert.equal(codaDirector.handleInteraction(codaRuntime.props.get('main_cold_bowl')).status, 'coda_playing');
 assert.equal(codaSlice.slicePhase, 'complete');
 assert.ok(codaRuntime.timers.every(timer => timer.delay <= 6000), 'the completion coda must remain bounded');
-codaRuntime.timers.find(timer => timer.delay === 2200)?.callback();
-assert.ok(codaRuntime.created.some(object => object.text === '实体解谜重做预览结束'));
-codaRuntime.timers.find(timer => timer.delay === 900)?.callback();
+assert.ok(codaDirector.coda.outline?.active, 'the child-height reflection begins in the fourth bowl');
+assert.equal(codaDirector.coda.drop, null, 'the rain drop cannot appear in the same frame as the reflection');
+assert.equal(codaDirector.coda.card, null, 'the preview card cannot appear in the opening frame');
+const initialOutline = {
+    x: codaDirector.coda.outline.x,
+    y: codaDirector.coda.outline.y,
+    alpha: codaDirector.coda.outline.alpha,
+    scale: codaDirector.coda.outline.scale
+};
+advanceNarrativeClock(codaRuntime, 1400);
+assert.ok(codaDirector.coda.drop?.active, 'a delayed rain drop must appear to break the reflection');
+assert.ok(
+    codaDirector.coda.outline.alpha < initialOutline.alpha ||
+        codaDirector.coda.outline.scale !== initialOutline.scale ||
+        codaDirector.coda.outline.x !== initialOutline.x ||
+        codaDirector.coda.outline.y !== initialOutline.y,
+    'the drop must visibly disturb the child-height reflection'
+);
+advanceNarrativeClock(codaRuntime, 1600);
+assert.ok(codaDirector.coda.card?.active, 'the preview card must arrive only after the broken reflection');
+assert.equal(codaDirector.coda.card.alpha, 0, 'the preview card must appear through a fade rather than a same-frame opaque pop');
+assert.ok(
+    codaRuntime.tweens.some(tween => tween.config.targets === codaDirector.coda.card && tween.config.alpha === 1),
+    'the preview card must own its fade-in tween'
+);
 assert.ok(codaRuntime.created.some(object => object.text === '饭凉了。'), 'the mother coda line must contain no speaker label or added explanation');
 assert.equal(codaDirector.skipCoda(), true, 'the preview card must be immediately advanceable');
 assert.equal(codaDirector.skipCoda(), false);
+assert.ok(codaRuntime.created.every(object => object.destroyed === true), 'skipping the preview must clean up every coda actor');
+assert.equal(codaDirector.ownedTweens.length, 0, 'skipping the preview must release every coda tween');
+assert.ok(codaRuntime.tweens.every(tween => tween.stopped === true && tween.removed === true), 'skipping the preview must stop and remove coda tweens');
 codaDirector.destroy();
 
 const codaInputSlice = { ...createDefaultSliceState(), slicePhase: 'return', planeChoice: 'take' };
@@ -256,7 +342,7 @@ assert.deepEqual(
     { status: 'coda_playing' },
     'the main-hall cold bowl must invoke the coda through the real interaction route'
 );
-codaInputRuntime.timers.find(timer => timer.delay === 2200)?.callback();
+advanceNarrativeClock(codaInputRuntime, 3000);
 const priorPhaser = globalThis.Phaser;
 globalThis.Phaser = { Input: { Keyboard: { JustDown: key => key?.justDown === true } } };
 codaInputRuntime.scene.keyE = { justDown: true };
