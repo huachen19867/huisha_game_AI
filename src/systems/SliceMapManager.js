@@ -1,5 +1,6 @@
 import { SliceMaps, getSliceDoorAccess } from '../data/SliceMaps.js';
 import { normalizeInteractionMeta } from './InteractionRules.js';
+import { getPlaneChoiceEffects } from './SliceNarrativeDirector.js';
 
 const TILE_SIZE = 32;
 
@@ -250,6 +251,10 @@ export class SliceMapManager {
             planeChoice: sliceState?.planeChoice === 'take' || sliceState?.planeChoice === 'leave'
                 ? sliceState.planeChoice
                 : null,
+            bedroomInvestigations: {
+                mirror: sliceState?.bedroomInvestigations?.mirror === true,
+                plane: sliceState?.bedroomInvestigations?.plane === true
+            },
             paperDollIndex: Number.isInteger(sliceState?.paperDollIndex) ? sliceState.paperDollIndex : 0
         };
         const revisionKey = JSON.stringify(revision);
@@ -258,7 +263,9 @@ export class SliceMapManager {
 
         this.clearRevisionEffects();
         if (this.currentMapId === 'room_kitchen') {
-            const keepsTableProtection = revision.planeChoice !== 'take';
+            const keepsTableProtection = revision.planeChoice
+                ? getPlaneChoiceEffects(revision.planeChoice).kitchenSafe
+                : true;
             this.safeZones = keepsTableProtection ? cloneAuthoredValue(this.baseSafeZones) : {};
             this.scene.sliceSafeZones = this.safeZones;
             if (revision.tableSolved && keepsTableProtection) this.createKitchenProtectionEffects();
@@ -284,14 +291,21 @@ export class SliceMapManager {
             const plane = this.findProp('bedroom_plane');
             if (plane) {
                 plane.sliceRevision = revision.planeChoice || 'unresolved';
-                plane.setVisible(revision.planeChoice !== 'take');
-                plane.setAlpha(revision.planeChoice === 'leave' ? 0.45 : 1);
+                plane.interactionEnabled = revision.planeChoice === null && revision.bedroomInvestigations.plane !== true;
+                plane.setVisible(revision.planeChoice === null);
+                plane.setAlpha(1);
             }
             const mirror = this.findProp('child_mirror');
             if (mirror) mirror.sliceRevision = revision.planeChoice ? 'after_choice' : 'waiting';
             for (const choiceId of ['plane_bag', 'plane_drawer']) {
                 const choice = this.findProp(choiceId);
-                if (choice) choice.choiceSelected = choice.sliceData?.choice === revision.planeChoice;
+                if (choice) {
+                    choice.choiceSelected = choice.sliceData?.choice === revision.planeChoice;
+                    choice.interactionEnabled = revision.planeChoice === null &&
+                        revision.bedroomInvestigations.mirror === true &&
+                        revision.bedroomInvestigations.plane === true;
+                    choice.slicePlaneStored = choiceId === 'plane_drawer' && revision.planeChoice === 'leave';
+                }
             }
         }
 

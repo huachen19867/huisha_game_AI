@@ -10,11 +10,13 @@ import { KitchenTableController } from '../systems/KitchenTableController.js';
 import { SoundManager } from '../systems/SoundManager.js';
 import { createDefaultGameState, getTruthLevel, normalizeGameState } from '../systems/StoryState.js';
 import { ensureSliceState } from '../systems/SliceState.js';
+import { SliceNarrativeDirector } from '../systems/SliceNarrativeDirector.js';
 import { resolveSpawnCoordinate, updateBoundedResource } from '../systems/RuntimeState.js';
 import { DomListenerRegistry } from '../systems/DomListenerRegistry.js';
 import { ObjectiveManager } from '../systems/ObjectiveManager.js';
 import { ChaseManager } from '../systems/ChaseManager.js';
 import { HouseRuleDirector } from '../systems/HouseRuleDirector.js';
+import { advanceAttention } from '../systems/HouseRuleState.js';
 import { getPendingNarrativeBeat, markNarrativeBeatSeen } from '../systems/NarrativeDirector.js';
 import { HauntingDirector } from '../systems/HauntingDirector.js';
 
@@ -294,6 +296,9 @@ export class GameScene extends Phaser.Scene {
         this.houseRuleDirector = this.sliceMode && this.currentMapId === 'room_kitchen'
             ? new HouseRuleDirector(this)
             : null;
+        this.sliceNarrativeDirector = this.sliceMode
+            ? new SliceNarrativeDirector(this)
+            : null;
         this.interactionManager = this.sliceMode
             ? new SliceInteractionManager(this)
             : new InteractionManager(this);
@@ -354,6 +359,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.kitchenTableController?.update();
+        this.sliceNarrativeDirector?.update(time, delta);
         if (this.interactionManager) this.interactionManager.update();
 
         this.physics.overlap(this.player.sprite, this.doors, (player, door) => {
@@ -486,6 +492,16 @@ export class GameScene extends Phaser.Scene {
         this.isSwitching = true;
         if (this.sliceMode && doorId && this.sliceState) {
             this.sliceState.lastTraversedDoor = doorId;
+            if (
+                this.currentMapId === 'room_bedroom_me' &&
+                mapId === 'room_kitchen' &&
+                doorId === 'bedroom_side_door' &&
+                this.sliceState.planeChoice === 'take' &&
+                this.sliceState.takeReturnAttentionRaised !== true
+            ) {
+                this.sliceState.fatherAttention = advanceAttention(this.sliceState.fatherAttention);
+                this.sliceState.takeReturnAttentionRaised = true;
+            }
         }
 
         this.cameras.main.fadeOut(500, 0, 0, 0);
@@ -827,6 +843,7 @@ export class GameScene extends Phaser.Scene {
             this.interactionManager?.destroy?.();
             this.kitchenTableController?.destroy?.();
             this.houseRuleDirector?.destroy?.();
+            this.sliceNarrativeDirector?.destroy?.();
             this.sliceMapManager?.destroy();
             this.chaseManager?.destroy();
             this.hauntingDirector?.destroy();

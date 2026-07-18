@@ -11,6 +11,7 @@ import {
     getSlicePrompt,
     routeSliceAction
 } from '../src/systems/SliceInteractionManager.js';
+import { SliceNarrativeDirector } from '../src/systems/SliceNarrativeDirector.js';
 
 assert.equal(getSlicePrompt({ label: '酒味缺口碗', verb: '端起' }), '端起：酒味缺口碗  [空格/E]');
 assert.equal(routeSliceAction('bowl'), 'table');
@@ -290,11 +291,50 @@ tableInputManager.update();
 assert.deepEqual(tableActions, ['bowl'], 'the second frame must not auto-place from a stale Space edge');
 Date.now = originalDateNow;
 
+let codaSkipCalls = 0;
+const codaInputScene = {
+    player: { sprite: { x: 0, y: 0 }, facingX: 1, facingY: 0 },
+    interactables: makeGroup(),
+    interactText: makeText(),
+    keyE: { justDown: true },
+    keySpace: { justDown: false },
+    sliceNarrativeDirector: {
+        coda: { card: {} },
+        skipCoda() { codaSkipCalls += 1; return true; }
+    }
+};
+const codaInputManager = new SliceInteractionManager(codaInputScene);
+codaInputManager.update();
+assert.equal(codaSkipCalls, 1, 'the coda preview must be advanceable even when no ordinary interaction target exists');
+
 const plane = interactionObject({ id: 'plane', action: 'plane_choice', x: 20, y: 0 });
 focusScene.currentTarget = { obj: plane, route: 'plane', type: 'plane' };
 window.dialogCalls.length = 0;
 assert.deepEqual(focusManager.handleInteraction(), { status: 'deferred', route: 'plane', targetId: 'plane' });
 assert.equal(window.dialogCalls.length, 0, 'Task 6 must defer the paper-plane choice without opening UI');
+let routedPlaneTarget = null;
+focusScene.sliceNarrativeDirector = {
+    handleInteraction(target) {
+        routedPlaneTarget = target;
+        return { status: 'chosen', choice: 'take' };
+    }
+};
+assert.deepEqual(focusManager.handleInteraction(), { status: 'chosen', choice: 'take' });
+assert.equal(routedPlaneTarget, plane, 'the physical paper-plane route must go through the slice narrative director');
+delete focusScene.sliceNarrativeDirector;
+const authoredObserve = interactionObject({ id: 'main_cold_bowl', action: 'observe', x: 20, y: 0 });
+focusScene.currentTarget = { obj: authoredObserve, route: 'observe', type: 'observe' };
+let routedObserveTarget = null;
+focusScene.sliceNarrativeDirector = {
+    handleInteraction(target) {
+        routedObserveTarget = target;
+        assert.equal(target, authoredObserve);
+        return { status: 'coda_playing' };
+    }
+};
+assert.deepEqual(focusManager.handleInteraction(), { status: 'coda_playing' });
+assert.equal(routedObserveTarget, authoredObserve, 'authored observe targets must reach the narrative director before generic dialog fallback');
+delete focusScene.sliceNarrativeDirector;
 focusManager.destroy();
 assert.equal(focusScene.interactText.visible, false);
 assert.equal(focusScene.currentTarget, null);
@@ -454,11 +494,13 @@ for (const mapId of ['room_main', 'room_kitchen', 'room_bedroom_me']) {
     scene.initializeInteractionSystems();
     assert.ok(scene.interactionManager instanceof SliceInteractionManager, `${mapId} must use slice interaction focus`);
     assert.equal(scene.kitchenTableController instanceof KitchenTableController, mapId === 'room_kitchen');
+    assert.ok(scene.sliceNarrativeDirector instanceof SliceNarrativeDirector, `${mapId} must own the slice narrative director`);
 }
 const legacyScene = prepareSystemScene('room_main', false);
 legacyScene.initializeInteractionSystems();
 assert.ok(legacyScene.interactionManager instanceof InteractionManager);
 assert.equal(legacyScene.kitchenTableController, null);
+assert.equal(legacyScene.sliceNarrativeDirector, null);
 assert.equal(legacyScene.interactionManager.interactText, legacyScene.interactText, 'legacy manager must receive already-created prompt UI');
 
 class FakeElement {
@@ -498,6 +540,7 @@ mobileScene.destroyJoystick();
 let shutdownHandler = null;
 let interactionDestroyCalls = 0;
 let tableDestroyCalls = 0;
+let narrativeDestroyCalls = 0;
 const shutdownScene = new GameScene();
 shutdownScene.events = { once(eventName, handler) { assert.equal(eventName, Phaser.Scenes.Events.SHUTDOWN); shutdownHandler = handler; } };
 shutdownScene.destroyJoystick = () => {};
@@ -507,10 +550,12 @@ shutdownScene.chaseManager = { destroy() {} };
 shutdownScene.hauntingDirector = { destroy() {} };
 shutdownScene.interactionManager = { destroy() { interactionDestroyCalls += 1; } };
 shutdownScene.kitchenTableController = { destroy() { tableDestroyCalls += 1; } };
+shutdownScene.sliceNarrativeDirector = { destroy() { narrativeDestroyCalls += 1; } };
 shutdownScene.registerShutdownCleanup();
 shutdownHandler();
 assert.equal(interactionDestroyCalls, 1);
 assert.equal(tableDestroyCalls, 1);
+assert.equal(narrativeDestroyCalls, 1);
 
 const interactionSource = readFileSync(new URL('../src/systems/SliceInteractionManager.js', import.meta.url), 'utf8');
 assert.doesNotMatch(interactionSource, /showPuzzle|caseConclusions|puzzleProgress/);
@@ -525,5 +570,7 @@ for (const dependency of [
     assert.ok(builder.indexOf(dependency[0]) >= 0, `builder missing ${dependency[0]}`);
     assert.ok(builder.indexOf(dependency[1]) > builder.indexOf(dependency[0]), `${dependency[0]} must precede ${dependency[1]}`);
 }
+assert.ok(builder.indexOf("'src/systems/SliceNarrativeDirector.js'") > builder.indexOf("'src/systems/MemoryReplayDirector.js'"));
+assert.ok(builder.indexOf("'src/systems/SliceNarrativeDirector.js'") < builder.indexOf("'src/systems/SliceMapManager.js'"));
 
 console.log('Slice interaction verification passed');

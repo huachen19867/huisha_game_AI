@@ -17,10 +17,12 @@ globalThis.Phaser = {
     }
 };
 
-const [{ SliceMapManager }, { TextureGenerator }, { GameScene }] = await Promise.all([
+const [{ SliceMapManager }, { TextureGenerator }, { GameScene }, { SliceNarrativeDirector }, { SliceInteractionManager }] = await Promise.all([
     import('../src/systems/SliceMapManager.js'),
     import('../src/systems/TextureGenerator.js'),
-    import('../src/scenes/GameScene.js')
+    import('../src/scenes/GameScene.js'),
+    import('../src/systems/SliceNarrativeDirector.js'),
+    import('../src/systems/SliceInteractionManager.js')
 ]);
 
 function createDisplayObject(type, x, y, textureKey, width = 32, height = 32) {
@@ -129,6 +131,67 @@ function createScene(sliceState = createDefaultSliceState()) {
         }
     };
     return scene;
+}
+
+function createBedroomChoiceRuntime(sliceState) {
+    const props = new Map();
+    for (const prop of SliceMaps.room_bedroom_me.objects.props) {
+        const object = createDisplayObject('image', prop.x, prop.y, prop.texture);
+        object.objId = prop.id;
+        object.sliceAction = prop.kind;
+        object.sliceData = structuredClone(prop);
+        object.interactionEnabled = true;
+        props.set(prop.id, object);
+    }
+    const scene = {
+        currentMapId: 'room_bedroom_me',
+        sliceState,
+        gameState: { slice: sliceState },
+        sliceMapDef: SliceMaps.room_bedroom_me,
+        player: { facingX: 1, facingY: 0, sprite: { x: 240, y: 220 } },
+        isSwitching: false,
+        add: {
+            image(x, y, texture) { return createDisplayObject('image', x, y, texture); },
+            rectangle(x, y, width, height) { return createDisplayObject('rectangle', x, y, undefined, width, height); },
+            text(x, y, text) { const object = createDisplayObject('text', x, y); object.text = text; return object; }
+        },
+        tweens: { add(config) { return { config, stop() {}, remove() {} }; } },
+        time: { delayedCall(delay, callback) { return { delay, callback, remove() {}, destroy() {} }; } },
+        events: { once() {}, off() {} },
+        sliceMapManager: {
+            findProp(id) { return props.get(id) || null; },
+            refreshDoorAccess() {},
+            applyRoomRevision(nextState) { scene.lastRevision = structuredClone(nextState); return true; }
+        },
+        reactions: [],
+        showSliceReaction(line) { this.reactions.push(line); }
+    };
+    scene.sliceNarrativeDirector = new SliceNarrativeDirector(scene);
+    const interactions = new SliceInteractionManager(scene);
+    function interact(id) {
+        const object = props.get(id);
+        scene.currentTarget = { obj: object, route: 'plane', type: 'plane' };
+        return interactions.handleInteraction();
+    }
+    return { scene, props, interact };
+}
+
+function makeTransitionScene(mapId, sliceState) {
+    const gameScene = new GameScene();
+    gameScene.init({ mapId, sliceMode: true });
+    gameScene.gameState = { isChasing: false, slice: sliceState };
+    gameScene.sliceState = sliceState;
+    gameScene.cameras = {
+        main: {
+            fadeOut() {},
+            once(eventName, callback) {
+                assert.equal(eventName, Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE);
+                callback();
+            }
+        }
+    };
+    gameScene.scene = { restart(payload) { gameScene.restartPayload = payload; } };
+    return gameScene;
 }
 
 const authoredSnapshot = structuredClone(SliceMaps);
@@ -300,6 +363,33 @@ bedroomManager.refreshDoorAccess(bedroomState);
 assert.equal(sideBedroomDoor.locked, false);
 assert.equal(mainBedroomDoor.locked, false);
 
+const bedroomPlane = bedroomManager.findProp('bedroom_plane');
+const planeBag = bedroomManager.findProp('plane_bag');
+const planeDrawer = bedroomManager.findProp('plane_drawer');
+assert.equal(planeBag.interactionEnabled, false, 'the old backpack is not a choice before both observations');
+assert.equal(planeDrawer.interactionEnabled, false, 'the drawer is not a choice before both observations');
+const choiceReadyState = {
+    ...createDefaultSliceState(),
+    slicePhase: 'bedroom',
+    bedroomInvestigations: { mirror: true, plane: true }
+};
+assert.equal(bedroomManager.applyRoomRevision(choiceReadyState), true);
+assert.equal(planeBag.interactionEnabled, true);
+assert.equal(planeDrawer.interactionEnabled, true);
+const selectedTakeState = { ...choiceReadyState, slicePhase: 'return', planeChoice: 'take' };
+assert.equal(bedroomManager.applyRoomRevision(selectedTakeState), true);
+assert.equal(planeBag.interactionEnabled, false);
+assert.equal(planeDrawer.interactionEnabled, false);
+assert.equal(bedroomPlane.visible, false, 'the taken plane must not reappear after a room rebuild');
+assert.equal(planeBag.choiceSelected, true);
+assert.equal(planeDrawer.choiceSelected, false);
+const selectedLeaveState = { ...choiceReadyState, slicePhase: 'return', planeChoice: 'leave' };
+assert.equal(bedroomManager.applyRoomRevision(selectedLeaveState), true);
+assert.equal(planeBag.interactionEnabled, false);
+assert.equal(planeDrawer.interactionEnabled, false);
+assert.equal(bedroomPlane.visible, false, 'the left plane must stay inside the drawer after a room rebuild');
+assert.equal(planeDrawer.slicePlaneStored, true);
+
 function createGraphicsRecorder(textureRecords) {
     const operations = [];
     const graphics = new Proxy({}, {
@@ -373,6 +463,35 @@ function runTransitions(sliceMode) {
 
 assert.deepEqual(runTransitions(true).map(payload => payload.sliceMode), [true, true]);
 assert.deepEqual(runTransitions(false).map(payload => payload.sliceMode), [false, false]);
+
+const takeReturnState = { ...createDefaultSliceState(), slicePhase: 'bedroom', fatherAttention: 'quiet' };
+const takeChoiceRuntime = createBedroomChoiceRuntime(takeReturnState);
+assert.equal(takeChoiceRuntime.interact('child_mirror').status, 'investigated');
+assert.equal(takeChoiceRuntime.interact('bedroom_plane').status, 'investigated');
+assert.deepEqual(takeChoiceRuntime.interact('plane_bag'), { status: 'chosen', choice: 'take' });
+assert.equal(takeReturnState.slicePhase, 'return', 'a real bedroom interaction must move the take route into return');
+const takeReturnScene = makeTransitionScene('room_bedroom_me', takeReturnState);
+takeReturnScene.switchScene('room_kitchen', 576, 256, 'bedroom_side_door');
+assert.equal(takeReturnState.fatherAttention, 'suspicious', 'taking the plane raises father attention exactly on the kitchen return');
+assert.equal(takeReturnState.takeReturnAttentionRaised, true);
+takeReturnScene.switchScene('room_kitchen', 576, 256, 'bedroom_side_door');
+assert.equal(takeReturnState.fatherAttention, 'suspicious', 're-entering cannot stack the take-route attention cost');
+
+const leaveReturnState = { ...createDefaultSliceState(), slicePhase: 'bedroom', fatherAttention: 'quiet' };
+const leaveChoiceRuntime = createBedroomChoiceRuntime(leaveReturnState);
+assert.equal(leaveChoiceRuntime.interact('child_mirror').status, 'investigated');
+assert.equal(leaveChoiceRuntime.interact('bedroom_plane').status, 'investigated');
+assert.deepEqual(leaveChoiceRuntime.interact('plane_drawer'), { status: 'chosen', choice: 'leave' });
+const leaveDoorScene = createScene(leaveReturnState);
+const leaveDoorManager = new SliceMapManager(leaveDoorScene);
+assert.equal(leaveDoorManager.createMap('room_bedroom_me'), true);
+const leaveDoors = leaveDoorScene.doors.getChildren();
+assert.equal(leaveDoors.find(door => door.doorId === 'bedroom_side_door').locked, true, 'leave must close the shortcut after the real choice action');
+assert.equal(leaveDoors.find(door => door.doorId === 'bedroom_main_door').locked, false, 'leave must leave the main-hall route usable');
+const leaveReturnScene = makeTransitionScene('room_bedroom_me', leaveReturnState);
+leaveReturnScene.switchScene('room_main', 384, 128, 'bedroom_main_door');
+assert.equal(leaveReturnState.fatherAttention, 'quiet', 'the leave route reaches the main hall without the take shortcut cost');
+assert.equal(leaveReturnScene.restartPayload.mapId, 'room_main', 'the leave route must keep the authored main-door completion path');
 
 globalThis.window ??= {};
 const dialogCalls = [];

@@ -26,7 +26,9 @@ assert.deepEqual(initial, {
     fatherAttention: 'quiet',
     lastTraversedDoor: 'main_kitchen_door',
     planeChoice: null,
+    bedroomInvestigations: { mirror: false, plane: false },
     paperDollIndex: 0,
+    takeReturnAttentionRaised: false,
     sliceCompleted: false
 });
 assert.deepEqual(SLICE_PHASES, ['arrival', 'investigation', 'table', 'rule', 'bedroom', 'return', 'complete']);
@@ -120,7 +122,9 @@ assert.deepEqual(canonicalSlice, {
     fatherAttention: 'quiet',
     lastTraversedDoor: 'main_kitchen_door',
     planeChoice: null,
+    bedroomInvestigations: { mirror: false, plane: false },
     paperDollIndex: 0,
+    takeReturnAttentionRaised: false,
     sliceCompleted: false
 });
 
@@ -215,11 +219,36 @@ for (const invalidPlaneChoice of [undefined, '', 'burn', 1]) {
     assert.equal(ensureSliceState({ slice: { planeChoice: invalidPlaneChoice } }).planeChoice, null);
 }
 
+assert.deepEqual(
+    ensureSliceState({ slice: { bedroomInvestigations: { mirror: true, plane: false } } }).bedroomInvestigations,
+    { mirror: true, plane: false }
+);
+for (const invalidInvestigations of [undefined, null, [], { mirror: 'true', plane: 1 }, { other: true }]) {
+    assert.deepEqual(
+        ensureSliceState({ slice: { bedroomInvestigations: invalidInvestigations } }).bedroomInvestigations,
+        { mirror: false, plane: false }
+    );
+}
+const recoveredChoice = ensureSliceState({ slice: { planeChoice: 'take', slicePhase: 'arrival' } });
+assert.equal(recoveredChoice.slicePhase, 'return', 'persisted choice must restore the irreversible return phase');
+assert.deepEqual(recoveredChoice.bedroomInvestigations, { mirror: true, plane: true });
+
 for (const paperDollIndex of [0, 1, 2]) {
     assert.equal(ensureSliceState({ slice: { paperDollIndex } }).paperDollIndex, paperDollIndex);
 }
 for (const invalidPaperDollIndex of [undefined, null, -1, 1.5, 3, '1']) {
     assert.equal(ensureSliceState({ slice: { paperDollIndex: invalidPaperDollIndex } }).paperDollIndex, 0);
+}
+
+assert.equal(
+    ensureSliceState({ slice: { planeChoice: 'take', takeReturnAttentionRaised: true } }).takeReturnAttentionRaised,
+    true
+);
+for (const invalidRaisedFlag of [undefined, null, 'true', 1]) {
+    assert.equal(
+        ensureSliceState({ slice: { takeReturnAttentionRaised: invalidRaisedFlag } }).takeReturnAttentionRaised,
+        false
+    );
 }
 
 const persistedCompleteState = {
@@ -268,10 +297,16 @@ assert.equal(completed.slicePhase, 'complete');
 assert.equal(completed.sliceCompleted, true);
 
 assert.throws(() => choosePlane(gameState.slice, 'fold'), /unknown plane choice/i);
-const tookPlane = choosePlane(gameState.slice, 'take');
+assert.throws(() => choosePlane(gameState.slice, 'take'), /bedroom/i);
+const bedroomChoiceState = { ...bedroom, sliceCompleted: false };
+const bedroomChoiceSnapshot = structuredClone(bedroomChoiceState);
+const tookPlane = choosePlane(bedroomChoiceState, 'take');
 assert.equal(tookPlane.planeChoice, 'take');
+assert.equal(tookPlane.slicePhase, 'return');
+assert.equal(tookPlane.sliceCompleted, false);
+assert.deepEqual(bedroomChoiceState, bedroomChoiceSnapshot, 'choice must not mutate the caller state');
 assert.equal(choosePlane(tookPlane, 'take').planeChoice, 'take');
-assert.throws(() => choosePlane(choosePlane(gameState.slice, 'leave'), 'take'), /locked/i);
+assert.throws(() => choosePlane(choosePlane(bedroomChoiceState, 'leave'), 'take'), /locked/i);
 
 const legacyState = createDefaultGameState();
 assert.equal(legacyState.slice, null);

@@ -130,6 +130,14 @@ export class SliceInteractionManager {
             return null;
         }
 
+        if ((pressedE || pressedSpace) && this.scene.sliceNarrativeDirector?.coda?.card) {
+            if (this.scene.sliceNarrativeDirector.skipCoda?.()) {
+                this.scene.interactText?.setVisible?.(false);
+                this.scene.currentTarget = null;
+                return { status: 'coda_skipped' };
+            }
+        }
+
         const selected = this.findInteractionTarget();
         const prompt = this.scene.interactText;
         const sprite = this.scene.player?.sprite;
@@ -167,6 +175,8 @@ export class SliceInteractionManager {
         }
 
         if (route === 'observe') {
+            const narrativeResult = this.scene.sliceNarrativeDirector?.handleInteraction?.(object);
+            if (narrativeResult) return narrativeResult;
             const fact = object.sliceData?.text;
             if (typeof fact !== 'string' || fact.length === 0) return { status: 'missing_fact' };
             globalThis.window?.showDialog?.('主角', fact);
@@ -174,6 +184,8 @@ export class SliceInteractionManager {
         }
 
         if (route === 'plane') {
+            const narrativeResult = this.scene.sliceNarrativeDirector?.handleInteraction?.(object);
+            if (narrativeResult) return narrativeResult;
             return {
                 status: 'deferred',
                 route: 'plane',

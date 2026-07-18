@@ -137,6 +137,11 @@ export const SliceMaps = deepFreeze({
                     under_table: { x: 296, y: 272, width: 48, height: 24 }
                 }
             },
+            paperDollAnchors: [
+                { x: 512, y: 336 },
+                { x: 448, y: 384 },
+                { x: 400, y: 320, facing: 'left', pointsTo: 'under_table' }
+            ],
             props: [
                 {
                     id: 'nailed_chair',

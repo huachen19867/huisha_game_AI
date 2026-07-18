@@ -13,6 +13,7 @@ const sourceFiles = [
     'src/systems/KitchenTableRules.js',
     'src/systems/MemoryReplayDirector.js',
     'src/systems/SliceState.js',
+    'src/systems/SliceNarrativeDirector.js',
     'src/systems/HouseRuleState.js',
     'src/systems/NarrativeDirector.js',
     'src/systems/RuntimeState.js',
