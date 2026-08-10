@@ -67,9 +67,16 @@ export class TitleScene extends Phaser.Scene {
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         prototypeText.setAlpha(0);
 
+        const aaaText = this.add.text(400, 486, '进入次世代视觉线  [3A BUILD 04]', {
+            fontFamily: '"Microsoft YaHei UI", sans-serif',
+            fontSize: '20px',
+            color: '#b99668'
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        aaaText.setAlpha(0);
+
         // Fade in start text after delay to prevent accidental clicks
         this.tweens.add({
-            targets: [startText, prototypeText],
+            targets: [startText, prototypeText, aaaText],
             alpha: 1,
             duration: 1000,
             delay: 200 // Reduced delay for better UX
@@ -105,9 +112,22 @@ export class TitleScene extends Phaser.Scene {
             });
         };
 
+        const startAAA = () => {
+            if (aaaText.alpha < 0.1) return;
+            if (!this.game.soundManager) {
+                this.game.soundManager = new SoundManager(this);
+            }
+            this.game.soundManager.playTone(56, 'sawtooth', 1.2);
+            this.cameras.main.fadeOut(700, 0, 0, 0);
+            this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+                window.location.href = 'aaa3d.html';
+            });
+        };
+
         this.input.keyboard.on('keydown-SPACE', startGame);
         this.input.keyboard.on('keydown-ENTER', startGame);
         startText.on('pointerdown', startGame);
         prototypeText.on('pointerdown', startPrototype);
+        aaaText.on('pointerdown', startAAA);
     }
 }
