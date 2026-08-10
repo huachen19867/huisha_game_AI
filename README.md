@@ -44,6 +44,10 @@
 ## 🧪 3D 原型
 标题页新增了“进入 3D 原型”入口，也可以直接访问 `prototype3d.html`。当前 3D 版本是第一阶段原型：保留 2D 主线不变，只提供正厅与走廊小段的 Three.js 低模探索、基础移动、目标提示、物件调查和返回标题。
 
+标题页同时提供“进入次世代视觉线”入口，也可直接访问 `aaa3d.html`。这条线独立保留原型作为可回归基线，已加入物理材质、电影化色调映射、软阴影、动态烛光、手电筒、灰尘、体积氛围、细化木构与重新三维化的供桌/棺材。Build 03 进一步完成实体封门、横木卡座、合页/门环、暗腔门缝、定向漏光和近门曝光控制，并通过匿名 A/B 与三机位核验；它仍是持续迭代的视觉纵切片，不代表整个游戏已经达到商业 3A 内容规模。
+
+当前可试玩预览为 **Dynamic VFX Build 04**。启动本地服务后访问 `http://localhost:8000/aaa3d.html`，可用 WASD 在正厅和走廊移动、鼠标观察、靠近物件后按 E 调查，并按左上角目标依次检查供桌、棺材、黑布相框和走廊封门。该版本已完成移动、碰撞、交互提示、调查对白和目标 HUD 的自动试玩烟测；试玩纵切片可用，不等同于完整剧情版或商业 3A 发布候选。
+
 3D 美术不建议直接在代码里硬搓。后续生成老宅场景、贴图和道具参考时，优先使用 `docs/3D_ART_PROMPTS.md` 里的完整提示词包。
 
 `美术/` 是 3D 源素材库。当前原型已直接引用 `木墙.png`、`木地板.png`、`木梁.png`、`供桌区域.png`、`走廊墙面.png` 和 `纸钱与香灰.png`；其他素材先作为后续抠图、低模贴片或道具参考保留。
@@ -54,7 +58,11 @@
 2. 浏览器访问 `http://localhost:8000`。
 
 ## 🧰 维护说明
-`index.html` 是可直接打开的单文件入口，源码仍以 `src` 目录为准。修改 `src` 后运行 `node tools\build_standalone_entry.mjs` 同步入口页，再运行 `node tools\verify_standalone_entry.mjs` 检查是否仍然适合本地双击启动。修改 3D 原型后，至少运行 `node tools\verify_3d_prototype.mjs` 和 `node tools\verify_3d_interaction_flow.mjs`。
+`index.html` 是可直接打开的单文件入口，源码仍以 `src` 目录为准。修改 `src` 后运行 `node tools\build_standalone_entry.mjs` 同步入口页，再运行 `node tools\verify_standalone_entry.mjs` 检查是否仍然适合本地双击启动。修改 3D 原型后，至少运行 `node tools\verify_3d_prototype.mjs` 和 `node tools\verify_3d_interaction_flow.mjs`；修改次世代视觉线后运行 `node tools\verify_aaa_line.mjs`。匿名 A/B 包可用 `node tools\build_visual_blind_test.mjs --seed=20260809` 重新生成。
+
+次世代线的可玩链路可用 `tools/smoke_aaa_playable.cjs` 回归：它会验证 W 移动、棺材交互提示、E 调查对白，并把证据截图写到 `artifacts/visual-qa/v4-playable-smoke.png`。脚本依赖工作区自带的 Playwright 运行时；普通系统 Node 找不到该依赖时，应改用 Codex 工作区依赖中的 Node 和 `NODE_PATH`，不要在项目里临时安装一套重复依赖。
+
+次世代线固定视觉核验机位可通过 `aaa3d.html?capture=hero|altar|angle|corridor|doorLock|doorCrack` 调用。正式截图应从本地 HTTP 地址打开；直接用 `file://` 启动无头浏览器时，纹理可能因本地资源策略未加载，生成的平涂画面不能进入盲测样本。
 
 ## 📦 部署与分享
 本项目为纯静态网页，推荐使用以下方式分享给朋友：
@@ -80,12 +88,14 @@
 ├── index.html
 ├── phaser.min.js
 ├── prototype3d.html
+├── aaa3d.html
 ├── vendor
 ├── StartGame.bat
 ├── server.ps1
 ├── src
 │   ├── data
 │   ├── 3d
+│   ├── aaa
 │   ├── entities
 │   ├── scenes
 │   └── systems
@@ -103,6 +113,8 @@
 - [开发日志](DEV_LOG.md)
 - [游戏流程梳理](docs/GAME_FLOW.md)
 - [3D 美术生成提示词包](docs/3D_ART_PROMPTS.md)
+- [3A 视觉盲测核验量表](docs/AAA_VISUAL_QA.md)
+- [3A 视觉线生产路线图](docs/AAA_PRODUCTION_ROADMAP.md)
 - [扩展设计文档](docs/superpowers/specs/2026-04-29-huisha-multi-ending-expansion-design.md)
 
 ## 📄 许可证
