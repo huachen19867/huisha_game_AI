@@ -1,12 +1,20 @@
 import { readFile, writeFile } from 'node:fs/promises';
+import { ART_ASSETS } from '../src/data/ArtAssets.js';
 
 const rootUrl = new URL('../', import.meta.url);
 const indexUrl = new URL('index.html', rootUrl);
 
 const sourceFiles = [
+    'src/data/ArtAssets.js',
     'src/data/Maps.js',
+    'src/systems/MemoryEchoes.js',
+    'src/systems/ManorPresentation.js',
     'src/systems/TextureGenerator.js',
     'src/systems/StoryState.js',
+    'src/systems/HorrorPacing.js',
+    'src/systems/Investigation.js',
+    'src/systems/Exploration.js',
+    'src/systems/InvestigationUI.js',
     'src/systems/StartRoute.js',
     'src/systems/SoundManager.js',
     'src/entities/Player.js',
@@ -58,15 +66,22 @@ for (const sourceFile of sourceFiles) {
     ].join(eol));
 }
 
+const embeddedArt = {};
+for (const [key, asset] of Object.entries(ART_ASSETS)) {
+    const bytes = await readFile(new URL(asset.file, rootUrl));
+    embeddedArt[key] = `data:${asset.mime};base64,${bytes.toString('base64')}`;
+}
+
 const nextModuleScript = [
     '',
     '        // Bundled game modules. Regenerate with: node tools\\build_standalone_entry.mjs',
+    `        window.huishaEmbeddedArt = ${JSON.stringify(embeddedArt)};`,
     bundledModules.join(`${eol}${eol}`),
     '',
     bootstrapScript.trimStart()
 ].join(eol);
 
 const nextHtml = indexHtml.replace(currentModuleScript, nextModuleScript);
-await writeFile(indexUrl, nextHtml, 'utf8');
+await writeFile(indexUrl, nextHtml.replace(/[\t ]+$/gm, ''), 'utf8');
 
 console.log('Standalone index.html generated');

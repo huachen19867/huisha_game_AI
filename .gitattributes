@@ -1,0 +1,5 @@
+# Keep downloaded third-party references as supplied, including their original whitespace.
+docs/references/WritingWithInk.md -text -whitespace
+docs/references/phaser-*.js -text -whitespace
+docs/references/mdn-* -text -whitespace
+docs/references/apg-* -text -whitespace

@@ -5,17 +5,23 @@ import { EventManager } from '../systems/EventManager.js';
 import { MapManager } from '../systems/MapManager.js';
 import { SoundManager } from '../systems/SoundManager.js';
 import { createDefaultGameState, getTruthLevel, normalizeGameState } from '../systems/StoryState.js';
+import { InvestigationUI } from '../systems/InvestigationUI.js';
+import { ensureInvestigation, saveCheckpoint, recoverFromCapture } from '../systems/Investigation.js';
+import { ManorPresentation } from '../systems/ManorPresentation.js';
+import { visitRoom } from '../systems/Exploration.js';
+import { isPursuitSpace, choosePursuerSpawn, advanceWarning, sanityRate } from '../systems/HorrorPacing.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
         super('GameScene');
     }
 
-    init(data) {
+    init(data = {}) {
         this.currentMapId = data.mapId || 'room_prologue';
         this.playerStartX = data.x || null;
         this.playerStartY = data.y || null;
         this.previousMapId = data.previousMapId || null;
+        this.returnedAfterCapture = !!data.returnedAfterCapture;
 
         // If restarting from Title (no data provided), ensure we start fresh
         if (!data.mapId) {
@@ -32,6 +38,7 @@ export class GameScene extends Phaser.Scene {
 
         // Reset scene switch flag
         this.isSwitching = false;
+        this.isManipulating = false;
 
         // Reset level specific objects to prevent ghost interactions
         this.coffin = null;
@@ -64,10 +71,16 @@ export class GameScene extends Phaser.Scene {
         this.rightCandle = null;
         this.shownCorridorHint = false;
         this.chaser = null; // Reset chaser ref
+        this.pursuitWarningMs = 0;
+        this.pursuitRetryMs = 0;
+        this.pursuitStepMs = 0;
+        this.micLoudMs = 0;
 
         this.safe = null; // New Safe Object
         this.wet_paper = null; // New Clue Object
         this.red_key = null; // New Item Object
+        this.incense = null;
+        this.spirit_money = null;
         this.toy_plane = null; // Reset plane ref
         this.npc = null; // Reset npc ref
 
@@ -78,6 +91,7 @@ export class GameScene extends Phaser.Scene {
             this.game.soundManager = new SoundManager(this);
             this.soundManager = this.game.soundManager;
         }
+        this.soundManager.scene = this;
 
         const ua = navigator.userAgent || '';
         this.isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
@@ -87,6 +101,19 @@ export class GameScene extends Phaser.Scene {
             window.globalGameState = createDefaultGameState();
         }
         this.gameState = normalizeGameState(window.globalGameState);
+        ensureInvestigation(this.gameState);
+        visitRoom(this.gameState, this.currentMapId, this.previousMapId);
+        this.gameState.isHidden = false;
+        this.captureTriggered = false;
+        this.lastHideToggleTime = 0;
+        this.hiddenAt = 0;
+        this.checkpointState = JSON.parse(JSON.stringify(this.gameState));
+        document.getElementById('inv-slots').replaceChildren();
+        const ownedItems = new Set(this.gameState.inventory);
+        [['hasRice', '倒头饭'], ['hasMatches', '火柴'], ['hasIncense', '香'], ['hasSpiritMoney', '纸钱'], ['hasRedKey', '血红钥匙']].forEach(([flag, name]) => {
+            if (this.gameState[flag]) ownedItems.add(name);
+        });
+        ownedItems.forEach(item => window.updateInventory(item));
 
         // Reset UI Visibility (in case it was hidden)
         document.getElementById('inventory').style.display = '';
@@ -117,6 +144,9 @@ export class GameScene extends Phaser.Scene {
         const startX = this.playerStartX || mapData.objects.playerStart.x;
         const startY = this.playerStartY || mapData.objects.playerStart.y;
         this.player = new Player(this, startX, startY);
+        this.mapManager.restorePlayerStart(this.player.sprite);
+        this.safeStart = { x: this.player.sprite.x, y: this.player.sprite.y };
+        this.presentation = new ManorPresentation(this, mapData);
 
         // Colliders
         this.physics.add.collider(this.player.sprite, this.walls);
@@ -129,7 +159,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Spawn Chaser if active (Persist chase across scenes)
-        if (this.gameState.isChasing) {
+        if (this.gameState.isChasing && isPursuitSpace(this.currentMapId)) {
             this.spawnChaser();
         }
 
@@ -141,7 +171,7 @@ export class GameScene extends Phaser.Scene {
         // Lights & Atmosphere
         if (!this.isMobile) {
             this.lights.enable();
-            this.lights.setAmbientColor(0x888888);
+            this.lights.setAmbientColor(mapData.visual?.ambient ?? 0x9a9b92);
         }
 
         this.rainParticles = this.add.particles(0, 0, 'rain', {
@@ -157,6 +187,10 @@ export class GameScene extends Phaser.Scene {
         });
         this.rainParticles.setDepth(200);
         this.rainParticles.setScrollFactor(0);
+        if (!['room_prologue', 'room_backyard', 'room_entrance', 'memory_crash'].includes(this.currentMapId)) {
+            this.rainParticles.stop();
+            this.rainParticles.setVisible(false);
+        }
 
         this.vignette = this.add.image(400, 300, 'vignette');
         this.vignette.setScrollFactor(0);
@@ -191,7 +225,7 @@ export class GameScene extends Phaser.Scene {
 
         // Mic Indicator
         // Moved down to 120 to avoid browser address bar blocking
-        this.micIndicator = this.add.text(400, 120, '🤫 保持安静...', {
+        this.micIndicator = this.add.text(400, 150, '屏息 · 保持安静', {
             fontSize: '24px',
             color: '#ff0000',
             backgroundColor: '#000',
@@ -207,31 +241,9 @@ export class GameScene extends Phaser.Scene {
             this.fog.setVisible(false);
         }
 
-        // Ambience (Rain/Static)
-        this.time.addEvent({
-            delay: 200,
-            callback: () => {
-                 if (this.isMobile) return;
-                 if (Math.random() < 0.2 && this.soundManager) this.soundManager.playNoise(0.05);
-            },
-            loop: true
-        });
-
         // Initialize Systems
         this.eventManager = new EventManager(this);
         this.interactionManager = new InteractionManager(this);
-
-        // Random Horror Events (Poltergeist)
-        this.time.addEvent({
-            delay: 5000, // Check every 5 seconds
-            callback: () => {
-                // 10% chance every 5s -> roughly once a minute
-                if (Math.random() < 0.1 && !this.gameState.isChasing && this.currentMapId !== 'room_memory') {
-                    this.eventManager.triggerRandomEvent();
-                }
-            },
-            loop: true
-        });
 
         // UI Text
         this.interactText = this.add.text(0, 0, '按 [空格] / [A] 调查', {
@@ -239,83 +251,65 @@ export class GameScene extends Phaser.Scene {
             color: '#fff',
             backgroundColor: '#000'
         }).setOrigin(0.5).setVisible(false).setDepth(400);
+        this.investigationUI = new InvestigationUI(this);
+        this.events.once('shutdown', () => {
+            if (this.exitHideListener) document.removeEventListener('touchstart', this.exitHideListener);
+            this.soundManager?.stopMic();
+        });
+        saveCheckpoint(this.gameState, this.currentMapId, startX, startY);
+        if (this.returnedAfterCapture) this.showHint('手记和判断保留，物品与现场按入房时恢复。脚步已经远去。');
 
-        // Intro Dialog (Prologue)
-        if (this.currentMapId === 'room_prologue' && !this.gameState.viewedIntro) {
-            this.time.delayedCall(1000, () => {
-                if (!this.gameState.viewedIntro) {
-                    this.gameState.viewedIntro = true;
-                    window.showDialog('主角', '（头痛欲裂）咳咳...雨下得太大了...刹车失灵...然后是一声巨响...', () => {
-                        window.showDialog('主角', '车彻底报废了。偏偏是今天，七月十四...手机也没信号。');
-                    });
-                }
-            });
-        }
+        // Opening observations live on the letter, car and doorpost. Arriving
+        // never schedules a dialogue that could interrupt an investigation.
 
-        // Entrance Dialog (When arriving from Prologue)
-        if (this.currentMapId === 'room_entrance' && !this.gameState.viewedEntrance) {
-             this.gameState.viewedEntrance = true;
-             this.time.delayedCall(1000, () => {
-                 window.showDialog('主角', '前面有座宅子...那是...我的老家？自从十年前那场变故后，我就再也没回来过。', () => {
-                     window.showDialog('主角', '虽然不想进去，但这鬼天气...只能去避一避了。');
-                 });
-             });
-        }
-
-        if (this.gameState.isChasing) {
-             this.chaseTimer = this.time.addEvent({
-                 delay: 2000,
-                 callback: () => {
-                     this.cameras.main.shake(200, 0.01);
-                     if (this.soundManager && this.chaser && this.chaser.active) {
-                        this.soundManager.playSpatialNoise(0.5, this.chaser.x, this.chaser.y);
-                     }
-                 },
-                 loop: true
-             });
-        }
-
-        this.showPostMemoryDialog();
     }
 
-    update() {
-        if (window.dialogActive) {
+    update(time, delta = 16.67) {
+        if (window.dialogActive || this.isSwitching || this.isManipulating) {
+            this.interactionManager?.clearTarget();
             this.player.sprite.setVelocity(0);
+            this.physics.pause();
             return;
         }
+        this.physics.resume();
+        this.eventManager.update(delta);
 
         // Update Chaser AI per frame for smoother movement
-        this.updateChaser();
+        this.updateChaser(delta);
 
         // Hiding Logic
         if (this.gameState.isHidden) {
+            this.interactionManager?.clearTarget();
+            this.interactText.setVisible(true).setText('[E / 空格] 离开躲藏');
+            this.interactText.setPosition(this.player.sprite.x, this.player.sprite.y - 60);
+            this.hiddenElapsed = (this.hiddenElapsed || 0) + Math.min(delta, 50);
+            if (this.gameState.isChasing && this.hiddenElapsed >= 6000) {
+                this.gameState.isChasing = false;
+                this.chaser?.destroy();
+                this.chaser = null;
+                this.chaserAura?.destroy();
+                this.chaserAura = null;
+                this.showHint('脚步停了。现在可以按 E 离开。');
+            }
             // Prevent exiting hide mode immediately after closing a dialog
             if (window.dialogActive) return;
 
             // Mic Check Logic
-            if (this.soundManager && this.soundManager.micStream) {
+            if (this.gameState.isChasing && this.soundManager && this.soundManager.micStream) {
                 const vol = this.soundManager.getMicVolume();
                 // Threshold logic:
                 // Quiet room is usually ~10-20. Speaking is ~50+.
                 // Let's set threshold to 40.
                 if (vol > 40) {
-                    this.micIndicator.setText('⚠️ 声音太大了！');
+                    this.micIndicator.setText('声音太大 · 它听见了');
                     this.micIndicator.setColor('#ff0000');
 
-                    if (!this.micTooLoudTimer) {
-                         this.micTooLoudTimer = this.time.delayedCall(1000, () => {
-                             // If still loud after 1s (or just cumulative trigger)
-                             // Actually let's just trigger immediately if it spikes high
-                             this.triggerFoundByMic();
-                         });
-                    }
+                    this.micLoudMs += Math.min(delta, 50);
+                    if (this.micLoudMs >= 1000) { this.micLoudMs = 0; this.triggerFoundByMic(); return; }
                 } else {
-                    this.micIndicator.setText('🤫 保持安静...');
+                    this.micIndicator.setText('屏息 · 保持安静');
                     this.micIndicator.setColor('#ffffff');
-                    if (this.micTooLoudTimer) {
-                        this.micTooLoudTimer.remove();
-                        this.micTooLoudTimer = null;
-                    }
+                    this.micLoudMs = 0;
                 }
             }
 
@@ -327,10 +321,11 @@ export class GameScene extends Phaser.Scene {
 
         // Wait for sound manager to be ready
         if (this.soundManager) {
-            this.player.update(this.cursors, this.wasd, this.joystick, this.soundManager);
+            this.player.update(this.cursors, this.wasd, this.joystick, this.soundManager, delta);
         }
 
         if (this.interactionManager) this.interactionManager.update();
+        if (window.dialogActive || this.isSwitching) return;
 
         this.physics.overlap(this.player.sprite, this.doors, (player, door) => {
             if (door.locked) {
@@ -346,7 +341,7 @@ export class GameScene extends Phaser.Scene {
                 } else {
                     if (!this.gameState.lastLockedMsg || this.time.now - this.gameState.lastLockedMsg > 2000) {
                         this.gameState.lastLockedMsg = this.time.now;
-                        window.showDialog('主角', '门锁住了。需要一把银色的钥匙。');
+                        window.showDialog('李明', door.targetMap === 'room_entrance' ? '门闩从里面卡死了。供桌旁的纸条说：灯亮以后，生人可以离门。' : '门锁住了。钥匙应该在父母卧室的保险箱里。');
                     }
                 }
                 return;
@@ -372,84 +367,33 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Sanity System Logic
-        this.updateSanity();
+        this.updateSanity(delta);
     }
 
-    updateSanity() {
-        if (!window.updateSanityUI) return;
-
-        let drainRate = 0;
-
-        // 1. Darkness Drain (if flashlight is off or flickering)
-        // Check ambient light + flashlight
-        // Simplified: If not in memory room and not near light source?
-        // Let's just say: If chaser is active OR in specific scary rooms
-
-        if (this.currentMapId === 'room_basement' || this.currentMapId === 'room_attic' || this.currentMapId === 'room_secret') {
-            drainRate += 0.05;
-        }
-
-        // 2. Chaser Proximity
-        if (this.chaser && this.chaser.active && this.gameState.isChasing) {
-            const dist = Phaser.Math.Distance.Between(this.player.sprite.x, this.player.sprite.y, this.chaser.x, this.chaser.y);
-            if (dist < 300) {
-                drainRate += 0.2;
-            }
-        }
-
-        // 3. Recharge in safe areas
-        if (this.currentMapId === 'room_bedroom_me' || this.currentMapId === 'room_memory') {
-            drainRate = -0.1;
-        }
-
-        this.gameState.sanity -= drainRate;
+    updateSanity(delta = 16.67) {
+        const distance = this.chaser?.active ? Math.hypot(this.chaser.x - this.player.sprite.x, this.chaser.y - this.player.sprite.y) : Infinity;
+        const drainRate = sanityRate(this.currentMapId, this.gameState.isChasing, distance);
+        this.gameState.sanity -= drainRate * Math.min(delta, 50) / 1000;
         this.gameState.sanity = Phaser.Math.Clamp(this.gameState.sanity, 0, 100);
-
-        window.updateSanityUI(this.gameState.sanity, 100);
-
-        // Sanity Effects
-        if (this.gameState.sanity < 30) {
-            // Audio Hallucinations
-            if (Math.random() < 0.01 && this.soundManager) {
-                this.soundManager.playSpatialNoise(0.5, this.player.sprite.x + Phaser.Math.Between(-100, 100), this.player.sprite.y + Phaser.Math.Between(-100, 100));
-            }
-            // Visual Shake
-            if (Math.random() < 0.05) {
-                this.cameras.main.shake(100, 0.005);
-            }
-        }
+        window.updateSanityUI?.(this.gameState.sanity, 100);
     }
 
     spawnChaser() {
-        if (this.chaser) return; // Already spawned
-
-        let spawnX, spawnY;
-        let fromDoor = false;
-
-        // Try to find the door leading back to previous map
-        if (this.previousMapId) {
-             const mapData = Maps[this.currentMapId];
-             if (mapData && mapData.objects.doors) {
-                 const door = mapData.objects.doors.find(d => d.targetMap === this.previousMapId);
-                 if (door) {
-                     // Found the door we came from
-                     const w = (door.w || 1) * 32;
-                     const h = (door.h || 1) * 32;
-                     spawnX = (door.x * 32) + (w / 2);
-                     spawnY = (door.y * 32) + (h / 2);
-                     fromDoor = true;
-                 }
-             }
-        }
-
-        if (!fromDoor) {
-             // Fallback: Random distance
-             spawnX = this.player.sprite.x + (Math.random() > 0.5 ? 200 : -200);
-             spawnY = this.player.sprite.y + (Math.random() > 0.5 ? 200 : -200);
-        }
-
-        this.chaser = this.physics.add.sprite(spawnX, spawnY, 'npc_paper').setPipeline('Light2D');
-        this.chaser.setTint(0xff0000); // Red tint for danger
+        if (this.chaser || !this.gameState.isChasing || !isPursuitSpace(this.currentMapId)) return;
+        const map = Maps[this.currentMapId];
+        const door = map.objects.doors?.find(door => door.targetMap === this.previousMapId);
+        const preferred = door ? { x: (door.x + (door.w || 1) / 2) * 32, y: (door.y + (door.h || 1) / 2) * 32 } : null;
+        const point = choosePursuerSpawn(map, this.player.sprite, (x, y) => this.isChaseCellOpen(x, y), preferred);
+        if (!point) { this.pursuitRetryMs = 500; return; }
+        this.chaser = this.physics.add.sprite(point.x, point.y, 'pursuer_shadow');
+        if (!this.isMobile) this.chaser.setPipeline('Light2D');
+        this.chaser.body.setSize(18, 18).setOffset(7, 27);
+        this.chaser.setDepth(20 + this.chaser.y / 1000);
+        this.chaser.setAlpha(0.35);
+        this.chaser.body.enable = false;
+        this.pursuitWarningMs = 1800;
+        this.pursuitStepMs = 0;
+        this.soundManager?.playFootstep(point.x, point.y, 0.65);
 
         // Dark Aura Particles (Evil Spirit Effect)
         if (!this.isMobile) {
@@ -472,48 +416,47 @@ export class GameScene extends Phaser.Scene {
         // Explicitly add collision with coffin if it exists (it's in furniture group, but double check)
         if (this.coffin) this.physics.add.collider(this.chaser, this.coffin);
 
-        if (fromDoor) {
-             // If from door, start invisible and disabled, then fade in
-             this.chaser.setAlpha(0);
-             this.chaser.body.enable = false;
-
-             // Give player 2 seconds to run before ghost enters
-             this.time.delayedCall(2000, () => {
-                 if (this.soundManager) this.soundManager.playNoise(1.0); // Door bang sound
-
-                 this.tweens.add({
-                    targets: this.chaser,
-                    alpha: 0.8,
-                    duration: 500,
-                    onComplete: () => {
-                        if (this.chaser) this.chaser.body.enable = true;
-                    }
-                 });
-             });
-        } else {
-             this.chaser.setAlpha(0.8);
-        }
-
         this.physics.add.overlap(this.player.sprite, this.chaser, () => {
-            if (!this.gameState.isHidden) {
+            if (!this.gameState.isHidden && !window.dialogActive && !this.isSwitching && !this.captureTriggered && this.pursuitWarningMs <= 0) {
+                this.captureTriggered = true;
                 // Game Over Logic
                 this.physics.pause();
                 this.chaser.body.setVelocity(0);
                 window.showDialog('暴怒的黑影', '抓到你了...乖儿子，哪也不许去。我们要永远在一起...永远不分开。', () => {
-                     this.scene.restart();
+                     window.globalGameState = recoverFromCapture(this.checkpointState, this.gameState);
+                     saveCheckpoint(window.globalGameState, this.currentMapId, this.safeStart.x, this.safeStart.y);
+                     this.scene.restart({ mapId: this.currentMapId, x: this.safeStart.x, y: this.safeStart.y, returnedAfterCapture: true });
                 });
             }
         });
     }
 
-    updateChaser() {
-        // No chaser in memory room
-        if (this.currentMapId === 'room_memory') return;
+    updateChaser(delta = 16.67) {
+        if (window.dialogActive || this.isSwitching || !isPursuitSpace(this.currentMapId)) return;
+        if (this.gameState.isChasing && !this.chaser) {
+            this.pursuitRetryMs = advanceWarning(this.pursuitRetryMs || 0, delta);
+            if (this.pursuitRetryMs <= 0) this.spawnChaser();
+        }
 
         // Reset danger effect if no chaser
         if (!this.chaser || !this.chaser.active || !this.gameState.isChasing) {
             if (this.dangerOverlay) this.dangerOverlay.setAlpha(0);
             return;
+        }
+        this.pursuitStepMs += Math.min(delta, 50);
+        if (this.pursuitWarningMs > 0) {
+            this.pursuitWarningMs = advanceWarning(this.pursuitWarningMs, delta);
+            this.chaser.body.setVelocity(0);
+            if (this.pursuitStepMs >= 650) { this.soundManager?.playFootstep(this.chaser.x, this.chaser.y, 0.65); this.pursuitStepMs = 0; }
+            if (this.pursuitWarningMs > 0) return;
+            this.chaser.body.enable = true;
+            this.chaser.setAlpha(0.85);
+        }
+        if (!this.chaser.body.enable) return;
+        this.chaser.setDepth(20 + this.chaser.y / 1000);
+        if (this.pursuitStepMs >= (this.gameState.isHidden ? 850 : 600)) {
+            this.soundManager?.playFootstep(this.chaser.x, this.chaser.y, 0.65);
+            this.pursuitStepMs = 0;
         }
 
         // Calculate distance for effects
@@ -523,16 +466,14 @@ export class GameScene extends Phaser.Scene {
         if (dist < 500) { // Increased range
             // Visual: Red pulse scaling with distance
             const intensity = 1 - (dist / 500);
-            this.dangerOverlay.setAlpha(intensity * 0.8 + Math.sin(this.time.now / 100) * 0.2); // Stronger effect
+            this.dangerOverlay.setAlpha(Math.max(0, intensity * 0.18 + Math.sin(this.time.now / 220) * 0.03));
 
             // Audio: Heartbeat
             // Frequency increases with proximity (1000ms down to 400ms)
             const beatInterval = 300 + (dist / 500) * 500;
             if (this.time.now > (this.nextHeartbeat || 0)) {
-                if (this.soundManager) this.soundManager.playHeartbeat(intensity);
+                if (this.soundManager) this.soundManager.playHeartbeat(intensity * 0.35);
                 this.nextHeartbeat = this.time.now + beatInterval;
-                // Camera bump
-                this.cameras.main.shake(100, 0.01 * intensity);
             }
         } else {
             this.dangerOverlay.setAlpha(0);
@@ -583,14 +524,49 @@ export class GameScene extends Phaser.Scene {
 
             // 1. Move towards player (Only if not in "avoidance mode" from previous stuck)
             if (now > this.chaser.nextDecisionTime) {
-                this.physics.moveToObject(this.chaser, this.player.sprite, speed);
+                const waypoint = this.getChaseWaypoint();
+                this.physics.moveTo(this.chaser, waypoint.x, waypoint.y, speed);
+                this.chaser.nextDecisionTime = now + 200;
             }
         }
     }
 
+    isChaseCellOpen(x, y) {
+        const map = Maps[this.currentMapId];
+        if (map.data[y]?.[x] !== 0) return false;
+        const cx = x * 32 + 16, cy = y * 32 + 16;
+        return ![...this.furniture.getChildren(), ...(this.trees?.getChildren() || [])].some(item => {
+            const body = item.body;
+            return body?.enable && cx > body.x - 8 && cx < body.x + body.width + 8 && cy > body.y - 8 && cy < body.y + body.height + 8;
+        });
+    }
+
+    getChaseWaypoint() {
+        const start = [Math.floor(this.chaser.x / 32), Math.floor(this.chaser.y / 32)];
+        const goal = [Math.floor(this.player.sprite.x / 32), Math.floor(this.player.sprite.y / 32)];
+        const key = (x, y) => `${x},${y}`;
+        const queue = [{ x: start[0], y: start[1], first: null }];
+        const visited = new Set([key(...start)]);
+        for (let i = 0; i < queue.length; i++) {
+            const current = queue[i];
+            if (current.x === goal[0] && current.y === goal[1]) {
+                const next = current.first;
+                return next ? { x: next.x * 32 + 16, y: next.y * 32 + 16 } : this.player.sprite;
+            }
+            for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
+                const x = current.x + dx, y = current.y + dy;
+                if (visited.has(key(x, y)) || !this.isChaseCellOpen(x, y)) continue;
+                visited.add(key(x, y));
+                queue.push({ x, y, first: current.first || { x, y } });
+            }
+        }
+        return this.player.sprite;
+    }
+
     switchScene(mapId, targetX, targetY) {
-        if (this.isSwitching) return;
+        if (this.isSwitching || this.isManipulating) return;
         this.isSwitching = true;
+        saveCheckpoint(this.gameState, mapId, targetX, targetY);
 
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
@@ -606,48 +582,11 @@ export class GameScene extends Phaser.Scene {
 
     triggerRealEnding() {
          // Stop chase timer if any
-         if (this.chaseTimer) this.chaseTimer.remove();
          this.gameState.isChasing = false;
 
-         document.getElementById('inventory').style.display = 'none';
-         document.getElementById('joystick-zone').style.display = 'none';
-         document.getElementById('action-btn').style.display = 'none';
-
-         this.cameras.main.fadeOut(2000, 255, 255, 255);
-
-         this.time.delayedCall(2000, () => {
-             // Use the global horror ending effect from index.html
-             window.triggerHorrorEnding(() => {
-                 const targetMap = getTruthLevel(this.gameState) === 'complete' ? 'memory_crash' : 'room_memory';
-                 const targetX = targetMap === 'memory_crash' ? 120 : 320;
-                 const targetY = targetMap === 'memory_crash' ? 200 : 400;
-                 this.scene.restart({ mapId: targetMap, x: targetX, y: targetY });
-
-                 // Reset UI for memory room (clean state)
-                 // We don't reset globalGameState fully yet, as we might want to check flags
-             });
+         window.showDialog('李明', '棺材里没有父亲，只有一件旧校服。领口缝着我的名字。雨声从木板下面传来——我得回到事故发生的地方。', () => {
+             this.switchScene('memory_crash', 120, 200);
          });
-    }
-
-    showPostMemoryDialog() {
-        if (this.currentMapId !== 'room_corridor') return;
-        const flags = this.gameState.storyFlags;
-        if (!flags || !flags.memories || !flags.postMemoryDialogShown) return;
-
-        if (flags.memories.school && !flags.postMemoryDialogShown.school) {
-            flags.postMemoryDialogShown.school = true;
-            this.time.delayedCall(700, () => {
-                window.showDialog('主角', '走廊里的照片变了。每一张里的我都低着头，像还站在那块黑板前。');
-            });
-            return;
-        }
-
-        if (flags.memories.hospital && !flags.postMemoryDialogShown.hospital) {
-            flags.postMemoryDialogShown.hospital = true;
-            this.time.delayedCall(700, () => {
-                window.showDialog('主角', '空气里多了一股消毒水味。母亲不是疯了，她只是一直没人救。');
-            });
-        }
     }
 
     // Safe play wrapper
@@ -701,6 +640,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     triggerFlashback(type) {
+        if (type === 'diary') { this.playSound(260, 'sine', 0.12); return; }
         // Sepia fade in
         this.tweens.add({
             targets: this.flashbackOverlay,
@@ -740,8 +680,7 @@ export class GameScene extends Phaser.Scene {
 
             // Teleport chaser nearby
             if (this.chaser) {
-                const angle = Math.random() * Math.PI * 2;
-                this.chaser.setPosition(this.player.sprite.x + Math.cos(angle) * 100, this.player.sprite.y + Math.sin(angle) * 100);
+                this.chaser.nextDecisionTime = 0;
             }
         });
     }
@@ -757,7 +696,7 @@ export class GameScene extends Phaser.Scene {
             this.gameState.isHidden = false;
             this.player.sprite.setVisible(true);
             this.player.sprite.body.enable = true;
-            this.interactText.setText('按 [空格] / [A] 调查');
+            this.interactText.setText('[E / 空格] 调查');
             this.cameras.main.zoomTo(1.2, 500);
 
             // Re-enable Flashlight
@@ -771,6 +710,7 @@ export class GameScene extends Phaser.Scene {
 
             // Hide Mic Indicator
             this.micIndicator.setVisible(false);
+            if (this.micTooLoudTimer) { this.micTooLoudTimer.remove(); this.micTooLoudTimer = null; }
 
             // Remove global touch listener if exists
             if (this.exitHideListener) {
@@ -781,15 +721,19 @@ export class GameScene extends Phaser.Scene {
         } else {
             // Enter hiding
             this.gameState.isHidden = true;
+            this.hiddenAt = this.time.now;
+            this.hiddenElapsed = 0;
+            this.micLoudMs = 0;
             this.player.sprite.setVisible(false);
             this.player.sprite.body.enable = false; // Disable physics immediately
-            this.interactText.setVisible(true).setText('按 [空格] / [A] 离开');
+            this.interactText.setVisible(true).setText('[E / 空格] 离开躲藏');
             this.interactText.setPosition(this.player.sprite.x, this.player.sprite.y - 60);
             this.cameras.main.zoomTo(1.5, 500);
 
             // Disable Flashlight
             if (this.player.flashlight) this.player.flashlight.setAlpha(0);
             if (this.player.lightSource) this.player.lightSource.setIntensity(0);
+            this.micIndicator.setVisible(!!this.soundManager.micStream);
 
             // Force Chaser to start wandering AWAY immediately
             if (this.chaser && this.chaser.active && this.gameState.isChasing) {
@@ -808,33 +752,16 @@ export class GameScene extends Phaser.Scene {
                 document.getElementById('action-btn').style.display = 'none';
             }
 
-            window.showDialog('主角', '（你屏住了呼吸...）', () => {
-                if (this.isMobile) {
-                    window.showDialog('系统', '（点击任意位置离开躲藏）', () => {
-                        // Dialog closed. Now attach the listener.
-                        if (this.gameState.isHidden && !this.exitHideListener) {
-                             this.exitHideListener = (e) => {
-                                 // Check dialogActive just in case
-                                 if (!window.dialogActive) {
-                                     this.toggleHide();
-                                 }
-                             };
-                             // Use standard listener (not once: true) so it persists until we toggleHide
-                             document.addEventListener('touchstart', this.exitHideListener);
-                        }
-                    });
-                } else if (this.soundManager) {
-                    this.soundManager.initMic().then(success => {
-                        if (success) {
-                            this.micIndicator.setVisible(true);
-                        }
-                    });
-                }
-            });
+            window.showDialog('李明', '藏好了。等脚步远去，再按 E 或右侧调查按钮离开。');
         }
     }
 
     initJoystick() {
+        // DOM controls survive scene restarts: replace the controls to release old listeners.
+        ['joystick-zone', 'action-btn'].forEach(id => {
+            const old = document.getElementById(id);
+            old.replaceWith(old.cloneNode(true));
+        });
         const zone = document.getElementById('joystick-zone');
         const knob = document.getElementById('joystick-knob');
         const actionBtn = document.getElementById('action-btn');
@@ -842,6 +769,7 @@ export class GameScene extends Phaser.Scene {
         let startX, startY;
         const maxDist = 35;
         let uiTimer = null;
+        this.events.once('shutdown', () => { if (uiTimer) clearTimeout(uiTimer); });
 
         const showUI = () => {
             zone.classList.remove('ui-faded');

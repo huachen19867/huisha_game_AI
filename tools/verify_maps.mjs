@@ -1,9 +1,20 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { Maps } from '../src/data/Maps.js';
+import { ManorPresentation } from '../src/systems/ManorPresentation.js';
 
 const textureSource = readFileSync(new URL('../src/systems/TextureGenerator.js', import.meta.url), 'utf8');
 const generatedTextures = new Set([...textureSource.matchAll(/generateTexture\('([^']+)'/g)].map(match => match[1]));
+const textureSizes = new Map();
+// Execute the pixel recipes to discover keys created by loops as well as literals.
+ManorPresentation.generateTextures({ textures: {
+    exists: () => false,
+    createCanvas(key, width, height) {
+        generatedTextures.add(key);
+        textureSizes.set(key, { width, height });
+        return { getContext: () => ({ fillRect() {} }), refresh() {} };
+    }
+} });
 
 const requiredMaps = [
     'room_study',
@@ -55,6 +66,15 @@ for (const [mapId, map] of Object.entries(Maps)) {
 
     for (const door of map.objects.doors || []) {
         assert.ok(Maps[door.targetMap], `${mapId} has door to missing map ${door.targetMap}`);
+    }
+
+    for (const item of [...(map.objects.furnishings || []), ...(map.objects.interactables || []).filter(item => item.collision)]) {
+        assert.ok(generatedTextures.has(item.texture), `${mapId} furnishing uses missing texture ${item.texture}`);
+        assert.ok(Number.isFinite(item.x) && Number.isFinite(item.y), `${mapId} furnishing has invalid coordinates`);
+        if (!item.collision) continue;
+        const body = item.collision, size = textureSizes.get(item.texture);
+        assert.ok(size && [body.x, body.y, body.width, body.height].every(Number.isFinite), `${mapId}:${item.texture} footprint must have finite dimensions`);
+        assert.ok(body.x >= 0 && body.y >= 0 && body.width > 0 && body.height > 0 && body.x + body.width <= size.width && body.y + body.height <= size.height, `${mapId}:${item.texture} footprint must stay within its image`);
     }
 
     for (const item of map.objects.interactables || []) {

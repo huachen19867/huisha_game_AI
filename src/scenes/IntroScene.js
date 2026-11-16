@@ -86,23 +86,30 @@ export class IntroScene extends Phaser.Scene {
 
         // --- Sequence Logic ---
         
-        // Initial Dialog
-        this.time.delayedCall(1500, () => {
-            window.showDialog('主角', '七月十四...雨下得好大...看来今晚赶不回去了。');
+        // A short, readable opening; timers never overwrite an unfinished dialogue.
+        this.add.text(64, 68, '七月十四 · 雨夜', { fontFamily: 'SimSun,serif', fontSize: '20px', color: '#c8b891' });
+        const start = () => {
+            if (this.crashed) return;
+            this.crashed = true;
+            this.engineTimer?.remove();
+            window.dismissDialog?.();
+            if (window.currentDialogTimer) clearInterval(window.currentDialogTimer);
+            window.currentDialogTimer = null;
+            window.currentDialogNextHandler = null;
+            window.dialogActive = false;
+            this.scene.start('GameScene', { mapId: 'room_prologue' });
+        };
+        this.add.text(600, 548, '跳过序章 [Esc]', { fontFamily: 'SimSun,serif', fontSize: '16px', color: '#aab3a7', padding: { x: 10, y: 8 } }).setInteractive({ useHandCursor: true }).on('pointerdown', start);
+        this.input.keyboard.once('keydown-ESC', start);
+        this.time.delayedCall(500, () => {
+            window.showDialog('李明', '那封信没有署名，只让我在七月十四回来，取走留在家里的东西。', () => {
+                window.showDialog('李明', '收音机突然安静了。挡风玻璃外，是我十年没见过的那扇门。', () => {
+                    this.cameras.main.fadeOut(600, 10, 16, 20);
+                    this.time.delayedCall(650, start);
+                });
+            });
         });
 
-        this.time.delayedCall(5000, () => {
-            window.showDialog('主角', '前面的路...怎么感觉有点熟悉？那封信上说的老宅...就在这附近吗？');
-        });
-
-        this.time.delayedCall(9000, () => {
-            window.showDialog('主角', '那是...什么东西？！');
-        });
-
-        // The Crash Event
-        this.time.delayedCall(10000, () => {
-            this.triggerCrash();
-        });
     }
 
     update(time, delta) {

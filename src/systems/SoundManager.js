@@ -3,37 +3,66 @@ export class SoundManager {
         this.scene = scene;
         this.audioCtx = null;
         this.micStream = null;
+        this.micSource = null;
+        this.micRequest = null;
         this.micAnalyser = null;
         this.micDataArray = null;
         this.init();
     }
 
     init() {
-        if (!this.audioCtx) {
-            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (this.audioCtx.state === 'suspended') {
-            this.audioCtx.resume();
+        try {
+            if (!this.audioCtx || this.audioCtx.state === 'closed') {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return false;
+                this.audioCtx = new AudioContext();
+            }
+            if (this.audioCtx.state === 'suspended' || this.audioCtx.state === 'interrupted') {
+                // Playback may be denied until the next user gesture. Keep silent play available.
+                Promise.resolve(this.audioCtx.resume()).catch(() => {});
+            }
+            return true;
+        } catch {
+            return false;
         }
     }
 
     async initMic() {
-        if (this.micStream) return true; // Already init
-        if (!this.audioCtx) this.init();
-        
-        try {
-            this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            this.micSource = this.audioCtx.createMediaStreamSource(this.micStream);
-            this.micAnalyser = this.audioCtx.createAnalyser();
-            this.micAnalyser.fftSize = 256;
-            this.micSource.connect(this.micAnalyser);
-            this.micDataArray = new Uint8Array(this.micAnalyser.frequencyBinCount);
-            console.log("Microphone initialized for horror immersion.");
-            return true;
-        } catch (e) {
-            console.warn("Microphone access denied or not available", e);
-            return false;
-        }
+        if (this.micStream) return true;
+        if (this.micRequest) return this.micRequest.promise;
+        if (!this.init()) return false;
+
+        const request = { cancelled: false, promise: null };
+        this.micRequest = request;
+        request.promise = (async () => {
+            let stream, source, analyser;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                // A permission dialog can outlive the room that requested it.
+                if (request.cancelled) {
+                    stream.getTracks().forEach(track => track.stop());
+                    return false;
+                }
+                source = this.audioCtx.createMediaStreamSource(stream);
+                analyser = this.audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+                const data = new Uint8Array(analyser.frequencyBinCount);
+                this.micStream = stream;
+                this.micSource = source;
+                this.micAnalyser = analyser;
+                this.micDataArray = data;
+                return true;
+            } catch {
+                source?.disconnect();
+                analyser?.disconnect();
+                stream?.getTracks().forEach(track => track.stop());
+                return false;
+            } finally {
+                if (this.micRequest === request) this.micRequest = null;
+            }
+        })();
+        return request.promise;
     }
 
     getMicVolume() {
@@ -48,11 +77,14 @@ export class SoundManager {
     }
 
     stopMic() {
-        if (this.micStream) {
-            this.micStream.getTracks().forEach(track => track.stop());
-            this.micStream = null;
-            this.micAnalyser = null;
+        if (this.micRequest) {
+            this.micRequest.cancelled = true;
+            this.micRequest = null;
         }
+        this.micStream?.getTracks().forEach(track => track.stop());
+        this.micSource?.disconnect();
+        this.micAnalyser?.disconnect();
+        this.micStream = this.micSource = this.micAnalyser = this.micDataArray = null;
     }
 
     playTone(freq, type, duration) {
@@ -87,9 +119,17 @@ export class SoundManager {
         noise.start();
     }
 
-    playFootstep() {
+    playFootstep(sourceX, sourceY, weight = 1) {
         if (!this.audioCtx) return;
         const t = this.audioCtx.currentTime;
+        let volume = weight, pan = 0;
+        const player = this.scene?.player?.sprite;
+        if (Number.isFinite(sourceX) && Number.isFinite(sourceY) && player) {
+            const distance = Math.hypot(sourceX - player.x, sourceY - player.y);
+            volume *= Math.max(0, 1 - distance / 600);
+            pan = Math.max(-1, Math.min(1, (sourceX - player.x) / 400));
+        }
+        if (volume <= 0) return;
         
         // Filtered noise for a "thud"
         const bufferSize = this.audioCtx.sampleRate * 0.1; // 100ms
@@ -108,17 +148,22 @@ export class SoundManager {
         filter.frequency.setValueAtTime(150, t);
 
         const gain = this.audioCtx.createGain();
-        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.setValueAtTime(0.2 * volume, t);
         gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
 
         noise.connect(filter);
-        filter.connect(gain);
+        if (Number.isFinite(sourceX) && this.audioCtx.createStereoPanner) {
+            const panner = this.audioCtx.createStereoPanner();
+            panner.pan.setValueAtTime(pan, t);
+            filter.connect(panner);
+            panner.connect(gain);
+        } else filter.connect(gain);
         gain.connect(this.audioCtx.destination);
         noise.start();
     }
 
     playSpatialNoise(duration, x, y) {
-        if (!this.audioCtx || !this.scene || !this.scene.player) return;
+        if (!this.audioCtx || !this.scene?.player?.sprite || !Number.isFinite(x) || !Number.isFinite(y)) return;
         
         const px = this.scene.player.sprite.x;
         const py = this.scene.player.sprite.y;
@@ -145,16 +190,16 @@ export class SoundManager {
         const noise = this.audioCtx.createBufferSource();
         noise.buffer = buffer;
 
-        // Stereo Panner
-        const panner = this.audioCtx.createStereoPanner();
-        panner.pan.setValueAtTime(pan, this.audioCtx.currentTime);
-
         const gain = this.audioCtx.createGain();
         gain.gain.setValueAtTime(vol * 0.1, this.audioCtx.currentTime); // Base volume 0.1
         gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + duration);
 
-        noise.connect(panner);
-        panner.connect(gain);
+        if (this.audioCtx.createStereoPanner) {
+            const panner = this.audioCtx.createStereoPanner();
+            panner.pan.setValueAtTime(pan, this.audioCtx.currentTime);
+            noise.connect(panner);
+            panner.connect(gain);
+        } else noise.connect(gain);
         gain.connect(this.audioCtx.destination);
         noise.start();
     }
@@ -189,7 +234,7 @@ export class SoundManager {
     }
 
     playSpatialTone(freq, type, duration, sourceX, sourceY) {
-        if (!this.audioCtx) return;
+        if (!this.audioCtx || !Number.isFinite(sourceX) || !Number.isFinite(sourceY)) return;
         
         // Calculate spatial values
         let pan = 0;
@@ -204,7 +249,7 @@ export class SoundManager {
             const dist = Math.sqrt(dx*dx + dy*dy);
             const maxDist = 600; // Hearable distance
             
-            if (dist > maxDist) return; // Too far to hear
+            if (dist >= maxDist) return; // Zero gain cannot be an exponential ramp target.
             
             pan = dx / 400; // Full pan at 400px
             if (pan < -1) pan = -1;
@@ -215,20 +260,21 @@ export class SoundManager {
         }
 
         const osc = this.audioCtx.createOscillator();
-        const panner = this.audioCtx.createStereoPanner();
         const gain = this.audioCtx.createGain();
         
         osc.type = type;
         osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
         
-        panner.pan.setValueAtTime(pan, this.audioCtx.currentTime);
-        
         // Attack/Decay
         gain.gain.setValueAtTime(0.1 * volume, this.audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01 * volume, this.audioCtx.currentTime + duration);
         
-        osc.connect(panner);
-        panner.connect(gain);
+        if (this.audioCtx.createStereoPanner) {
+            const panner = this.audioCtx.createStereoPanner();
+            panner.pan.setValueAtTime(pan, this.audioCtx.currentTime);
+            osc.connect(panner);
+            panner.connect(gain);
+        } else osc.connect(gain);
         gain.connect(this.audioCtx.destination);
         
         osc.start();

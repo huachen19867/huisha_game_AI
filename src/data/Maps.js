@@ -20,8 +20,8 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 100, y: 200 },
-            crashed_car: { x: 500, y: 250, dialog: '车头已经完全变形，像一头死去的钢铁巨兽。引擎盖下冒着黑烟，空气中弥漫着汽油味和...一股淡淡的铁锈腥味。奇怪，我记得出发前才刚做过保养。' },
-            rain_trigger: { x: 300, y: 200, dialog: '雨点砸在脸上，生疼。这场雨下得太久了，久到我都快忘了太阳长什么样。前面的路通向那座老宅...如果不是因为那封没有署名的信，我这辈子都不想再回来。' },
+            crashed_car: { x: 500, y: 250, interactLabel: '停在雨里的车', documentTitle: '路边的车门', documentText: '四扇车门都关着，钥匙还插在锁里。左后门有一道月牙形划痕，露出浅色底漆。\n我记得自己还握着方向盘，掌心却已经全是雨水。我是从哪一扇门下来的？' },
+            interactables: [{ id: 'return_letter', x: 300, y: 200, texture: 'document_page', documentTitle: '无署名来信', documentText: '李明收：\n七月十四，回来取你的东西。\n东西放在正厅供桌右侧，黑布下面。门不锁。\n\n没有署名。信封内侧黏着一根褪色红线。', openingFlag: 'viewedIntro' }],
             trees: [
                 { x: 100, y: 50 }, { x: 300, y: 50 }, { x: 500, y: 50 }, { x: 700, y: 50 },
                 { x: 100, y: 350 }, { x: 300, y: 350 }, { x: 500, y: 350 }, { x: 700, y: 350 }
@@ -54,10 +54,10 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 384, y: 350 },
-            car: { x: 250, y: 300 },
+            interactables: [{ id: 'height_marks', x: 432, y: 80, texture: 'height_marks', documentTitle: '门柱上的旧刻痕', documentText: '门柱上有三道短线。母亲量身高时，总让我把脚跟贴在这里。\n第三道线比前两道深，旁边那句“明年再量”只剩了半个“年”字。\n正厅的门虚掩着，黑布的一角露在供桌右侧。', openingFlag: 'viewedEntrance' }],
             exit_door: { x: 384, y: 416, dialog: '朱红色的大门漆皮剥落，露出了里面发黑的木头，像是一块块尸斑。推开门，生锈的门轴发出令人牙酸的“吱呀”声。' },
             doors: [
-                { x: 11, y: 0, w: 2, h: 1, targetMap: 'room_main', targetX: 368, targetY: 330 }
+                { x: 11, y: 0, w: 2, h: 1, targetMap: 'room_main', targetX: 384, targetY: 450 }
             ]
         }
     },
@@ -86,21 +86,24 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 384, y: 450 },
-            coffin: { x: 384, y: 150, dialog: '一口黑漆棺材，死气沉沉地横在屋子中央。棺材盖上钉着七颗长钉，每一颗都缠着浸透了黑狗血的红线。这是"锁魂钉"...他们在怕什么？怕里面的人出来吗？隐约间，我似乎听到了棺材里传来了指甲抓挠木板的声音...咯吱...咯吱...' },
-            altar: { x: 384, y: 250, dialog: '供桌上落满了厚厚的灰尘。香炉里插着三根断香，两短一长...人最忌讳的三长两短。供桌正中央摆着一个相框，被一块黑布死死地遮住。' },
-            black_cloth: { x: 384, y: 240, dialog: '（手颤抖着掀开黑布）是父亲的遗像。照片上的男人面容消瘦，颧骨高耸，那双眼睛...无论我走到哪里，似乎都在死死地盯着我。即使变成了照片，他的眼神依然让我感到窒息。' },
+            coffin: {
+                x: 384, y: 150, id: 'red_bound_coffin',
+                observationTitle: '棺锁与三圈红线',
+                observationText: '旧锁扣在棺盖下沿，和红线是分开的。三圈红线从棺底绕到盖上：上端夹着被红笔划过的方格纸，下端夹着一截蓝边排号纸，中间的结朝着供桌。里面有人敲了三下，又停了。'
+            },
+            altar: { x: 384, y: 250 },
+            black_cloth: { id: 'covered_portrait', x: 452, y: 225, observationTitle: '黑布露出的纸角', observationText: '黑布搭在一只相框上，边角没有系住，可以掀起。布下露出一截旧纸，最末一个字是“收”，前面的名字还被遮着。\n相框旁夹着守灯纸条，桌面没有积灰。有人一直在等收信的人回来。', documentTitle: '遗像与相框背面', documentText: '黑布下面是父亲的遗像。相框背面写的却是“李明收”，名字写在旧纸的右下角。\n纸条夹在相框脚边，字迹已经褪色，相框上的灰却刚被擦过。' },
             candles: [
                 { x: 354, y: 240 },
                 { x: 414, y: 240 }
             ],
-            dirt: { x: 650, y: 400 },
-            stove: { x: 100, y: 400 },
-            medical_record: { x: 200, y: 300 },
+            medical_record: { x: 200, y: 300, clueId: 'medical_record', documentTitle: '诊断书', documentText: '姓名：王秀兰。\n诊断：重度抑郁，伴精神分裂样症状。\n建议：规律服药，避免刺激，必要时住院观察。\n背面写着一行潦草的字：他把药藏起来了。' },
+            interactables: [{ id: 'ritual_note', x: 304, y: 255, texture: 'trash_paper', documentTitle: '守灯纸条', documentText: '饭留其名，香照其身，纸送其行。\n先摆倒头饭，再点香烛，最后焚纸。\n\n厨房留饭，后院藏香，阁楼收纸；火柴放在父母卧室衣柜后的工作台。\n灯亮后，生人自可离门。', interactLabel: '守灯纸条' }],
             doors: [
                 { x: 11, y: 0, w: 2, h: 1, targetMap: 'room_corridor', targetX: 240, targetY: 580 },
                 { x: 11, y: 15, w: 2, h: 1, targetMap: 'room_entrance', targetX: 368, targetY: 64 },
                 { x: 23, y: 8, w: 1, h: 2, targetMap: 'room_kitchen', targetX: 64, targetY: 240 },
-                { x: 0, y: 8, w: 1, h: 2, targetMap: 'room_basement', targetX: 432, targetY: 100, locked: true, key: 'silver_key' }
+                { x: 0, y: 8, w: 1, h: 2, targetMap: 'room_basement', targetX: 880, targetY: 432, locked: true, key: 'silver_key' }
             ]
         }
     },
@@ -128,7 +131,16 @@ export const Maps = {
         objects: {
             playerStart: { x: 64, y: 240 },
             sink: { x: 250, y: 50, dialog: '水龙头生锈了，拧不紧，每隔几秒就滴落一滴浑浊的水珠。滴答...滴答...在这死寂的屋子里，听起来像是时间的倒计时。灶台上有一层油腻的黑垢，那是母亲生前最在意的地方。' },
-            cabinet: { x: 400, y: 50, id: 'kitchen_cabinet' },
+            cabinet: {
+                x: 400, y: 50, id: 'kitchen_cabinet',
+                supply: {
+                    flag: 'hasRice', name: '倒头饭', title: '橱柜里留着的饭',
+                    texture: 'kitchen_cabinet_rice', emptyTexture: 'kitchen_cabinet_empty',
+                    text: '柜门虚掩着，中层单独留着一碗饭，筷子直插在饭里。碗下压着一截褪色红纸，写着“留给归家的人”。饭已经凉透，碗沿却没有积灰。可以带去供桌。',
+                    takenText: '饭碗被端出来，柜板上留下一圈浅色的印子。我收好了倒头饭，柜子里没有第二份。',
+                    emptyText: '中层只剩一圈碗印。留给归家人的那份饭，已经被我带走了。'
+                }
+            },
             doors: [
                 { x: 0, y: 7, w: 1, h: 2, targetMap: 'room_main', targetX: 700, targetY: 272 }
             ]
@@ -163,12 +175,17 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 176, y: 580 },
-            locked_window: { x: 48, y: 100 },
+            locked_window: {
+                x: 48, y: 100, id: 'locked_window', texture: 'boarded_window',
+                clueId: 'locked_window', clueType: 'control', interactLabel: '钉死的窗',
+                documentTitle: '窗扣与外侧的钉子',
+                documentText: '窗扣留在屋内，已经拨开。两块横木仍挡在窗外，钉尖穿过窗框朝里露着，钉头却都在外侧。下沿有几道旧抓痕，窗扇只能被推出一条细缝。挡住它的不是屋里的锁扣。'
+            },
             photos: [
-                { x: 48, y: 150, id: 1, text: '1998年，全家福。那时候父母笑得很开心，我被抱在怀里。照片的边缘有些发黄，幸福得像个假象。' },
-                { x: 272, y: 250, id: 2, text: '1999年，满月。我抓周抓了一支笔，父亲很高兴，说我以后一定有出息。母亲在旁边看着，眼神里却透着一丝忧虑。' },
-                { x: 48, y: 350, id: 3, text: '2003年，入学。我背着新书包，却笑不出来。父亲的手重重地按在我的肩膀上，像一座大山压得我喘不过气。' },
-                { x: 272, y: 450, id: 4, text: '2005年，争吵。照片被撕碎过又粘了起来。画面里只有父亲愤怒的背影和母亲掩面哭泣的样子。' }
+                { x: 48, y: 150, id: 1, text: '童年，全家福。母亲抱着我，父亲对着镜头笑。相纸背面写着：“以后年年都拍一张。”' },
+                { x: 272, y: 250, id: 2, text: '入学那天。我背着新书包，父亲的手按在肩上。相纸背面写着：“别给家里丢脸。”' },
+                { x: 48, y: 350, id: 3, text: '学校领奖。我站在第二名的位置。照片左侧被剪去，留下父亲半只攥紧的手。' },
+                { x: 272, y: 450, id: 4, text: '离家前。母亲举着相机，我站在反锁的窗后。照片裂开的地方贴着透明胶，背面没有日期。' }
             ],
             doors: [
                 { x: 5, y: 0, w: 2, h: 1, targetMap: 'room_backyard', targetX: 320, targetY: 100 },
@@ -205,7 +222,7 @@ export const Maps = {
             playerStart: { x: 448, y: 200 },
             toilet: { x: 80, y: 80, dialog: '狭窄逼仄的空间，只有一扇高高的小窗。墙角堆满了杂物。这里是我的"反省室"。每次考试没考好，或者说错了一句话，我就会被关在这里。' },
             mirror: { x: 250, y: 20, dialog: '镜面上布满了裂纹，把我的脸分割得支离破碎。我凑近看...镜子里的我脸色惨白，眼神空洞。等等...为什么镜子里的我，嘴角在微微上扬？' },
-            wet_paper: { x: 150, y: 300 },
+            wet_paper: { x: 150, y: 300, documentTitle: '湿纸条', documentText: '湿纸上只剩半句：“结婚那年，□□八八。那是我噩梦开始的一年……”\n开头两个数已被水洇开，笔画很细，墨色泛成了褐色。' },
             doors: [
                 { x: 15, y: 6, w: 1, h: 2, targetMap: 'room_corridor', targetX: 80, targetY: 208 }
             ]
@@ -235,9 +252,9 @@ export const Maps = {
         objects: {
             playerStart: { x: 64, y: 240 },
             bed: { x: 450, y: 150, dialog: '一张巨大的双人床，占据了房间的一半。床单上绣着鸳鸯戏水，现在看来却显得格外讽刺。床头柜上放着一瓶安眠药，瓶子已经空了。' },
-            cabinet: { x: 528, y: 240, id: 'parents_cabinet', dialog: '一个沉重的红木衣柜。看起来...后面似乎有什么空间？' },
-            family_rules: { x: 250, y: 50 },
-            safe: { x: 100, y: 350 },
+            cabinet: { x: 528, y: 240, id: 'parents_cabinet', observationTitle: '衣柜底下的擦痕', observationText: '右侧柜脚紧贴东墙，没有再往右挪的余地。两道浅色擦痕从柜脚向左延伸，在一掌宽的位置停下。\n柜背上缘漏出一丝冷风。有人曾把它移开，又沿原路推了回去。' },
+            family_rules: { x: 250, y: 50, clueId: 'family_rules', documentTitle: '相框里的家规', documentText: '一、饭桌上不许说话。\n二、十点以前必须回家。\n三、门由父亲来锁。\n四、孩子没有自己的秘密。\n\n背面有母亲细小的字：“结婚那年，一九□□。”末尾两字被潮斑泡散，旁边画着一只小保险箱。\n\n木框下缘沾着锈粉。衣柜后面透着风。' },
+            safe: { x: 100, y: 350, inscription: '锁盘旁刻着：“结婚那年。”四只数字轮已经磨亮。', code: '1988' },
             doors: [
                 { x: 0, y: 7, w: 1, h: 2, targetMap: 'room_corridor', targetX: 240, targetY: 272 },
                 // Hidden door (Initially inaccessible, handled by logic)
@@ -266,13 +283,22 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 64, y: 200 },
-            desk: { x: 300, y: 200, dialog: '一张布满灰尘的工作台。上面放着各种奇怪的工具：刻刀、红线、符纸...还有一些未完成的木偶。原来...那些"纸人"都是父亲亲手做的？' },
-            notes: [
-                { x: 300, y: 300, dialog: '工作台上的笔记："秀兰的病越来越重了。她总说看见了明儿。我也看见了...但我知道那不是明儿。那是心中的鬼。我要把它们封印起来。用这些木偶..."' },
-                { x: 100, y: 100, dialog: '墙上的血书："我没有疯！我没有疯！放我出去！"' }
+            desk: {
+                x: 300, y: 200, id: 'secret_workbench', interactLabel: '刻刀旁的工作台',
+                supply: {
+                    flag: 'hasMatches', name: '火柴', title: '刻刀旁的火柴盒',
+                    texture: 'workbench_matches', emptyTexture: 'workbench_empty',
+                    text: '刻刀、红线和没做完的木偶堆在工作台上。前沿放着一盒火柴，侧面的擦纸磨出了一道白痕；纸盒盖没有受潮。旁边的笔记反复写着“封起来”。',
+                    takenText: '火柴盒收进了口袋，台面露出一小块没落灰的方印。刻刀与木偶还在原处。',
+                    emptyText: '火柴已经收好，台面留下一个浅方印。这里仍有刻刀、红线和未完成的木偶；父亲的笔记里反复写着“封起来”。'
+                }
+            },
+            interactables: [
+                { id: 'secret_workbench_notes', x: 300, y: 300, texture: 'document_page', documentTitle: '工作台的木偶笔记', documentText: '工作台上的笔记："秀兰的病越来越重了。她总说看见了明儿。我也看见了...但我知道那不是明儿。那是心中的鬼。我要把它们封印起来。用这些木偶..."' },
+                { id: 'secret_red_words', x: 100, y: 100, texture: 'scratch', documentTitle: '反复涂写的红字', documentText: '墙上的血书："我没有疯！我没有疯！放我出去！"' }
             ],
             doors: [
-                    { x: 0, y: 6, w: 1, h: 2, targetMap: 'room_bedroom_parents', targetX: 450, targetY: 400 }
+                    { x: 0, y: 6, w: 1, h: 2, targetMap: 'room_bedroom_parents', targetX: 520, targetY: 300 }
             ]
         }
     },
@@ -323,11 +349,13 @@ export const Maps = {
                 },
                 {
                     id: 'school_memory_trigger',
+                    interactLabel: '桌下的旧书包',
                     x: 330,
                     y: 290,
                     texture: 'desk',
                     tint: 0x777777,
-                    dialog: '桌下塞着一个旧书包。拉链拉开的瞬间，粉笔灰的味道涌了出来。',
+                    documentTitle: '桌下的旧书包',
+                    documentText: '桌下塞着一个旧书包。拉链拉开后，粉笔灰的味道涌了出来。内袋里露出一角被红笔划破的成绩单，像教室里留下的那一张。',
                     memoryTrigger: { mapId: 'memory_school', x: 240, y: 320 }
                 }
             ],
@@ -383,11 +411,13 @@ export const Maps = {
                 },
                 {
                     id: 'hospital_memory_trigger',
+                    interactLabel: '药柜底层的排号单',
                     x: 150,
                     y: 300,
                     texture: 'cabinet',
                     tint: 0x8899aa,
-                    dialog: '药柜最底层压着一张医院排号单。号码牌翻过来，灯光突然变成惨白。',
+                    documentTitle: '药柜底层的排号单',
+                    documentText: '药柜最底层压着一张医院排号单，日期是7月12日。摸到纸角，药水的味道忽然清晰了，像又站在那扇诊室窗口前。',
                     memoryTrigger: { mapId: 'memory_hospital', x: 80, y: 240 }
                 }
             ],
@@ -420,9 +450,26 @@ export const Maps = {
         objects: {
             playerStart: { x: 64, y: 240 },
             bed: { x: 400, y: 150, dialog: '我的床。很小，很硬。床单是我最喜欢的蓝色，上面印着卡通图案。这是我在这个家里唯一的避风港。以前我总是躲在被子里，用手电筒照着漫画书，那是唯一的亮光。' },
-            cabinet: { x: 400, y: 350 },
+            cabinet: { x: 400, y: 350, id: 'my_cabinet', interactLabel: '衣柜 · 躲藏' },
             desk: { x: 100, y: 150, id: 'my_desk', dialog: '这是我的书桌。上面刻着"早"字，但那只是我为了模仿鲁迅刻的。抽屉里塞满了没及格的试卷，每一次打开都需要勇气。' },
-            diary: { x: 100, y: 140 },
+            diary: {
+                x: 100, y: 140, id: 'mother_diary', interactLabel: '母亲留下的日记',
+                clueId: 'diary_mother', clueType: 'illness', documentTitle: '残破的日记',
+                documentText: `
+七月十四日，阴。
+明儿走后，饭桌上还是多摆了一双筷子。
+我总觉得他还在这个家里。
+每天晚上，我都能听到走廊里有脚步声。
+不是老鼠，是孩子跑跳的声音。
+他最喜欢玩捉迷藏了。
+我写了好几封信，却不知道该寄到哪里。
+他爸爸又喝醉了，说孩子认个错就会回来。
+我把信封压在药盒下面，没有照他的话写。
+我也听到了。
+明儿，是你回来了吗？
+如果你读到这些，不必因为我没睡好，就把自己的路再走回一遍。
+`
+            },
             toy_plane: { x: 300, y: 300, dialog: '一只折断机翼的纸飞机。是我七岁那年折的。我以为只要飞得够高，就能飞出围墙，飞出这个家。但它最终还是掉在了地上，被父亲一脚踩扁。' },
             doors: [
                 { x: 0, y: 7, w: 1, h: 2, targetMap: 'room_corridor', targetX: 240, targetY: 368 }
@@ -458,7 +505,7 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 320, y: 100 },
-            well: { x: 320, y: 320, dialog: '古老的枯井，井口被几块大石头死死压住，缝隙里塞满了画着符咒的黄纸。井底深处，似乎有冷风不断吹上来。小时候，我不小心把球踢到了井边，父亲发了疯一样打我，说井里住着吃人的怪物。' },
+            well: { id: 'backyard_well', x: 320, y: 320, observationTitle: '井沿铁钩的亮痕', observationText: '井口压着石板，缝里塞着褪色符纸。红钥匙挂在井外侧的铁钩上，不需要挪开石板。\n钩尖朝上，钥匙环被它挡住。锈层里有一道亮痕，从钩尖上方一直延到井外侧；石沿正下方没有拉拽的痕迹。\n小时候，我把球踢到井边，父亲发了疯一样打我，说井里住着吃人的怪物。那时我只顾着跑，从没仔细看过这只钩子。' },
             incense: { x: 550, y: 550, dialog: '在树后发现了一把香。' },
             trees: [
                 { x: 100, y: 200 },
@@ -515,15 +562,13 @@ export const Maps = {
                 { x: 500, y: 500, frame: 'npc_paper', dialog: '这纸人做得太逼真了……它的嘴角挂着似有若无的笑，仿佛在嘲笑我至今仍被困在这里。' },
                 { x: 100, y: 800, frame: 'toy_plane', dialog: '一只破旧的拨浪鼓。鼓面上已经破了一个洞，摇晃时会掉出一些黑色的粉末...像是干涸的血渣。' }
             ],
-            scratches: [
-                { x: 300, y: 300, dialog: '墙壁上布满了指甲抓挠的痕迹...深浅不一，有的甚至带血。这不是野兽抓的，是人。一个人在极度绝望的时候，试图用指甲挖穿这堵墙。' },
-                { x: 700, y: 700, dialog: '墙缝里塞着一张皱巴巴的纸条："我不明白，为什么爱会变成枷锁？他说这是为了我好，为了我不走弯路。可如果连路都不能自己选，活着还有什么意义？"' }
-            ],
-            notes: [
-                { x: 400, y: 600, dialog: '一张藏在砖缝里的纸条："爸爸又喝醉了。他说要把我关在这里，直到我承认看见了那些东西是幻觉。可是...我真的看见了。它就在天花板上看着我。"' }
+            interactables: [
+                { id: 'basement_old_scratches', x: 300, y: 300, texture: 'scratch', documentTitle: '墙上的抓痕', documentText: '墙壁上布满了指甲抓挠的痕迹...深浅不一，有的甚至带血。这不是野兽抓的，是人。一个人在极度绝望的时候，试图用指甲挖穿这堵墙。' },
+                { id: 'basement_route_note', x: 700, y: 700, texture: 'document_page', documentTitle: '墙缝里的纸条', documentText: '墙缝里塞着一张皱巴巴的纸条："我不明白，为什么爱会变成枷锁？他说这是为了我好，为了我不走弯路。可如果连路都不能自己选，活着还有什么意义？"' },
+                { id: 'basement_hidden_note', x: 400, y: 600, texture: 'document_page', documentTitle: '砖缝里的字条', documentText: '一张藏在砖缝里的纸条："爸爸又喝醉了。他说要把我关在这里，直到我承认看见了那些东西是幻觉。可是...我真的看见了。它就在天花板上看着我。"' }
             ],
             doors: [
-                { x: 29, y: 13, w: 1, h: 2, targetMap: 'room_main', targetX: 64, targetY: 208 }
+                { x: 29, y: 13, w: 1, h: 2, targetMap: 'room_main', targetX: 64, targetY: 272 }
             ]
         }
     },
@@ -552,7 +597,7 @@ export const Maps = {
             playerStart: { x: 320, y: 384 },
             spirit_money: { x: 320, y: 100, dialog: '横梁上挂着一串串纸钱，随着气流轻轻晃动，发出沙沙的声音。就像是有无数个看不见的幽灵在窃窃私语。这些钱...是烧给谁的？' },
             doors: [
-                { x: 9, y: 13, w: 2, h: 1, targetMap: 'room_corridor', targetX: 176, targetY: 64 }
+                { x: 9, y: 13, w: 2, h: 1, targetMap: 'room_corridor', targetX: 240, targetY: 96 }
             ]
         }
     },
@@ -585,36 +630,44 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 240, y: 320 },
+            furnishings: [
+                { x: 160, y: 220, texture: 'classroom_desk', collision: { x: 5, y: 12, width: 54, height: 44 } },
+                { x: 400, y: 220, texture: 'classroom_desk', collision: { x: 5, y: 12, width: 54, height: 44 } },
+                { x: 160, y: 320, texture: 'classroom_desk', collision: { x: 5, y: 12, width: 54, height: 44 } },
+                { x: 400, y: 320, texture: 'classroom_desk', collision: { x: 5, y: 12, width: 54, height: 44 } },
+                { x: 288, y: 132, texture: 'teacher_desk', collision: { x: 6, y: 16, width: 92, height: 28 } },
+                { x: 48, y: 132, texture: 'classroom_window' },
+                { x: 48, y: 280, texture: 'classroom_window' }
+            ],
             interactables: [
                 {
                     id: 'school_blackboard',
                     x: 288,
                     y: 60,
-                    texture: 'photo_frame',
-                    tint: 0x0d1f18,
+                    texture: 'school_board',
                     clueId: 'school_blackboard',
                     clueType: 'control',
                     documentTitle: '黑板评语',
-                    documentText: '黑板上写着：李明，第二名。全班都在笑，只有父亲站在门口，脸比黑板还沉。'
+                    documentText: '黑板上写着：李明，第二名。旁边贴着学校的表扬名单，我的名字也在上面。父亲站在门口，没有鼓掌。'
                 },
                 {
                     id: 'school_report',
                     x: 160,
                     y: 210,
-                    texture: 'trash_paper',
-                    tint: 0xffeeee,
+                    texture: 'school_report',
                     clueId: 'school_report',
                     clueType: 'control',
                     documentTitle: '成绩单',
-                    documentText: '总分只差三分。红笔在“三分”下面划了很多遍，最后纸被划破了。'
+                    documentText: '总分只差三分。红笔在“三分”下面划了很多遍，最后纸被划破了。家长签字处是父亲的笔迹：“第二名也配出去玩？今晚锁门，什么时候认错什么时候出来。”'
                 },
                 {
                     id: 'school_final_stack',
                     x: 400,
                     y: 310,
-                    texture: 'desk',
-                    tint: 0x666666,
-                    dialog: '几张试卷按年份排好，最后一张背面写着：我不想回家。',
+                    texture: 'exam_stack',
+                    interactLabel: '桌上最后一张试卷',
+                    documentTitle: '最后一张试卷背面',
+                    documentText: '几张试卷按年份排好，最后一张背面写着：我不想回家。',
                     clueId: 'school_last_argument',
                     clueType: 'control',
                     memoryComplete: 'school',
@@ -653,36 +706,44 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 80, y: 240 },
+            furnishings: [
+                { x: 144, y: 192, texture: 'waiting_bench', collision: { x: 7, y: 20, width: 90, height: 23 } },
+                { x: 144, y: 320, texture: 'waiting_bench', collision: { x: 7, y: 20, width: 90, height: 23 } },
+                { x: 376, y: 220, texture: 'privacy_screen', collision: { x: 5, y: 70, width: 62, height: 20 } },
+                { x: 548, y: 166, texture: 'bedside_cabinet', collision: { x: 4, y: 16, width: 32, height: 28 } },
+                { x: 420, y: 370, texture: 'forms_table', collision: { x: 4, y: 12, width: 56, height: 24 } }
+            ],
             interactables: [
                 {
                     id: 'hospital_window',
                     x: 260,
                     y: 90,
-                    texture: 'photo_frame',
-                    tint: 0x99ccff,
+                    texture: 'clinic_window',
                     clueId: 'hospital_window',
                     clueType: 'illness',
                     documentTitle: '诊室窗口',
-                    documentText: '窗口里没有医生，只有母亲的声音反复说：我吃了药就不会看见他了，对吗？'
+                    documentText: '7月12日，15时。接诊记录：“王秀兰主动求助，询问服药后能否不再看见幻影，建议住院观察。”窗口里还留着她的声音：医生，我想好起来。'
                 },
                 {
                     id: 'hospital_ward',
                     x: 480,
                     y: 180,
-                    texture: 'bed',
-                    tint: 0xaaccff,
+                    texture: 'hospital_bed',
+                    collision: { x: 5, y: 28, width: 38, height: 48 },
                     clueId: 'hospital_ward',
                     clueType: 'illness',
-                    documentTitle: '病房门牌',
-                    documentText: '门牌上写着王秀兰，旁边被父亲划掉了“住院观察”四个字。'
+                    documentTitle: '空病床的留床单',
+                    documentText: '7月12日，18时。留床单上写着王秀兰，“住院观察”被红笔划掉。家属意见：“不同意，回家休息即可。”落款是父亲的签名。床位号已经填好，却没有人住进来。'
                 },
                 {
                     id: 'hospital_return',
                     x: 420,
                     y: 360,
-                    texture: 'trash_paper',
+                    texture: 'payment_slip',
+                    interactLabel: '灯下的缴费单',
                     tint: 0xffffff,
-                    dialog: '缴费单在灯下慢慢变湿，像有人刚刚哭过。你听见母亲说：明儿，不要怪我。',
+                    documentTitle: '灯下的缴费单',
+                    documentText: '缴费单在灯下慢慢变湿，像有人刚刚哭过。你听见母亲说：明儿，不要怪我。',
                     clueId: 'hospital_mother_voice',
                     clueType: 'illness',
                     memoryComplete: 'hospital',
@@ -720,44 +781,56 @@ export const Maps = {
         ],
         objects: {
             playerStart: { x: 120, y: 200 },
+            furnishings: [
+                { x: 228, y: 144, texture: 'road_guardrail', collision: { x: 0, y: 16, width: 96, height: 18 } },
+                { x: 324, y: 144, texture: 'road_guardrail', collision: { x: 0, y: 16, width: 96, height: 18 } },
+                { x: 516, y: 144, texture: 'road_guardrail', collision: { x: 0, y: 16, width: 96, height: 18 } },
+                { x: 612, y: 144, texture: 'road_guardrail', collision: { x: 0, y: 16, width: 96, height: 18 } },
+                { x: 708, y: 144, texture: 'road_guardrail', collision: { x: 0, y: 16, width: 96, height: 18 } },
+                { x: 420, y: 304, texture: 'skid_marks' },
+                { x: 160, y: 240, texture: 'road_lane' },
+                { x: 288, y: 240, texture: 'road_lane' },
+                { x: 640, y: 240, texture: 'road_lane' },
+                { x: 768, y: 240, texture: 'road_lane' }
+            ],
             interactables: [
                 {
                     id: 'crash_car_memory',
                     x: 420,
                     y: 230,
-                    texture: 'car',
+                    texture: 'car_wrecked',
+                    collision: { x: 6, y: 16, width: 52, height: 100 },
                     tint: 0x666666,
                     clueId: 'crash_car_memory',
                     clueType: 'death',
                     documentTitle: '变形的车门',
-                    documentText: '车门从里面撞弯了。安全带还扣着，像一只不肯松开的手。你终于想起来，自己并不是从这里走出去的。'
+                    documentText: '后排车门已经撞弯，安全带仍扣着。左后门那道月牙形划痕，已经锈进变形的铁皮里。座位上留着一件风化的校服，领口缝着“李明”。扣环没有被解开的痕迹。'
                 },
                 {
                     id: 'crash_guardrail',
-                    x: 660,
-                    y: 160,
-                    texture: 'photo_frame',
-                    tint: 0xcccccc,
+                    x: 420,
+                    y: 144,
+                    texture: 'guardrail_marker',
                     clueId: 'crash_guardrail',
                     clueType: 'death',
                     documentTitle: '护栏缺口',
-                    documentText: '护栏外的坡下有一只纸飞机，湿透了，却还保持着飞出去的姿势。'
+                    documentText: '护栏上留着十年前的事故编号。坡下的纸飞机已经褪色，折痕里是我当年的字：“等到了外面，我想自己选一条路。”'
                 },
                 {
                     id: 'final_leave',
                     x: 850,
                     y: 180,
-                    texture: 'tile_mud',
-                    tint: 0x88ccff,
+                    texture: 'mountain_path',
+                    interactLabel: '通向山路的石阶',
                     dialog: '前面的路没有灯，也没有人叫你的名字。只是雨小了一点。',
                     endingChoice: 'leave'
                 },
                 {
                     id: 'final_return',
-                    x: 850,
+                    x: 120,
                     y: 320,
-                    texture: 'tile_wall',
-                    tint: 0x884444,
+                    texture: 'manor_threshold',
+                    interactLabel: '回到老宅的门口',
                     dialog: '身后的老宅亮起一盏灯，母亲在门里喊你吃饭。父亲没有骂人，只是沉默地等着。',
                     endingChoice: 'return'
                 }

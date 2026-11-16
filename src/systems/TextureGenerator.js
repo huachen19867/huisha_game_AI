@@ -1,3 +1,5 @@
+import { ManorPresentation } from './ManorPresentation.js';
+
 export class TextureGenerator {
     static generate(scene) {
         this.scene = scene;
@@ -9,6 +11,7 @@ export class TextureGenerator {
         this.createRain();
         this.createToyPlane(); // Added
         this.createScratch(); // Added
+        ManorPresentation.generateTextures(scene);
     }
 
     static createScratch() {

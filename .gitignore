@@ -12,3 +12,13 @@ build/
 .env.*
 .superpowers/
 Huisha_Game.zip
+docs/references/YarnSpinner/
+
+# Independent 3D repository and retained historical originals, excluded from 2D releases.
+/huisha-3d/
+/src/3d/
+/vendor/three.min.js
+/美术/
+/prototype3d.html
+/tools/verify_3d_prototype.mjs
+/tools/verify_3d_interaction_flow.mjs

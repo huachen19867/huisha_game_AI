@@ -91,13 +91,16 @@ export class Player {
         this.flickerTimer = 0;
     }
 
-    update(cursors, wasd, joystick, soundManager) {
+    update(cursors, wasd, joystick, soundManager, delta = 16.67) {
         this.sprite.setVelocity(0);
-
-        // Stamina Logic
-        if (this.keyShift.isDown && !this.exhausted && (this.sprite.body.velocity.x !== 0 || this.sprite.body.velocity.y !== 0)) {
+        const moving = cursors.left.isDown || cursors.right.isDown || cursors.up.isDown || cursors.down.isDown
+            || wasd.left.isDown || wasd.right.isDown || wasd.up.isDown || wasd.down.isDown
+            || (joystick.active && Math.hypot(joystick.x, joystick.y) > 0.1);
+        const seconds = Math.min(delta, 50) / 1000;
+        // Evaluate input before applying velocity; stamina is independent of frame rate.
+        if ((this.keyShift.isDown || joystick.sprint) && !this.exhausted && moving) {
             this.isRunning = true;
-            this.stamina -= this.staminaDrainRate;
+            this.stamina -= 23 * seconds;
             if (this.stamina <= 0) {
                 this.stamina = 0;
                 this.exhausted = true;
@@ -106,7 +109,7 @@ export class Player {
         } else {
             this.isRunning = false;
             if (this.stamina < this.maxStamina) {
-                this.stamina += this.staminaRechargeRate;
+                this.stamina += 16 * seconds;
                 if (this.stamina > this.maxStamina) this.stamina = this.maxStamina;
             }
             if (this.exhausted && this.stamina > 30) {
@@ -250,6 +253,7 @@ export class Player {
         // Sync Light Position
         this.flashlight.x = this.sprite.x;
         this.flashlight.y = this.sprite.y;
+        this.sprite.setDepth(20 + this.sprite.y / 1000);
         if (this.lightSource) {
             this.lightSource.x = this.sprite.x;
             this.lightSource.y = this.sprite.y;
