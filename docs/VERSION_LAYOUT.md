@@ -5,7 +5,7 @@
 | 版本 | 本地位置 | GitHub | 状态 |
 | --- | --- | --- | --- |
 | 2D | 本工作区根目录 | [huisha_game_AI](https://github.com/huachen19867/huisha_game_AI) | 第三十七轮成果封存，停止研发 |
-| 3D | `huisha-3d/`，独立 `.git` | [huisha_game_3d](https://github.com/huachen19867/huisha_game_3d) | 独立重新制作，第一章“归门” |
+| 3D | `huisha-3d/`，独立 `.git` | [huisha_game_3d](https://github.com/huachen19867/huisha_game_3d) | 独立重新制作，“归门 / 余温”两段探索与两种结局 |
 
 根仓库忽略 `huisha-3d/`，不能把它作为子模块或普通子目录上传到 2D 仓库。3D 内不携带 Phaser、2D 入口、2D 源码或 2D 存档。新章的浏览器存档键为 `huisha.3d.homecoming.v1`，不读取 2D 进度。
 
