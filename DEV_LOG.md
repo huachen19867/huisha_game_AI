@@ -16,6 +16,8 @@
 
 原文参考包含其自身行尾空白，新增 .gitattributes 仅保留第三方参考源码/许可原始字节和排版；自写文件仍执行正常空白检查。3D 的 glTF 也保留下载字节，避免跨平台换行转换使源校验失效。全部实现与说明已沉淀到两套文档中，画面和实机验收的限制仍然保留。
 
+后续上传遇到直连 TLS 握手失败，经只读检查发现 Windows 已开启本地系统代理而 Git 没有自动使用；命令级 `-c http.proxy=<已启用的本地系统代理>` 后 3D 收尾提交 cc913bb 成功上传。后续用同样方式同步，未关闭证书校验，未改全局网络设置。两套本地工作树、入口和 Git 追踪范围分别核对。
+
 ## 2026-11-16
 
 第三十七轮先读日志、表单与游戏按键注册，下载 Phaser v3.60.0 官方 KeyboardManager.js/KeyboardPlugin.js 到 docs/references，沿用已有 Phaser MIT 许可。上轮已加入原文查找与可收起物证库，属于实质进展。本轮在源码中确认 KeyboardManager 监听窗口 keydown/keyup，按全局 captures 阻止默认行为，没有排除 DOM 文本框；GameScene 已注册 WASD/E/空格/方向键，因而只在自定义 document 监听中忽略 input 不足以让文字正常输入。
